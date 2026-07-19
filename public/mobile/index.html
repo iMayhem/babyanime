@@ -655,68 +655,71 @@
       searchResultsSection.style.display = 'none';
     });
 
-    // Simple URL parameter router for mobile navigation deep-linking
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    if (tabParam === 'browse') {
-      tabBrowse.click();
-    } else if (tabParam === 'search') {
-      const input = document.getElementById('searchInput');
-      if (input) {
-        btnNavHome.classList.remove('active');
-        btnNavSearch.classList.add('active');
-        input.focus();
-      }
-    }
+    // Wrap bottom nav setup in DOMContentLoaded to ensure elements exist in the DOM before query
+    document.addEventListener('DOMContentLoaded', () => {
+      // Simple URL parameter router for mobile navigation deep-linking
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      
+      const btnNavHome = document.getElementById('btnNavHome');
+      const btnNavBrowse = document.getElementById('btnNavBrowse');
+      const btnNavSearch = document.getElementById('btnNavSearch');
 
-    // Bottom Navigation click handlers
-    const btnNavHome = document.getElementById('btnNavHome');
-    const btnNavBrowse = document.getElementById('btnNavBrowse');
-    const btnNavSearch = document.getElementById('btnNavSearch');
-
-    if (btnNavHome && btnNavBrowse && btnNavSearch) {
-      btnNavHome.addEventListener('click', () => {
-        btnNavHome.classList.add('active');
-        btnNavBrowse.classList.remove('active');
-        btnNavSearch.classList.remove('active');
-        
-        tabHome.click();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-
-      btnNavBrowse.addEventListener('click', () => {
-        btnNavHome.classList.remove('active');
-        btnNavBrowse.classList.add('active');
-        btnNavSearch.classList.remove('active');
-        
+      if (tabParam === 'browse') {
         tabBrowse.click();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-
-      btnNavSearch.addEventListener('click', () => {
-        btnNavHome.classList.remove('active');
-        btnNavBrowse.classList.remove('active');
-        btnNavSearch.classList.add('active');
-        
+      } else if (tabParam === 'search') {
         const input = document.getElementById('searchInput');
         if (input) {
+          if (btnNavHome) btnNavHome.classList.remove('active');
+          if (btnNavSearch) btnNavSearch.classList.add('active');
           input.focus();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      });
+      }
 
-      // Sync desktop tabs clicks with bottom nav
-      tabHome.addEventListener('click', () => {
-        btnNavHome.classList.add('active');
-        btnNavBrowse.classList.remove('active');
-        btnNavSearch.classList.remove('active');
-      });
-      tabBrowse.addEventListener('click', () => {
-        btnNavHome.classList.remove('active');
-        btnNavBrowse.classList.add('active');
-        btnNavSearch.classList.remove('active');
-      });
-    }
+      if (btnNavHome && btnNavBrowse && btnNavSearch) {
+        btnNavHome.addEventListener('click', () => {
+          btnNavHome.classList.add('active');
+          btnNavBrowse.classList.remove('active');
+          btnNavSearch.classList.remove('active');
+          
+          tabHome.click();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        btnNavBrowse.addEventListener('click', () => {
+          btnNavHome.classList.remove('active');
+          btnNavBrowse.classList.add('active');
+          btnNavSearch.classList.remove('active');
+          
+          tabBrowse.click();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        btnNavSearch.addEventListener('click', () => {
+          btnNavHome.classList.remove('active');
+          btnNavBrowse.classList.remove('active');
+          btnNavSearch.classList.add('active');
+          
+          const input = document.getElementById('searchInput');
+          if (input) {
+            input.focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+
+        // Sync desktop tabs clicks with bottom nav
+        tabHome.addEventListener('click', () => {
+          btnNavHome.classList.add('active');
+          btnNavBrowse.classList.remove('active');
+          btnNavSearch.classList.remove('active');
+        });
+        tabBrowse.addEventListener('click', () => {
+          btnNavHome.classList.remove('active');
+          btnNavBrowse.classList.add('active');
+          btnNavSearch.classList.remove('active');
+        });
+      }
+    });
   </script>
 
   <!-- Bottom Navigation Bar for Mobile -->
