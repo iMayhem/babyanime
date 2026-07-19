@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>babyanime - watch anime with AniList and MAL IDs</title>
+  <meta name="description" content="A sleek, ad-free anime watching site powered by AniList and MAL IDs. Keep track of your history and bookmarks easily.">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" onerror="this.href='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>'">
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand-container">
+        <a href="/" class="logo-text">baby<span>anime</span></a>
+      </div>
+      <div class="toggles">
+        <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8 1.6a6.4 6.4 0 000 12.8z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero Section -->
+      <section class="hero" style="margin-bottom: 1.5rem;">
+        <h1>watch anime.</h1>
+        <svg class="squig" viewBox="0 0 160 13" fill="none" aria-hidden="true">
+          <path d="M3 8.5 C 16 2.5, 28 12, 42 7.5 S 68 2.5, 82 8.5 S 108 12.5, 122 6.5 S 148 4, 157 8.5" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+        </svg>
+        <p>No ads, no tracking. Stream your favorite anime by simply providing an AniList or MAL ID.</p>
+      </section>
+
+      <!-- Category Navigation Tabs -->
+      <nav class="tab-row">
+        <button type="button" class="tab-btn active" id="tabHome">Home</button>
+        <button type="button" class="tab-btn" id="tabBrowse">Browse Catalog</button>
+      </nav>
+
+      <!-- HOME VIEW -->
+      <div id="homeView">
+        <!-- Search Section -->
+        <section class="search-section">
+          <div class="search-bar-container">
+            <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search anime titles...">
+          </div>
+        </section>
+
+        <!-- Dynamic Search Results Section (Hidden by default) -->
+        <section id="searchResultsSection" style="display: none;">
+          <div class="section-title">
+            <h2>Search Results</h2>
+            <button type="button" class="tt" id="clearSearchBtn">Clear Results</button>
+          </div>
+          <div class="anime-grid" id="searchResultsGrid"></div>
+        </section>
+
+        <!-- Continue Watching (Recent History) -->
+        <section id="historySection" style="display: none;">
+          <div class="section-title">
+            <h2>Continue Watching</h2>
+            <button type="button" class="tt" id="clearHistoryBtn">Clear History</button>
+          </div>
+          <div class="recent-grid" id="historyGrid"></div>
+        </section>
+
+        <!-- Watchlist (Bookmarks) -->
+        <section id="watchlistSection" style="display: none;">
+          <div class="section-title">
+            <h2>My Watchlist</h2>
+          </div>
+          <div class="anime-grid" id="watchlistGrid"></div>
+        </section>
+
+        <!-- Shelves (Category shelves similar to miruro) -->
+        <!-- 1. Trending Now -->
+        <section id="trendingSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Trending Now</h2>
+          </div>
+          <div class="shelf-container" id="trendingShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- 2. Highest Rated -->
+        <section id="topRatedSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Highest Rated</h2>
+          </div>
+          <div class="shelf-container" id="topRatedShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- 3. Popular Movies -->
+        <section id="moviesSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Anime Movies</h2>
+          </div>
+          <div class="shelf-container" id="moviesShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- 4. Upcoming Shows -->
+        <section id="upcomingSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Upcoming Next Season</h2>
+          </div>
+          <div class="shelf-container" id="upcomingShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- BROWSE CATALOG VIEW -->
+      <div id="browseView" style="display: none;">
+        <!-- Filters Card -->
+        <section class="card filter-card">
+          <!-- Genre Filters -->
+          <div class="filter-section">
+            <span class="filter-section-title">Genres</span>
+            <div class="filter-tags-grid" id="genreFiltersGrid">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Format Filters -->
+          <div class="filter-section">
+            <span class="filter-section-title">Format</span>
+            <div class="filter-tags-grid" id="formatFiltersGrid">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Sort Filter -->
+          <div class="filter-section">
+            <span class="filter-section-title">Sort By</span>
+            <div class="filter-tags-grid" id="sortFiltersGrid">
+              <button type="button" class="filter-tag-btn active" data-sort="POPULARITY_DESC">Most Popular</button>
+              <button type="button" class="filter-tag-btn" data-sort="TRENDING_DESC">Trending</button>
+              <button type="button" class="filter-tag-btn" data-sort="SCORE_DESC">Top Rated</button>
+              <button type="button" class="filter-tag-btn" data-sort="START_DATE_DESC">Release Date</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Browse Results Grid -->
+        <section id="browseResultsSection">
+          <div class="section-title">
+            <h2>Explore: <span id="browseActiveLabel" style="font-weight: 700; color: var(--accent); font-size: 0.9em;">All Genres</span></h2>
+            <button type="button" class="tt" id="resetFiltersBtn">Reset Filters</button>
+          </div>
+          <div class="anime-grid" id="browseResultsGrid">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+          <!-- Load More Button -->
+          <div id="loadMoreContainer" style="text-align: center; margin-top: 2rem; display: none;">
+            <button type="button" class="btn-primary" id="loadMoreBtn" style="max-width: 220px; margin: 0 auto; font-size: 0.95rem; padding: 0.6rem 1.2rem;">Load More</button>
+          </div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <footer>
+    <nav class="fnav">
+      <a href="https://anilist.co" target="_blank" rel="noopener">AniList</a>
+      <a href="https://myanimelist.net" target="_blank" rel="noopener">MyAnimeList</a>
+      <a href="https://github.com/manami-project/anime-offline-database" target="_blank" rel="noopener">Database</a>
+    </nav>
+    <div class="footer-stats">
+      <span class="onion-tag">onion</span>: <span class="onion-addr">babyanimewatchv74b92p90r210e7y2u7.onion</span>
+    </div>
+    <div class="sig">babyanime © 2026. Made with ❤️ for the community.</div>
+  </footer>
+
+  <!-- Floating Animated Anime Sticker -->
+  <div class="sticker-card" id="stickerCard">
+    <img id="stickerImg" src="" alt="anime character" draggable="false">
+    <div class="sticker-label" id="stickerLabel"></div>
+  </div>
+
+  <!-- Core Scripts -->
+  <script src="/assets/app.js"></script>
+  <script>
+    // Clean and sort anime list helper
+    // 1. Completely filters out titles with no coverImage or standard placeholder images
+    // 2. Groups "dead" titles (popularity < 300 and not upcoming NOT_YET_RELEASED) and pushes them to the end of the results
+    function cleanAndSortMediaList(mediaArray, preserveOrder = false) {
+      if (!mediaArray) return [];
+      
+      const withPosters = mediaArray.filter(anime => {
+        if (!anime.coverImage || !anime.coverImage.large) return false;
+        const url = anime.coverImage.large.toLowerCase();
+        if (url.includes('default') && url.includes('placeholder')) return false;
+        return true;
+      });
+
+      const alive = [];
+      const dead = [];
+
+      withPosters.forEach(anime => {
+        const pop = anime.popularity || 0;
+        const isUpcoming = anime.status === 'NOT_YET_RELEASED';
+        
+        if (pop < 300 && !isUpcoming) {
+          dead.push(anime);
+        } else {
+          alive.push(anime);
+        }
+      });
+
+      if (preserveOrder) {
+        return [...alive, ...dead];
+      } else {
+        alive.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        dead.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        return [...alive, ...dead];
+      }
+    }
+
+    // Browse State Variables
+    let selectedGenres = [];
+    let selectedFormat = '';
+    let selectedSort = 'POPULARITY_DESC';
+    let browsePage = 1;
+
+    const GENRES_LIST = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"];
+    const FORMATS_LIST = [
+      { code: 'TV', label: 'TV Series' },
+      { code: 'MOVIE', label: 'Movies' },
+      { code: 'OVA', label: 'OVAs' },
+      { code: 'ONA', label: 'ONAs' },
+      { code: 'SPECIAL', label: 'Specials' }
+    ];
+
+    // Views
+    const homeView = document.getElementById('homeView');
+    const browseView = document.getElementById('browseView');
+    
+    // Tab buttons
+    const tabHome = document.getElementById('tabHome');
+    const tabBrowse = document.getElementById('tabBrowse');
+
+    tabHome.addEventListener('click', () => {
+      tabHome.classList.add('active');
+      tabBrowse.classList.remove('active');
+      homeView.style.display = 'block';
+      browseView.style.display = 'none';
+    });
+
+    tabBrowse.addEventListener('click', () => {
+      tabBrowse.classList.add('active');
+      tabHome.classList.remove('active');
+      homeView.style.display = 'none';
+      browseView.style.display = 'block';
+      loadBrowseResults(false);
+    });
+
+    // Load Watch History & Bookmarks on home load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderHistory();
+      renderWatchlist();
+      loadHomeShelves();
+      setupBrowseFilters();
+    });
+
+    function renderHistory() {
+      const history = getWatchHistory();
+      const section = document.getElementById('historySection');
+      const grid = document.getElementById('historyGrid');
+      
+      if (!history || history.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      
+      section.style.display = 'block';
+      grid.innerHTML = history.map(item => {
+        const idParam = item.type === 'mal' ? 'mal_id' : 'id';
+        const url = `/watch.html?${idParam}=${item.id}&ep=${item.episode}`;
+        const titleText = item.title.english || item.title.romaji || item.title.userPreferred || 'Unknown Title';
+        const coverImg = item.coverImage.large || item.coverImage.medium || '';
+        
+        return `
+          <div class="card recent-card interactive" onclick="window.location.href='${url}'" style="cursor: pointer;">
+            <img class="recent-thumb" src="${coverImg}" alt="${titleText}">
+            <div class="recent-details">
+              <h3 class="recent-title" title="${titleText}">${titleText}</h3>
+              <div class="recent-ep">Episode ${item.episode}</div>
+              <div class="recent-time">${new Date(item.updatedAt).toLocaleDateString()}</div>
+              <div class="recent-progress">
+                <div class="recent-progress-fill" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+      if (confirm('Clear your watching history?')) {
+        saveWatchHistory([]);
+        renderHistory();
+      }
+    });
+
+    function renderWatchlist() {
+      const watchlist = getBookmarks();
+      const section = document.getElementById('watchlistSection');
+      const grid = document.getElementById('watchlistGrid');
+      
+      if (!watchlist || watchlist.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      
+      section.style.display = 'block';
+      grid.innerHTML = watchlist.map(item => {
+        const anime = {
+          id: item.type === 'anilist' ? item.id : undefined,
+          idMal: item.type === 'mal' ? item.id : undefined,
+          title: item.title,
+          coverImage: item.coverImage,
+          episodes: item.episodes
+        };
+        return createAnimeCardHTML(anime);
+      }).join('');
+    }
+
+    // Load category shelves
+    function loadHomeShelves() {
+      loadShelf('TRENDING_DESC', null, null, 'trendingShelf');
+      loadShelf('SCORE_DESC', null, null, 'topRatedShelf');
+      loadShelf('POPULARITY_DESC', 'MOVIE', null, 'moviesShelf');
+      loadShelf('POPULARITY_DESC', null, 'NOT_YET_RELEASED', 'upcomingShelf');
+    }
+
+    async function loadShelf(sortValue, formatValue, statusValue, containerId) {
+      const query = `
+        query ($sort: [MediaSort], $format: MediaFormat, $status: MediaStatus) {
+          Page(page: 1, perPage: 24) {
+            media(sort: $sort, format: $format, status: $status, type: ANIME, isAdult: false) {
+              id
+              idMal
+              title {
+                romaji
+                english
+                native
+                userPreferred
+              }
+              coverImage {
+                large
+              }
+              format
+              episodes
+              averageScore
+              popularity
+              status
+              seasonYear
+            }
+          }
+        }
+      `;
+      
+      const variables = { sort: [sortValue] };
+      if (formatValue) variables.format = formatValue;
+      if (statusValue) variables.status = statusValue;
+
+      const container = document.getElementById(containerId);
+      try {
+        const data = await queryAniList(query, variables);
+        if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
+          const processed = cleanAndSortMediaList(data.Page.media).slice(0, 12);
+          if (processed.length > 0) {
+            container.innerHTML = processed.map(anime => createAnimeCardHTML(anime)).join('');
+          } else {
+            container.innerHTML = '<div class="empty-state">No content found.</div>';
+          }
+        } else {
+          container.innerHTML = '<div class="empty-state">No content found.</div>';
+        }
+      } catch (err) {
+        container.innerHTML = '<div class="empty-state">Error loading recommendation row.</div>';
+      }
+    }
+
+    // Browse Catalog filters setup
+    function setupBrowseFilters() {
+      const genresGrid = document.getElementById('genreFiltersGrid');
+      const formatsGrid = document.getElementById('formatFiltersGrid');
+      const sortGrid = document.getElementById('sortFiltersGrid');
+
+      // Populate genres
+      genresGrid.innerHTML = GENRES_LIST.map(g => `<button type="button" class="filter-tag-btn" data-genre="${g}">${g}</button>`).join('');
+      // Populate formats
+      formatsGrid.innerHTML = FORMATS_LIST.map(f => `<button type="button" class="filter-tag-btn" data-format="${f.code}">${f.label}</button>`).join('');
+
+      // Add listeners
+      genresGrid.querySelectorAll('.filter-tag-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const genre = btn.getAttribute('data-genre');
+          if (selectedGenres.includes(genre)) {
+            selectedGenres = selectedGenres.filter(g => g !== genre);
+            btn.classList.remove('active');
+          } else {
+            selectedGenres.push(genre);
+            btn.classList.add('active');
+          }
+          loadBrowseResults();
+        });
+      });
+
+      formatsGrid.querySelectorAll('.filter-tag-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const format = btn.getAttribute('data-format');
+          
+          formatsGrid.querySelectorAll('.filter-tag-btn').forEach(b => b.classList.remove('active'));
+          
+          if (selectedFormat === format) {
+            selectedFormat = '';
+          } else {
+            selectedFormat = format;
+            btn.classList.add('active');
+          }
+          loadBrowseResults();
+        });
+      });
+
+      sortGrid.querySelectorAll('.filter-tag-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sort = btn.getAttribute('data-sort');
+          sortGrid.querySelectorAll('.filter-tag-btn').forEach(b => b.classList.remove('active'));
+          
+          selectedSort = sort;
+          btn.classList.add('active');
+          loadBrowseResults();
+        });
+      });
+
+      // Reset
+      document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+        selectedGenres = [];
+        selectedFormat = '';
+        selectedSort = 'POPULARITY_DESC';
+        
+        // Remove active states from buttons
+        genresGrid.querySelectorAll('.filter-tag-btn').forEach(b => b.classList.remove('active'));
+        formatsGrid.querySelectorAll('.filter-tag-btn').forEach(b => b.classList.remove('active'));
+        
+        sortGrid.querySelectorAll('.filter-tag-btn').forEach(b => b.classList.remove('active'));
+        sortGrid.querySelector('[data-sort="POPULARITY_DESC"]').classList.add('active');
+        
+        loadBrowseResults();
+      });
+    }
+
+    // Query filtered Catalog Explorer
+    async function loadBrowseResults(append = false) {
+      const grid = document.getElementById('browseResultsGrid');
+      const loadMoreContainer = document.getElementById('loadMoreContainer');
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      
+      if (!append) {
+        browsePage = 1;
+        grid.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+        loadMoreContainer.style.display = 'none';
+      } else {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Loading...';
+      }
+
+      // Update current active filters label
+      const labelEl = document.getElementById('browseActiveLabel');
+      const genresText = selectedGenres.length > 0 ? selectedGenres.join(', ') : 'All Genres';
+      const formatObj = FORMATS_LIST.find(f => f.code === selectedFormat);
+      const formatText = formatObj ? formatObj.label : 'All Formats';
+      
+      let sortText = 'Popularity';
+      if (selectedSort === 'SCORE_DESC') sortText = 'Rating';
+      if (selectedSort === 'TRENDING_DESC') sortText = 'Trending';
+      if (selectedSort === 'START_DATE_DESC') sortText = 'Release Date';
+
+      labelEl.textContent = `${genresText} (${formatText}) sorted by ${sortText}`;
+
+      const query = `
+        query ($page: Int, $perPage: Int, $sort: [MediaSort], $format: MediaFormat, $genres: [String]) {
+          Page(page: $page, perPage: $perPage) {
+            pageInfo {
+              hasNextPage
+              currentPage
+            }
+            media(sort: $sort, format: $format, genre_in: $genres, type: ANIME, isAdult: false) {
+              id
+              idMal
+              title {
+                romaji
+                english
+                native
+                userPreferred
+              }
+              coverImage {
+                large
+              }
+              format
+              episodes
+              averageScore
+              popularity
+              status
+              seasonYear
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        page: browsePage,
+        perPage: 32, // request slightly more to cover filtered out poster-less shows
+        sort: [selectedSort]
+      };
+      if (selectedFormat) variables.format = selectedFormat;
+      if (selectedGenres.length > 0) variables.genres = selectedGenres;
+
+      try {
+        const data = await queryAniList(query, variables);
+        
+        // Reset load more button
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = 'Load More';
+        
+        if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
+          const processed = cleanAndSortMediaList(data.Page.media, true); // preserveOrder = true, groups dead shows last
+          if (processed.length > 0) {
+            const html = processed.map(anime => createAnimeCardHTML(anime)).join('');
+            if (append) {
+              grid.insertAdjacentHTML('beforeend', html);
+            } else {
+              grid.innerHTML = html;
+            }
+            
+            // Show or hide pagination load more
+            if (data.Page.pageInfo.hasNextPage) {
+              loadMoreContainer.style.display = 'block';
+            } else {
+              loadMoreContainer.style.display = 'none';
+            }
+          } else {
+            if (!append) {
+              grid.innerHTML = '<div class="empty-state">No matching anime found for selected filters.</div>';
+            }
+            loadMoreContainer.style.display = 'none';
+          }
+        } else {
+          if (!append) {
+            grid.innerHTML = '<div class="empty-state">No matching anime found for selected filters.</div>';
+          }
+          loadMoreContainer.style.display = 'none';
+        }
+      } catch (err) {
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = 'Load More';
+        if (!append) {
+          grid.innerHTML = '<div class="empty-state">Error loading filtered catalog list.</div>';
+        } else {
+          alert('Failed to load more anime.');
+        }
+      }
+    }
+
+    // Load More click listener
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+      browsePage++;
+      loadBrowseResults(true);
+    });
+
+    // Live search input handling (debounced)
+    const searchInput = document.getElementById('searchInput');
+    const searchResultsSection = document.getElementById('searchResultsSection');
+    const searchResultsGrid = document.getElementById('searchResultsGrid');
+    let searchTimeout = null;
+
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const queryText = searchInput.value.trim();
+      
+      if (!queryText) {
+        searchResultsSection.style.display = 'none';
+        return;
+      }
+      
+      searchTimeout = setTimeout(() => {
+        performSearch(queryText);
+      }, 500);
+    });
+
+    async function performSearch(titleQuery) {
+      searchResultsSection.style.display = 'block';
+      searchResultsGrid.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+      
+      const query = `
+        query ($search: String) {
+          Page(page: 1, perPage: 24) {
+            media(search: $search, type: ANIME, isAdult: false) {
+              id
+              idMal
+              title {
+                romaji
+                english
+                native
+                userPreferred
+              }
+              coverImage {
+                large
+              }
+              format
+              episodes
+              averageScore
+              popularity
+              status
+              seasonYear
+            }
+          }
+        }
+      `;
+      
+      try {
+        const data = await queryAniList(query, { search: titleQuery });
+        if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
+          const processed = cleanAndSortMediaList(data.Page.media);
+          if (processed.length > 0) {
+            searchResultsGrid.innerHTML = processed.map(anime => createAnimeCardHTML(anime)).join('');
+          } else {
+            searchResultsGrid.innerHTML = '<div class="empty-state">No matching anime found.</div>';
+          }
+        } else {
+          searchResultsGrid.innerHTML = '<div class="empty-state">No matching anime found.</div>';
+        }
+      } catch (err) {
+        searchResultsGrid.innerHTML = '<div class="empty-state">Error performing search query.</div>';
+      }
+    }
+
+    document.getElementById('clearSearchBtn').addEventListener('click', () => {
+      searchInput.value = '';
+      searchResultsSection.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

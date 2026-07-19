@@ -1,0 +1,16 @@
+{
+  "name": "babyanime",
+  "version": "1.0.0",
+  "description": "Sleek neo-brutalist anime watching site using AniList and MyAnimeList IDs.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

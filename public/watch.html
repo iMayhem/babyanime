@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watch Anime - babyanime</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" onerror="this.href='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>'">
+  <link rel="stylesheet" href="/assets/app.css">
+  <style>    /* Watch page specific additions */
+    .btn-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+    
+    .bookmark-btn {
+      flex: 1;
+      padding: 0.5rem;
+      border-radius: 10px;
+      font-weight: 800;
+      border: 2px solid var(--ink);
+      background: var(--card);
+      color: var(--ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      box-shadow: 3px 3px 0 var(--shadow);
+      transition: all 0.1s ease;
+    }
+
+    .bookmark-btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 var(--shadow);
+      color: var(--accent);
+    }
+    
+    .bookmark-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--ink);
+    }
+
+    .ep-jump-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.8rem;
+      padding: 0.8rem;
+      background: var(--bg);
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+    }
+
+    .ep-jump-input {
+      width: 70px;
+      padding: 0.35rem;
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      background: var(--card);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+      text-align: center;
+    }
+    
+    .ep-jump-input:focus {
+      outline: 0;
+      border-color: var(--accent);
+    }
+    
+    .ep-jump-btn {
+      padding: 0.35rem 0.8rem;
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      background: var(--accent);
+      color: #ffffff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .ep-jump-btn:hover {
+      background: var(--ink);
+      color: var(--card);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand-container">
+        <a href="/" class="logo-text">baby<span>anime</span></a>
+      </div>
+      <div class="toggles">
+        <a href="/" class="tt" style="font-weight:800; text-decoration:none;">← Home</a>
+        <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8 1.6a6.4 6.4 0 000 12.8z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Error & Notice banners -->
+      <div id="errorBanner" class="error-banner" style="display: none;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorMessage">Error loading anime details.</span>
+      </div>
+
+      <!-- Main Layout -->
+      <div class="watch-container" id="watchLayout" style="display: none;">
+        
+        <!-- Player Column -->
+        <div class="player-column">
+          <!-- Video Iframe wrapper -->
+          <div class="player-wrapper">
+            <iframe id="playerIframe" class="player-iframe" allowfullscreen referrerpolicy="no-referrer"></iframe>
+          </div>
+
+          <!-- Video control selectors -->
+          <div class="card selector-row">
+            <div class="selector-section">
+              <span class="selector-label">Server:</span>
+              <select id="serverSelect" class="select-dropdown">
+                <option value="aniplay_ani">AnimePlay (AniList ID)</option>
+                <option value="aniplay_mal">AnimePlay (MAL ID)</option>
+                <option value="moviesrc_mal">Movie-Src (MAL ID)</option>
+                <option value="vidsrc_cc">VidSrc.cc (MAL ID)</option>
+                <option value="vidsrc_to">VidSrc.to (MAL ID)</option>
+              </select>
+            </div>
+
+            <div class="selector-section" id="audioSection">
+              <span class="selector-label">Language:</span>
+              <div class="pills-group" style="padding: 0.15rem;">
+                <button type="button" class="pill-opt active" id="audioSub" data-audio="sub" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">Sub</button>
+                <button type="button" class="pill-opt" id="audioDub" data-audio="dub" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">Dub</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Anime Metadata Details -->
+          <div class="card details-box">
+            <div class="details-header">
+              <img id="detailsPoster" class="details-poster" src="" alt="Poster">
+              <div class="details-meta">
+                <h1 id="detailsTitleRomaji" class="details-title-romaji">Anime Title</h1>
+                <h3 id="detailsTitleEnglish" class="details-title-english">English Title</h3>
+                
+                <div class="badge-row">
+                  <span id="badgeScore" class="meta-badge">★ -.-</span>
+                  <span id="badgeFormat" class="meta-badge">TV</span>
+                  <span id="badgeSeason" class="meta-badge">Fall 2026</span>
+                  <span id="badgeEpisodes" class="meta-badge">- Episodes</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="genre-tags" id="detailsGenres"></div>
+
+            <div class="synopsis">
+              <div class="synopsis-title">Synopsis</div>
+              <p id="detailsSynopsisText">No description available.</p>
+            </div>
+
+            <div class="details-row">
+              <div class="info-item">
+                <span class="info-item-label">AniList ID</span>
+                <span class="info-item-value" id="infoAnilistId">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item-label">MyAnimeList ID</span>
+                <span class="info-item-value" id="infoMalId">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item-label">Studio</span>
+                <span class="info-item-value" id="infoStudio">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item-label">Status</span>
+                <span class="info-item-value" id="infoStatus">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar / Episodes panel -->
+        <div class="sidebar-panel">
+          <div class="card episodes-panel">
+            <div class="episodes-header">
+              <span>Episodes</span>
+              <span id="episodesCountText" class="episodes-count">- / -</span>
+            </div>
+            
+            <div class="ep-grid-container">
+              <div class="ep-grid" id="episodesGrid">
+                <!-- Episode buttons injected here -->
+              </div>
+            </div>
+
+            <!-- Episode Jump / Quick Input -->
+            <div class="ep-jump-card">
+              <span class="selector-label" style="flex-grow:1;">Jump to:</span>
+              <input type="number" id="epJumpInput" class="ep-jump-input" min="1" value="1">
+              <button type="button" id="epJumpBtn" class="ep-jump-btn">Go</button>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" class="bookmark-btn" id="bookmarkBtn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span id="bookmarkText">Watchlist</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Loading spinner screen -->
+      <div id="loadingScreen" class="loading-container" style="padding: 10vh 0;">
+        <div style="text-align: center;">
+          <div class="spinner" style="width:40px; height:40px;"></div>
+          <p style="margin-top: 1rem; font-weight:800; color:var(--muted);">Loading metadata...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Floating Animated Anime Sticker -->
+  <div class="sticker-card" id="stickerCard">
+    <img id="stickerImg" src="" alt="anime character" draggable="false">
+    <div class="sticker-label" id="stickerLabel"></div>
+  </div>
+
+  <!-- Core Scripts -->
+  <script src="/assets/app.js"></script>
+  <script>    let activeAnime = null;
+    let activeEpisode = 1;
+    let activeServer = 'aniplay_ani';
+    let activeAudio = 'sub';
+
+    // Parse URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const anilistId = urlParams.get('id');
+    const malId = urlParams.get('mal_id');
+    const startEp = parseInt(urlParams.get('ep')) || 1;
+    activeEpisode = startEp;
+
+    // Elements
+    const loadingScreen = document.getElementById('loadingScreen');
+    const watchLayout = document.getElementById('watchLayout');
+    const errorBanner = document.getElementById('errorBanner');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    const playerIframe = document.getElementById('playerIframe');
+    const serverSelect = document.getElementById('serverSelect');
+    const audioSub = document.getElementById('audioSub');
+    const audioDub = document.getElementById('audioDub');
+    
+    const detailsPoster = document.getElementById('detailsPoster');
+    const detailsTitleRomaji = document.getElementById('detailsTitleRomaji');
+    const detailsTitleEnglish = document.getElementById('detailsTitleEnglish');
+    const detailsSynopsisText = document.getElementById('detailsSynopsisText');
+    const detailsGenres = document.getElementById('detailsGenres');
+    
+    const badgeScore = document.getElementById('badgeScore');
+    const badgeFormat = document.getElementById('badgeFormat');
+    const badgeSeason = document.getElementById('badgeSeason');
+    const badgeEpisodes = document.getElementById('badgeEpisodes');
+    
+    const infoAnilistId = document.getElementById('infoAnilistId');
+    const infoMalId = document.getElementById('infoMalId');
+    const infoStudio = document.getElementById('infoStudio');
+    const infoStatus = document.getElementById('infoStatus');
+    
+    const episodesGrid = document.getElementById('episodesGrid');
+    const episodesCountText = document.getElementById('episodesCountText');
+    const epJumpInput = document.getElementById('epJumpInput');
+    const epJumpBtn = document.getElementById('epJumpBtn');
+    
+    const bookmarkBtn = document.getElementById('bookmarkBtn');
+    const bookmarkText = document.getElementById('bookmarkText');
+
+    // Page Load
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (!anilistId && !malId) {
+        showError('No anime ID specified. Please go back to the homepage.');
+        return;
+      }
+      
+      await loadAnimeDetails();
+      setupControls();
+    });
+
+    // Fetch details from AniList (with MAL fallback)
+    async function loadAnimeDetails() {
+      const query = `
+        query ($id: Int, $idMal: Int) {
+          Media (id: $id, idMal: $idMal, type: ANIME) {
+            id
+            idMal
+            title {
+              romaji
+              english
+              native
+              userPreferred
+            }
+            description
+            coverImage {
+              large
+              extraLarge
+            }
+            bannerImage
+            episodes
+            format
+            status
+            season
+            seasonYear
+            averageScore
+            genres
+            studios(isMain: true) {
+              nodes {
+                name
+              }
+            }
+          }
+        }
+      `;
+
+      const variables = {};
+      if (anilistId) variables.id = parseInt(anilistId);
+      if (malId) variables.idMal = parseInt(malId);
+
+      try {
+        const data = await queryAniList(query, variables);
+        if (data && data.Media) {
+          activeAnime = data.Media;
+          activeAnime.type = anilistId ? 'anilist' : 'mal'; // Store lookup context
+          renderMetadata();
+          renderEpisodes();
+          updatePlayer();
+          updateBookmarkBtnState();
+          
+          loadingScreen.style.display = 'none';
+          watchLayout.style.display = 'grid';
+        } else {
+          throw new Error('Not found on AniList');
+        }
+      } catch (err) {
+        console.warn('AniList fetch failed, attempting MAL Jikan API fallback:', err);
+        // Attempt Jikan (MAL) fallback if MAL ID was provided
+        if (malId) {
+          try {
+            const malData = await fetchMALMetadata(parseInt(malId));
+            if (malData) {
+              // Convert Jikan data structure to a compatible format
+              activeAnime = {
+                id: null,
+                idMal: malData.mal_id,
+                title: {
+                  romaji: malData.title,
+                  english: malData.title_english || malData.title,
+                  native: malData.title_japanese || ''
+                },
+                description: malData.synopsis || 'No description available.',
+                coverImage: {
+                  large: malData.images.jpg.large_image_url || malData.images.jpg.image_url
+                },
+                episodes: malData.episodes,
+                format: malData.type,
+                status: malData.status,
+                season: malData.season,
+                seasonYear: malData.year,
+                averageScore: malData.score ? malData.score * 10 : null,
+                genres: malData.genres ? malData.genres.map(g => g.name) : [],
+                studios: {
+                  nodes: malData.studios && malData.studios[0] ? [{ name: malData.studios[0].name }] : []
+                },
+                type: 'mal'
+              };
+              
+              renderMetadata();
+              renderEpisodes();
+              updatePlayer();
+              updateBookmarkBtnState();
+              
+              loadingScreen.style.display = 'none';
+              watchLayout.style.display = 'grid';
+            } else {
+              showError('Could not fetch metadata from backup MAL API.');
+            }
+          } catch (fallbackErr) {
+            showError('Failed to fetch anime metadata from both AniList and Jikan backup API.');
+          }
+        } else {
+          showError('Failed to find anime on AniList. (No MyAnimeList ID supplied for fallback lookup)');
+        }
+      }
+    }
+
+    // Render metadata to page
+    function renderMetadata() {
+      const titleRomaji = activeAnime.title.romaji || activeAnime.title.userPreferred;
+      const titleEng = activeAnime.title.english || titleRomaji;
+      
+      document.title = `Watch ${titleEng} - babyanime`;
+      
+      detailsPoster.src = activeAnime.coverImage.large;
+      detailsPoster.alt = titleEng;
+      detailsTitleRomaji.textContent = titleRomaji;
+      detailsTitleEnglish.textContent = activeAnime.title.english ? activeAnime.title.english : '';
+      
+      // Clean synopsis description from HTML tags
+      const rawDesc = activeAnime.description || 'No description available.';
+      detailsSynopsisText.innerHTML = rawDesc;
+      
+      // Badges
+      badgeScore.textContent = activeAnime.averageScore ? `★ ${(activeAnime.averageScore / 10).toFixed(1)}` : '★ -. -';
+      badgeFormat.textContent = activeAnime.format || 'TV';
+      badgeSeason.textContent = activeAnime.season && activeAnime.seasonYear ? `${activeAnime.season} ${activeAnime.seasonYear}` : (activeAnime.seasonYear || 'Unknown');
+      badgeEpisodes.textContent = activeAnime.episodes ? `${activeAnime.episodes} Ep` : 'Ongoing';
+      
+      // Info rows
+      infoAnilistId.textContent = activeAnime.id || 'N/A';
+      infoMalId.textContent = activeAnime.idMal || 'N/A';
+      infoStudio.textContent = (activeAnime.studios && activeAnime.studios.nodes && activeAnime.studios.nodes[0]) ? activeAnime.studios.nodes[0].name : 'N/A';
+      infoStatus.textContent = activeAnime.status || 'N/A';
+      
+      // Genres
+      detailsGenres.innerHTML = activeAnime.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('');
+    }
+
+    // Render episodes grid
+    function renderEpisodes() {
+      // Determine max episodes
+      const maxEpisodes = activeAnime.episodes || 100; // Default to 100 if ongoing/null
+      let html = '';
+      
+      for (let i = 1; i <= maxEpisodes; i++) {
+        const isActive = i === activeEpisode;
+        html += `<button type="button" class="ep-btn ${isActive ? 'active' : ''}" data-ep="${i}">${i}</button>`;
+      }
+      
+      episodesGrid.innerHTML = html;
+      episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
+      epJumpInput.value = activeEpisode;
+      
+      // Episode click
+      document.querySelectorAll('.ep-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ep = parseInt(btn.getAttribute('data-ep'));
+          changeEpisode(ep);
+        });
+      });
+    }
+
+    // Update bookmark button look
+    function updateBookmarkBtnState() {
+      const isFav = isBookmarked(activeAnime.id || activeAnime.idMal, activeAnime.type);
+      if (isFav) {
+        bookmarkBtn.classList.add('active');
+        bookmarkText.textContent = 'Bookmarked';
+      } else {
+        bookmarkBtn.classList.remove('active');
+        bookmarkText.textContent = 'Watchlist';
+      }
+    }
+
+    // Handle episode change
+    function changeEpisode(epNum) {
+      activeEpisode = epNum;
+      
+      // Update active class in grid
+      document.querySelectorAll('.ep-btn').forEach(btn => {
+        const ep = parseInt(btn.getAttribute('data-ep'));
+        if (ep === activeEpisode) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      
+      episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
+      epJumpInput.value = activeEpisode;
+      
+      updatePlayer();
+      
+      // Add to watch history
+      addToHistory(activeAnime, activeEpisode);
+    }
+
+    // Setup player and selectors
+    function setupControls() {
+      // Server select
+      serverSelect.addEventListener('change', () => {
+        activeServer = serverSelect.value;
+        // Update audio availability
+        const audioSection = document.getElementById('audioSection');
+        if (activeServer === 'vidsrc_to') {
+          audioSection.style.display = 'none'; // VidSrc.to doesn't accept language suffix in this endpoint
+        } else {
+          audioSection.style.display = 'flex';
+        }
+        updatePlayer();
+      });
+
+      // Audio buttons
+      audioSub.addEventListener('click', () => {
+        audioSub.classList.add('active');
+        audioDub.classList.remove('active');
+        activeAudio = 'sub';
+        updatePlayer();
+      });
+
+      audioDub.addEventListener('click', () => {
+        audioDub.classList.add('active');
+        audioSub.classList.remove('active');
+        activeAudio = 'dub';
+        updatePlayer();
+      });
+
+      // Episode Jump
+      epJumpBtn.addEventListener('click', () => {
+        const ep = parseInt(epJumpInput.value);
+        if (ep > 0) {
+          changeEpisode(ep);
+        }
+      });
+      epJumpInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const ep = parseInt(epJumpInput.value);
+          if (ep > 0) changeEpisode(ep);
+        }
+      });
+
+      // Bookmark Button Click
+      bookmarkBtn.addEventListener('click', () => {
+        const isFav = toggleBookmark(activeAnime);
+        updateBookmarkBtnState();
+      });
+    }
+
+    // Update Iframe Source URL
+    function updatePlayer() {
+      let url = '';
+      const mal = activeAnime.idMal;
+      const ani = activeAnime.id;
+      
+      switch (activeServer) {
+        case 'aniplay_ani':
+          url = ani 
+            ? `https://animeplay.cfd/stream/ani/${ani}/${activeEpisode}/${activeAudio}`
+            : `https://animeplay.cfd/stream/mal/${mal}/${activeEpisode}/${activeAudio}`;
+          break;
+        case 'aniplay_mal':
+          url = mal
+            ? `https://animeplay.cfd/stream/mal/${mal}/${activeEpisode}/${activeAudio}`
+            : `https://animeplay.cfd/stream/ani/${ani}/${activeEpisode}/${activeAudio}`;
+          break;
+        case 'moviesrc_mal':
+          url = mal 
+            ? `https://movie-src.xyz/v1/embed/anime/${mal}/${activeEpisode}/${activeAudio}`
+            : `https://movie-src.xyz/v1/embed/anime/0/${activeEpisode}/${activeAudio}`;
+          break;
+        case 'vidsrc_cc':
+          url = mal
+            ? `https://vidsrc.cc/v2/embed/anime/${mal}/${activeEpisode}/${activeAudio}`
+            : `https://vidsrc.cc/v2/embed/anime/0/${activeEpisode}/${activeAudio}`;
+          break;
+        case 'vidsrc_to':
+          url = mal
+            ? `https://vidsrc.to/embed/anime/${mal}/${activeEpisode}`
+            : `https://vidsrc.to/embed/anime/0/${activeEpisode}`;
+          break;
+      }
+      
+      playerIframe.src = url;
+      
+      // Save to history on load
+      addToHistory(activeAnime, activeEpisode);
+    }
+
+    // Error display
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorBanner.style.display = 'flex';
+      loadingScreen.style.display = 'none';
+      watchLayout.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
