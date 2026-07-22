@@ -776,6 +776,12 @@
 
     // Update Iframe Source URL (uses full API data)
     function updatePlayer() {
+      const displayTitle = activeAnime.title ? (activeAnime.title.english || activeAnime.title.romaji || activeAnime.title.userPreferred) : 'Anime';
+      const playerHeaderTitle = document.getElementById('playerHeaderTitle');
+      if (playerHeaderTitle) {
+        playerHeaderTitle.textContent = `🎬 ${displayTitle} · Ep ${activeEpisode}`;
+      }
+
       let url = '';
       const mal = activeAnime.idMal;
       const ani = activeAnime.id;
