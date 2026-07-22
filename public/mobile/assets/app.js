@@ -322,140 +322,140 @@ function createAnimeCardHTML(anime) {
   `;
 }
 
-// --- SEAMLESS HOLD-TO-SWAP LAYOUT ENGINE ---
+// --- UNIVERSAL DELEGATED HOLD-TO-SWAP SYSTEM ---
 function setupHoldToSwap() {
   const oldControls = document.getElementById('layoutControlWrap');
   if (oldControls) oldControls.remove();
-
   document.querySelectorAll('.panel-drag-handle').forEach(h => h.remove());
-  document.body.classList.remove('customize-layout-active');
 
-  const containers = document.querySelectorAll('.watch-container, .sidebar-column, .layout-container, .rooms-grid, .shelves-container, .shelf-items, .shelf-grid, .anime-grid, .selector-row, .pills-group, .ep-grid, .episode-grid, .ep-nav-row, .badge-row, .genre-tags, .btn-row, .airing-tabs, .top-airing-list, .airing-schedule-grid, .header-search-wrap, .nav-links');
+  let holdTimer = null;
+  let isSwapping = false;
+  let draggedElem = null;
+  let parentContainer = null;
+  let startX = 0, startY = 0;
+  let preventNextClick = false;
 
-  containers.forEach(container => {
-    const containerId = container.id || container.className.split(' ')[0];
-    const savedOrder = localStorage.getItem('babyanime_swap_order_' + containerId);
-    if (savedOrder) {
-      try {
-        const orderArr = JSON.parse(savedOrder);
-        const childrenMap = {};
-        Array.from(container.children).forEach(child => {
-          if (child.id) childrenMap[child.id] = child;
-        });
-        orderArr.forEach(id => {
-          if (childrenMap[id]) {
-            container.appendChild(childrenMap[id]);
-          }
-        });
-      } catch (e) {}
+  // Intercept click event on document if we just completed a swap
+  document.addEventListener('click', (e) => {
+    if (preventNextClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      preventNextClick = false;
+      return false;
+    }
+  }, true);
+
+  function getSwappableItem(target) {
+    if (!target) return null;
+    const tag = target.tagName.toLowerCase();
+    if (['input', 'select', 'textarea', 'option', 'iframe'].includes(tag)) return null;
+    if (target.closest('input, select, textarea, iframe')) return null;
+
+    return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
+  }
+
+  function onPointerDown(e) {
+    if (e.type === 'mousedown' && e.button !== 0) return;
+
+    const item = getSwappableItem(e.target);
+    if (!item || !item.parentNode) return;
+
+    const container = item.parentNode;
+    if (container.children.length < 2) return;
+
+    const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+    const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+
+    startX = pageX;
+    startY = pageY;
+
+    holdTimer = setTimeout(() => {
+      isSwapping = true;
+      preventNextClick = true;
+      draggedElem = item;
+      parentContainer = container;
+
+      draggedElem.classList.add('panel-swapping-active');
+      if (navigator.vibrate) navigator.vibrate(35);
+
+      document.addEventListener('mousemove', onPointerMove, { passive: false });
+      document.addEventListener('mouseup', onPointerUp);
+      document.addEventListener('touchmove', onPointerMove, { passive: false });
+      document.addEventListener('touchend', onPointerUp);
+    }, 180);
+
+    document.addEventListener('mouseup', cancelHold);
+    document.addEventListener('touchend', cancelHold);
+    document.addEventListener('mousemove', checkEarlyCancel);
+    document.addEventListener('touchmove', checkEarlyCancel);
+  }
+
+  function checkEarlyCancel(e) {
+    if (isSwapping) return;
+    const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+    const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+    if (Math.hypot(pageX - startX, pageY - startY) > 8) {
+      cancelHold();
+    }
+  }
+
+  function cancelHold() {
+    if (holdTimer) clearTimeout(holdTimer);
+    document.removeEventListener('mouseup', cancelHold);
+    document.removeEventListener('touchend', cancelHold);
+    document.removeEventListener('mousemove', checkEarlyCancel);
+    document.removeEventListener('touchmove', checkEarlyCancel);
+  }
+
+  function onPointerMove(e) {
+    if (!isSwapping || !draggedElem || !parentContainer) return;
+    if (e.cancelable) e.preventDefault();
+
+    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+    draggedElem.style.pointerEvents = 'none';
+    const targetUnder = document.elementFromPoint(clientX, clientY);
+    draggedElem.style.pointerEvents = '';
+
+    if (!targetUnder) return;
+
+    const targetItem = targetUnder.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
+
+    if (targetItem && targetItem !== draggedElem && targetItem.parentNode === parentContainer) {
+      const children = Array.from(parentContainer.children);
+      const draggedIdx = children.indexOf(draggedElem);
+      const targetIdx = children.indexOf(targetItem);
+
+      if (draggedIdx < targetIdx) {
+        parentContainer.insertBefore(draggedElem, targetItem.nextSibling);
+      } else {
+        parentContainer.insertBefore(draggedElem, targetItem);
+      }
+    }
+  }
+
+  function onPointerUp(e) {
+    cancelHold();
+    if (!isSwapping) return;
+    isSwapping = false;
+
+    if (draggedElem) {
+      draggedElem.classList.remove('panel-swapping-active');
+      draggedElem = null;
     }
 
-    Array.from(container.children).forEach((panel, idx) => {
-      if (!panel.id) panel.id = `${containerId}_item_${idx}`;
+    document.removeEventListener('mousemove', onPointerMove);
+    document.removeEventListener('mouseup', onPointerUp);
+    document.removeEventListener('touchmove', onPointerMove);
+    document.removeEventListener('touchend', onPointerUp);
 
-      let holdTimer = null;
-      let isSwapping = false;
-      let draggedElem = null;
-      let startX = 0, startY = 0;
+    setTimeout(() => {
+      preventNextClick = false;
+    }, 100);
+  }
 
-      function onPointerDown(e) {
-        const targetTag = e.target.tagName.toLowerCase();
-        if (['input', 'select', 'textarea', 'option'].includes(targetTag)) return;
-        if (e.target.closest('input, select, textarea, iframe')) return;
-
-        if (e.type === 'mousedown' && e.button !== 0) return;
-
-        const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-        const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
-
-        startX = pageX;
-        startY = pageY;
-
-        holdTimer = setTimeout(() => {
-          isSwapping = true;
-          draggedElem = panel;
-
-          panel.classList.add('panel-swapping-active');
-          if (navigator.vibrate) navigator.vibrate(30);
-
-          document.addEventListener('mousemove', onPointerMove, { passive: false });
-          document.addEventListener('mouseup', onPointerUp);
-          document.addEventListener('touchmove', onPointerMove, { passive: false });
-          document.addEventListener('touchend', onPointerUp);
-        }, 180);
-
-        document.addEventListener('mouseup', cancelHold);
-        document.addEventListener('touchend', cancelHold);
-        document.addEventListener('mousemove', checkEarlyCancel);
-        document.addEventListener('touchmove', checkEarlyCancel);
-      }
-
-      function checkEarlyCancel(e) {
-        if (isSwapping) return;
-        const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-        const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
-        if (Math.hypot(pageX - startX, pageY - startY) > 8) {
-          cancelHold();
-        }
-      }
-
-      function cancelHold() {
-        if (holdTimer) clearTimeout(holdTimer);
-        document.removeEventListener('mouseup', cancelHold);
-        document.removeEventListener('touchend', cancelHold);
-        document.removeEventListener('mousemove', checkEarlyCancel);
-        document.removeEventListener('touchmove', checkEarlyCancel);
-      }
-
-      function onPointerMove(e) {
-        if (!isSwapping || !draggedElem) return;
-        if (e.cancelable) e.preventDefault();
-
-        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-
-        draggedElem.style.pointerEvents = 'none';
-        const targetUnder = document.elementFromPoint(clientX, clientY);
-        draggedElem.style.pointerEvents = '';
-
-        if (!targetUnder) return;
-
-        const targetPanel = targetUnder.closest(`#${container.id} > *`) || targetUnder.closest(`.${container.className.split(' ')[0]} > *`);
-
-        if (targetPanel && targetPanel !== draggedElem && targetPanel.parentNode === container) {
-          const children = Array.from(container.children);
-          const draggedIdx = children.indexOf(draggedElem);
-          const targetIdx = children.indexOf(targetPanel);
-
-          if (draggedIdx < targetIdx) {
-            container.insertBefore(draggedElem, targetPanel.nextSibling);
-          } else {
-            container.insertBefore(draggedElem, targetPanel);
-          }
-        }
-      }
-
-      function onPointerUp() {
-        cancelHold();
-        if (!isSwapping) return;
-        isSwapping = false;
-
-        if (draggedElem) {
-          draggedElem.classList.remove('panel-swapping-active');
-          draggedElem = null;
-        }
-
-        document.removeEventListener('mousemove', onPointerMove);
-        document.removeEventListener('mouseup', onPointerUp);
-        document.removeEventListener('touchmove', onPointerMove);
-        document.removeEventListener('touchend', onPointerUp);
-
-        const currentOrder = Array.from(container.children).map(c => c.id).filter(Boolean);
-        localStorage.setItem('babyanime_swap_order_' + containerId, JSON.stringify(currentOrder));
-      }
-
-      panel.addEventListener('mousedown', onPointerDown);
-      panel.addEventListener('touchstart', onPointerDown, { passive: false });
-    });
-  });
+  document.addEventListener('mousedown', onPointerDown);
+  document.addEventListener('touchstart', onPointerDown, { passive: false });
 }
