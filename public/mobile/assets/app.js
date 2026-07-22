@@ -322,7 +322,7 @@ function createAnimeCardHTML(anime) {
   `;
 }
 
-// --- UNIVERSAL DELEGATED HOLD-TO-SWAP SYSTEM ---
+// --- SEAMLESS CSS-ORDER HOLD-TO-SWAP ENGINE (NO BUFFERING / NO FLICKER) ---
 function setupHoldToSwap() {
   const oldControls = document.getElementById('layoutControlWrap');
   if (oldControls) oldControls.remove();
@@ -334,6 +334,8 @@ function setupHoldToSwap() {
   let parentContainer = null;
   let startX = 0, startY = 0;
   let preventNextClick = false;
+  let lastSwapTime = 0;
+  let lastSwappedTarget = null;
 
   // Intercept click event on document if we just completed a swap
   document.addEventListener('click', (e) => {
@@ -369,6 +371,28 @@ function setupHoldToSwap() {
 
     startX = pageX;
     startY = pageY;
+
+    // Restore saved order if exists
+    const containerId = container.id || container.className.split(' ')[0];
+    const savedMap = localStorage.getItem('babyanime_order_map_' + containerId);
+    if (savedMap) {
+      try {
+        const orderMap = JSON.parse(savedMap);
+        Array.from(container.children).forEach((child, idx) => {
+          const id = child.id || `${containerId}_item_${idx}`;
+          if (orderMap[id] !== undefined) {
+            child.style.order = orderMap[id];
+          }
+        });
+      } catch (err) {}
+    }
+
+    // Initialize CSS order for siblings if missing
+    Array.from(container.children).forEach((child, idx) => {
+      if (!child.style.order) {
+        child.style.order = idx;
+      }
+    });
 
     holdTimer = setTimeout(() => {
       isSwapping = true;
@@ -412,6 +436,9 @@ function setupHoldToSwap() {
     if (!isSwapping || !draggedElem || !parentContainer) return;
     if (e.cancelable) e.preventDefault();
 
+    const now = Date.now();
+    if (now - lastSwapTime < 220) return;
+
     const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
     const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
 
@@ -423,16 +450,15 @@ function setupHoldToSwap() {
 
     const targetItem = targetUnder.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
 
-    if (targetItem && targetItem !== draggedElem && targetItem.parentNode === parentContainer) {
-      const children = Array.from(parentContainer.children);
-      const draggedIdx = children.indexOf(draggedElem);
-      const targetIdx = children.indexOf(targetItem);
+    if (targetItem && targetItem !== draggedElem && targetItem.parentNode === parentContainer && targetItem !== lastSwappedTarget) {
+      const draggedOrder = parseInt(draggedElem.style.order || 0);
+      const targetOrder = parseInt(targetItem.style.order || 0);
 
-      if (draggedIdx < targetIdx) {
-        parentContainer.insertBefore(draggedElem, targetItem.nextSibling);
-      } else {
-        parentContainer.insertBefore(draggedElem, targetItem);
-      }
+      draggedElem.style.order = targetOrder;
+      targetItem.style.order = draggedOrder;
+
+      lastSwappedTarget = targetItem;
+      lastSwapTime = now;
     }
   }
 
@@ -446,14 +472,26 @@ function setupHoldToSwap() {
       draggedElem = null;
     }
 
+    lastSwappedTarget = null;
+
     document.removeEventListener('mousemove', onPointerMove);
     document.removeEventListener('mouseup', onPointerUp);
     document.removeEventListener('touchmove', onPointerMove);
     document.removeEventListener('touchend', onPointerUp);
 
+    if (parentContainer) {
+      const containerId = parentContainer.id || parentContainer.className.split(' ')[0];
+      const orderMap = {};
+      Array.from(parentContainer.children).forEach((c, idx) => {
+        const id = c.id || `${containerId}_item_${idx}`;
+        orderMap[id] = c.style.order;
+      });
+      localStorage.setItem('babyanime_order_map_' + containerId, JSON.stringify(orderMap));
+    }
+
     setTimeout(() => {
       preventNextClick = false;
-    }, 100);
+    }, 120);
   }
 
   document.addEventListener('mousedown', onPointerDown);
