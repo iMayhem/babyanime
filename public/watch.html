@@ -16,6 +16,7 @@
   <title>Watch Anime - babyanime</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" onerror="this.href='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>'">
   <link rel="stylesheet" href="/assets/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <link rel="preconnect" href="https://animeplay.cfd">
   <link rel="preconnect" href="https://movie-src.xyz">
   <link rel="preconnect" href="https://vidsrc.cc">
@@ -189,9 +190,10 @@
             <span>🎬 Video Player</span>
             <span style="font-size:0.75rem;opacity:0.7;">Hold / Tap to Swap</span>
           </div>
-          <!-- Video Iframe wrapper -->
+          <!-- Video Player wrapper -->
           <div class="player-wrapper">
             <iframe id="playerIframe" class="player-iframe" allowfullscreen referrerpolicy="no-referrer"></iframe>
+            <video id="playerVideo" class="player-iframe" controls style="display:none;background:#000;"></video>
           </div>
 
           <!-- Video control selectors -->
@@ -200,6 +202,7 @@
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
                 <option value="aniplay_mal" selected>AnimePlay (MAL ID)</option>
+                <option value="custom_proxy">Custom VPS Proxy (Direct HLS/MP4)</option>
                 <option value="aniplay_ani">AnimePlay (AniList ID)</option>
                 <option value="moviesrc_mal">Movie-Src (MAL ID)</option>
                 <option value="vidsrc_cc">VidSrc.cc (MAL ID)</option>
@@ -786,35 +789,66 @@
       const mal = activeAnime.idMal;
       const ani = activeAnime.id;
       
-      switch (activeServer) {
-        case 'aniplay_ani':
-          url = ani 
-            ? `https://animeplay.cfd/stream/ani/${ani}/${activeEpisode}/${activeAudio}`
-            : `https://animeplay.cfd/stream/mal/${mal}/${activeEpisode}/${activeAudio}`;
-          break;
-        case 'aniplay_mal':
-          url = mal
-            ? `https://animeplay.cfd/stream/mal/${mal}/${activeEpisode}/${activeAudio}`
-            : `https://animeplay.cfd/stream/ani/${ani}/${activeEpisode}/${activeAudio}`;
-          break;
-        case 'moviesrc_mal':
-          url = mal 
-            ? `https://movie-src.xyz/v1/embed/anime/${mal}/${activeEpisode}/${activeAudio}`
-            : `https://movie-src.xyz/v1/embed/anime/0/${activeEpisode}/${activeAudio}`;
-          break;
-        case 'vidsrc_cc':
-          url = mal
-            ? `https://vidsrc.cc/v2/embed/anime/${mal}/${activeEpisode}/${activeAudio}`
-            : `https://vidsrc.cc/v2/embed/anime/0/${activeEpisode}/${activeAudio}`;
-          break;
-        case 'vidsrc_to':
-          url = mal
-            ? `https://vidsrc.to/embed/anime/${mal}/${activeEpisode}`
-            : `https://vidsrc.to/embed/anime/0/${activeEpisode}`;
-          break;
+      const playerVideo = document.getElementById('playerVideo');
+
+      if (activeServer === 'custom_proxy') {
+        playerIframe.style.display = 'none';
+        playerVideo.style.display = 'block';
+
+        const mal = activeAnime.idMal || activeAnime.id;
+        // Cloudflare Worker Proxy Endpoint
+        const streamUrl = `https://stream-proxy.babyanime.workers.dev/api/stream?id=${mal}&ep=${activeEpisode}&sub=${activeAudio}`;
+
+        if (Hls.isSupported()) {
+          if (window.hlsInstance) window.hlsInstance.destroy();
+          const hls = new Hls();
+          hls.loadSource(streamUrl);
+          hls.attachMedia(playerVideo);
+          window.hlsInstance = hls;
+        } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
+          playerVideo.src = streamUrl;
+        } else {
+          playerVideo.src = streamUrl;
+        }
+      } else {
+        if (window.hlsInstance) {
+          window.hlsInstance.destroy();
+          window.hlsInstance = null;
+        }
+        playerVideo.pause();
+        playerVideo.style.display = 'none';
+        playerIframe.style.display = 'block';
+
+        switch (activeServer) {
+          case 'aniplay_ani':
+            url = ani 
+              ? `https://animeplay.cfd/stream/ani/${ani}/${activeEpisode}/${activeAudio}`
+              : `https://animeplay.cfd/stream/mal/${mal}/${activeEpisode}/${activeAudio}`;
+            break;
+          case 'aniplay_mal':
+            url = mal
+              ? `https://animeplay.cfd/stream/mal/${mal}/${activeEpisode}/${activeAudio}`
+              : `https://animeplay.cfd/stream/ani/${ani}/${activeEpisode}/${activeAudio}`;
+            break;
+          case 'moviesrc_mal':
+            url = mal 
+              ? `https://movie-src.xyz/v1/embed/anime/${mal}/${activeEpisode}/${activeAudio}`
+              : `https://movie-src.xyz/v1/embed/anime/0/${activeEpisode}/${activeAudio}`;
+            break;
+          case 'vidsrc_cc':
+            url = mal
+              ? `https://vidsrc.cc/v2/embed/anime/${mal}/${activeEpisode}/${activeAudio}`
+              : `https://vidsrc.cc/v2/embed/anime/0/${activeEpisode}/${activeAudio}`;
+            break;
+          case 'vidsrc_to':
+            url = mal
+              ? `https://vidsrc.to/embed/anime/${mal}/${activeEpisode}`
+              : `https://vidsrc.to/embed/anime/0/${activeEpisode}`;
+            break;
+        }
+        
+        playerIframe.src = url;
       }
-      
-      playerIframe.src = url;
       
       // Save to history on load
       addToHistory(activeAnime, activeEpisode);
