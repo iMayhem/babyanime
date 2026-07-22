@@ -576,12 +576,14 @@
 
     // Render episodes grid
     function renderEpisodes() {
-      const maxEpisodes = activeAnime.episodes || 9999;
-      const totalPages = Math.floor(maxEpisodes / EPISODES_PER_PAGE) + 1;
-      // epPage is set externally by changeEpisode or pagination buttons
+      const maxEpisodes = activeAnime.episodes || (activeAnime.nextAiringEpisode?.episode ? activeAnime.nextAiringEpisode.episode - 1 : 9999);
+      const totalPages = Math.ceil(maxEpisodes / EPISODES_PER_PAGE);
+      
+      if (epPage < 1) epPage = 1;
+      if (epPage > totalPages) epPage = totalPages;
 
-      const start = epPage === 1 ? 1 : (epPage - 1) * EPISODES_PER_PAGE;
-      const end = Math.min(start + EPISODES_PER_PAGE - 1, maxEpisodes);
+      const start = (epPage - 1) * EPISODES_PER_PAGE + 1;
+      const end = Math.min(epPage * EPISODES_PER_PAGE, maxEpisodes);
 
       const nextAiringEp = activeAnime.nextAiringEpisode?.episode;
       let html = '';
@@ -609,10 +611,18 @@
       if (prevBtn && nextBtn && pageInfo) {
         prevBtn.disabled = epPage <= 1;
         nextBtn.disabled = epPage >= totalPages;
-        pageInfo.textContent = activeAnime.episodes ? `${start}–${end} of ${activeAnime.episodes}` : `${start}–${end}`;
+        pageInfo.textContent = `${start}–${end}`;
         prevBtn.onclick = () => { epPage--; renderEpisodes(); };
         nextBtn.onclick = () => { epPage++; renderEpisodes(); };
       }
+
+      // Auto-scroll active episode into view
+      setTimeout(() => {
+        const activeBtn = episodesGrid.querySelector('.ep-btn.active');
+        if (activeBtn) {
+          activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+      }, 80);
     }
 
     // Update bookmark button look

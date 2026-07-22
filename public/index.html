@@ -1568,6 +1568,14 @@
           partyVisibleEpisodesLimit += 100;
           renderEpisodes(animeId, partyActiveRoom.episode, totalEps);
         };
+
+        // Auto-scroll active episode into view
+        setTimeout(() => {
+          const activeBtn = episodesGrid.querySelector('.ep-btn.active');
+          if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          }
+        }, 80);
       }
 
       // Format & Load player source URL

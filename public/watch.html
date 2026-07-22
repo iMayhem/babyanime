@@ -645,6 +645,14 @@
         prevBtn.onclick = () => { epPage--; renderEpisodes(); };
         nextBtn.onclick = () => { epPage++; renderEpisodes(); };
       }
+
+      // Auto-scroll active episode into view
+      setTimeout(() => {
+        const activeBtn = episodesGrid.querySelector('.ep-btn.active');
+        if (activeBtn) {
+          activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+      }, 80);
     }
 
     // Update bookmark button look
