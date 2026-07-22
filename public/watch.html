@@ -195,8 +195,8 @@
             <div class="selector-section">
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
+                <option value="aniplay_mal" selected>AnimePlay (MAL ID)</option>
                 <option value="aniplay_ani">AnimePlay (AniList ID)</option>
-                <option value="aniplay_mal">AnimePlay (MAL ID)</option>
                 <option value="moviesrc_mal">Movie-Src (MAL ID)</option>
                 <option value="vidsrc_cc">VidSrc.cc (MAL ID)</option>
                 <option value="vidsrc_to">VidSrc.to (MAL ID)</option>
@@ -331,7 +331,7 @@
   <script src="/assets/app.js"></script>
   <script>    let activeAnime = null;
     let activeEpisode = 1;
-    let activeServer = 'aniplay_ani';
+    let activeServer = 'aniplay_mal';
     let activeAudio = 'sub';
     const EPISODES_PER_PAGE = 100;
 
@@ -699,7 +699,7 @@
     function startPlayerEarly() {
       const id = anilistId || malId;
       if (!id) return;
-      const server = serverSelect ? serverSelect.value : 'aniplay_ani';
+      const server = serverSelect ? serverSelect.value : 'aniplay_mal';
       let url;
       if (server === 'aniplay_ani' || server === 'aniplay_mal') {
         const mode = anilistId ? 'ani' : 'mal';

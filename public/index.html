@@ -296,8 +296,8 @@
                 <div>
                   <label class="form-label" for="partyServerInput">Server</label>
                   <select id="partyServerInput" class="form-input" style="height: 43px;">
+                    <option value="aniplay_mal" selected>AnimePlay (MAL)</option>
                     <option value="aniplay_ani">AnimePlay (AniList)</option>
-                    <option value="aniplay_mal">AnimePlay (MAL)</option>
                     <option value="moviesrc_mal">Movie-Src (MAL)</option>
                     <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
                     <option value="vidsrc_to">VidSrc.to (MAL)</option>
@@ -343,8 +343,8 @@
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <span style="font-weight: 800; font-size: 0.85rem; color: var(--muted); text-transform: uppercase;">Streaming Server:</span>
                   <select id="partyWorkspaceServerInput" class="form-input" style="height: 36px; padding: 0.3rem 0.6rem; font-size: 0.85rem; width: auto; min-width: 180px;">
+                    <option value="aniplay_mal" selected>AnimePlay (MAL)</option>
                     <option value="aniplay_ani">AnimePlay (AniList)</option>
-                    <option value="aniplay_mal">AnimePlay (MAL)</option>
                     <option value="moviesrc_mal">Movie-Src (MAL)</option>
                     <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
                     <option value="vidsrc_to">VidSrc.to (MAL)</option>
@@ -1425,10 +1425,10 @@
         partyActiveRoom = room;
         workspaceRoomName.textContent = room.name;
         workspaceAnimeTitle.textContent = room.animeTitle;
-        workspaceServerInput.value = 'aniplay_ani'; // default
+        workspaceServerInput.value = 'aniplay_mal'; // default
 
         // Load Player
-        updatePlayer('aniplay_ani', room.animeId, room.episode);
+        updatePlayer('aniplay_mal', room.animeId, room.episode);
 
         // Render Episodes List — fetch fresh episode count for ongoing shows
         (async () => {
@@ -1606,7 +1606,7 @@
         animeTitleInput.value = '';
         animeIdInput.value = '';
         episodeInput.value = '1';
-        serverInput.value = 'aniplay_ani';
+        serverInput.value = 'aniplay_mal';
 
         lobbyScreen.style.display = 'none';
         createScreen.style.display = 'block';
