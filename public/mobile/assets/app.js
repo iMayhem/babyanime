@@ -333,7 +333,7 @@ function setupHoldToSwap() {
   let preventNextClick = false;
 
   // Restore saved CSS order for main layout containers on load
-  document.querySelectorAll('.schedule-sidebar, .watch-container, .sidebar-column, .home-layout, .rooms-grid, .shelves-container').forEach(container => {
+  document.querySelectorAll('.schedule-sidebar, .watch-container, .sidebar-column, .home-layout, .rooms-grid, .shelves-container, .toggles').forEach(container => {
     const containerId = container.id || container.className.split(' ')[0];
     const savedMap = localStorage.getItem('babyanime_order_map_' + containerId);
     if (savedMap) {
@@ -364,9 +364,9 @@ function setupHoldToSwap() {
     if (!target) return null;
     const tag = target.tagName.toLowerCase();
     if (['input', 'select', 'textarea', 'option', 'iframe'].includes(tag)) return null;
-    if (target.closest('input, select, textarea, iframe, .clr-dot, .schedule-tab-btn, .tab-btn, #themeBtn')) return null;
+    if (target.closest('input, select, textarea, iframe, .clr-dot, .schedule-tab-btn')) return null;
 
-    return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
+    return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section, .tab-btn, .tt');
   }
 
   function clearSelection() {
