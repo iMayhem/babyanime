@@ -10,7 +10,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   setupTheme();
   setupMascot();
-  setupDraggablePanels();
+  setupHoldToSwap();
 });
 
 function setupTheme() {
@@ -322,187 +322,140 @@ function createAnimeCardHTML(anime) {
   `;
 }
 
-// --- UNIVERSAL DRAGGABLE LAYOUT ENGINE ---
-function setupDraggablePanels() {
-  const panels = document.querySelectorAll('.card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel');
-  if (panels.length === 0) return;
+// --- SEAMLESS HOLD-TO-SWAP LAYOUT ENGINE ---
+function setupHoldToSwap() {
+  const oldControls = document.getElementById('layoutControlWrap');
+  if (oldControls) oldControls.remove();
 
-  const savedLayout = localStorage.getItem('babyanime_panel_positions');
-  let panelPositions = {};
-  if (savedLayout) {
-    try { panelPositions = JSON.parse(savedLayout); } catch (e) {}
-  }
+  document.querySelectorAll('.panel-drag-handle').forEach(h => h.remove());
+  document.body.classList.remove('customize-layout-active');
 
-  createLayoutControls();
+  const containers = document.querySelectorAll('.watch-container, .sidebar-column, .layout-container, .rooms-grid, .shelves-container, .selector-row');
 
-  let isCustomizeMode = localStorage.getItem('babyanime_customize_mode') === 'true';
-  updateCustomizeModeUI();
-
-  panels.forEach((panel, index) => {
-    if (!panel.id) panel.id = 'panel_' + index;
-    const panelId = panel.id;
-
-    if (panelPositions[panelId]) {
-      const pos = panelPositions[panelId];
-      if (typeof pos.left === 'number' && typeof pos.top === 'number') {
-        panel.style.position = 'relative';
-        panel.style.left = `${pos.left}px`;
-        panel.style.top = `${pos.top}px`;
-        panel.setAttribute('data-dragged', 'true');
-      }
+  containers.forEach(container => {
+    const containerId = container.id || container.className.split(' ')[0];
+    const savedOrder = localStorage.getItem('babyanime_swap_order_' + containerId);
+    if (savedOrder) {
+      try {
+        const orderArr = JSON.parse(savedOrder);
+        const childrenMap = {};
+        Array.from(container.children).forEach(child => {
+          if (child.id) childrenMap[child.id] = child;
+        });
+        orderArr.forEach(id => {
+          if (childrenMap[id]) {
+            container.appendChild(childrenMap[id]);
+          }
+        });
+      } catch (e) {}
     }
 
-    let handle = panel.querySelector('.panel-drag-handle');
-    if (!handle) {
-      handle = document.createElement('div');
-      handle.className = 'panel-drag-handle';
-      handle.innerHTML = `<span>⋮⋮ Drag Panel</span><button type="button" class="panel-reset-btn" title="Reset position">✕</button>`;
-      panel.insertBefore(handle, panel.firstChild);
-    }
+    Array.from(container.children).forEach((panel, idx) => {
+      if (!panel.id) panel.id = `${containerId}_item_${idx}`;
 
-    let isDragging = false;
-    let startX = 0, startY = 0;
-    let initialLeft = 0, initialTop = 0;
+      let holdTimer = null;
+      let isSwapping = false;
+      let draggedElem = null;
+      let startX = 0, startY = 0;
 
-    const resetBtn = handle.querySelector('.panel-reset-btn');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        panel.style.position = '';
-        panel.style.left = '';
-        panel.style.top = '';
-        panel.removeAttribute('data-dragged');
-        delete panelPositions[panelId];
-        localStorage.setItem('babyanime_panel_positions', JSON.stringify(panelPositions));
-      });
-    }
+      function onPointerDown(e) {
+        const targetTag = e.target.tagName.toLowerCase();
+        if (['input', 'select', 'button', 'a', 'textarea', 'option'].includes(targetTag)) return;
+        if (e.target.closest('input, select, button, a, iframe')) return;
 
-    function onPointerDown(e) {
-      if (!isCustomizeMode) return;
-      if (e.target.classList.contains('panel-reset-btn')) return;
-      if (e.type === 'mousedown' && e.button !== 0) return;
+        if (e.type === 'mousedown' && e.button !== 0) return;
 
-      isDragging = true;
-      const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+        const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+        const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
 
-      startX = pageX;
-      startY = pageY;
+        startX = pageX;
+        startY = pageY;
 
-      initialLeft = parseFloat(panel.style.left) || 0;
-      initialTop = parseFloat(panel.style.top) || 0;
+        holdTimer = setTimeout(() => {
+          isSwapping = true;
+          draggedElem = panel;
 
-      panel.style.position = 'relative';
-      panel.style.zIndex = '1000';
-      panel.style.transition = 'none';
+          panel.classList.add('panel-swapping-active');
+          if (navigator.vibrate) navigator.vibrate(30);
 
-      document.addEventListener('mousemove', onPointerMove, { passive: false });
-      document.addEventListener('mouseup', onPointerUp);
-      document.addEventListener('touchmove', onPointerMove, { passive: false });
-      document.addEventListener('touchend', onPointerUp);
-    }
+          document.addEventListener('mousemove', onPointerMove, { passive: false });
+          document.addEventListener('mouseup', onPointerUp);
+          document.addEventListener('touchmove', onPointerMove, { passive: false });
+          document.addEventListener('touchend', onPointerUp);
+        }, 180);
 
-    function onPointerMove(e) {
-      if (!isDragging) return;
-
-      const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
-
-      const deltaX = pageX - startX;
-      const deltaY = pageY - startY;
-
-      if (Math.hypot(deltaX, deltaY) > 3) {
-        if (e.cancelable) e.preventDefault();
+        document.addEventListener('mouseup', cancelHold);
+        document.addEventListener('touchend', cancelHold);
+        document.addEventListener('mousemove', checkEarlyCancel);
+        document.addEventListener('touchmove', checkEarlyCancel);
       }
 
-      const newLeft = initialLeft + deltaX;
-      const newTop = initialTop + deltaY;
-
-      panel.style.left = `${newLeft}px`;
-      panel.style.top = `${newTop}px`;
-      panel.setAttribute('data-dragged', 'true');
-    }
-
-    function onPointerUp() {
-      if (!isDragging) return;
-      isDragging = false;
-      panel.style.zIndex = '';
-      panel.style.transition = '';
-
-      document.removeEventListener('mousemove', onPointerMove);
-      document.removeEventListener('mouseup', onPointerUp);
-      document.removeEventListener('touchmove', onPointerMove);
-      document.removeEventListener('touchend', onPointerUp);
-
-      const finalLeft = parseFloat(panel.style.left) || 0;
-      const finalTop = parseFloat(panel.style.top) || 0;
-
-      panelPositions[panelId] = { left: finalLeft, top: finalTop };
-      localStorage.setItem('babyanime_panel_positions', JSON.stringify(panelPositions));
-    }
-
-    handle.addEventListener('mousedown', onPointerDown);
-    handle.addEventListener('touchstart', onPointerDown, { passive: false });
-  });
-
-  function createLayoutControls() {
-    let container = document.getElementById('layoutControlWrap');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'layoutControlWrap';
-      container.className = 'layout-control-bar';
-      container.innerHTML = `
-        <button type="button" id="toggleCustomizeBtn" class="layout-toggle-btn">
-          <span class="icon">🔓</span> <span class="text">Rearrange Layout</span>
-        </button>
-        <button type="button" id="resetAllLayoutBtn" class="layout-reset-all-btn" style="display:none;">
-          🔄 Reset Layout
-        </button>
-      `;
-      document.body.appendChild(container);
-
-      const toggleBtn = container.querySelector('#toggleCustomizeBtn');
-      const resetAllBtn = container.querySelector('#resetAllLayoutBtn');
-
-      toggleBtn.addEventListener('click', () => {
-        isCustomizeMode = !isCustomizeMode;
-        localStorage.setItem('babyanime_customize_mode', isCustomizeMode ? 'true' : 'false');
-        updateCustomizeModeUI();
-      });
-
-      resetAllBtn.addEventListener('click', () => {
-        if (confirm('Reset all panel positions to default layout?')) {
-          localStorage.removeItem('babyanime_panel_positions');
-          panels.forEach(p => {
-            p.style.position = '';
-            p.style.left = '';
-            p.style.top = '';
-            p.removeAttribute('data-dragged');
-          });
-          resetAllBtn.style.display = 'none';
+      function checkEarlyCancel(e) {
+        if (isSwapping) return;
+        const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+        const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+        if (Math.hypot(pageX - startX, pageY - startY) > 8) {
+          cancelHold();
         }
-      });
-    }
-  }
-
-  function updateCustomizeModeUI() {
-    const toggleBtn = document.querySelector('#toggleCustomizeBtn');
-    const resetAllBtn = document.querySelector('#resetAllLayoutBtn');
-
-    if (isCustomizeMode) {
-      document.body.classList.add('customize-layout-active');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = `<span class="icon">🔒</span> <span class="text">Lock Layout</span>`;
-        toggleBtn.classList.add('active');
       }
-      if (resetAllBtn) resetAllBtn.style.display = 'inline-flex';
-    } else {
-      document.body.classList.remove('customize-layout-active');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = `<span class="icon">🔓</span> <span class="text">Rearrange Layout</span>`;
-        toggleBtn.classList.remove('active');
+
+      function cancelHold() {
+        if (holdTimer) clearTimeout(holdTimer);
+        document.removeEventListener('mouseup', cancelHold);
+        document.removeEventListener('touchend', cancelHold);
+        document.removeEventListener('mousemove', checkEarlyCancel);
+        document.removeEventListener('touchmove', checkEarlyCancel);
       }
-      if (resetAllBtn) resetAllBtn.style.display = 'none';
-    }
-  }
+
+      function onPointerMove(e) {
+        if (!isSwapping || !draggedElem) return;
+        if (e.cancelable) e.preventDefault();
+
+        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+        draggedElem.style.pointerEvents = 'none';
+        const targetUnder = document.elementFromPoint(clientX, clientY);
+        draggedElem.style.pointerEvents = '';
+
+        if (!targetUnder) return;
+
+        const targetPanel = targetUnder.closest(`#${container.id} > *`) || targetUnder.closest(`.${container.className.split(' ')[0]} > *`);
+
+        if (targetPanel && targetPanel !== draggedElem && targetPanel.parentNode === container) {
+          const children = Array.from(container.children);
+          const draggedIdx = children.indexOf(draggedElem);
+          const targetIdx = children.indexOf(targetPanel);
+
+          if (draggedIdx < targetIdx) {
+            container.insertBefore(draggedElem, targetPanel.nextSibling);
+          } else {
+            container.insertBefore(draggedElem, targetPanel);
+          }
+        }
+      }
+
+      function onPointerUp() {
+        cancelHold();
+        if (!isSwapping) return;
+        isSwapping = false;
+
+        if (draggedElem) {
+          draggedElem.classList.remove('panel-swapping-active');
+          draggedElem = null;
+        }
+
+        document.removeEventListener('mousemove', onPointerMove);
+        document.removeEventListener('mouseup', onPointerUp);
+        document.removeEventListener('touchmove', onPointerMove);
+        document.removeEventListener('touchend', onPointerUp);
+
+        const currentOrder = Array.from(container.children).map(c => c.id).filter(Boolean);
+        localStorage.setItem('babyanime_swap_order_' + containerId, JSON.stringify(currentOrder));
+      }
+
+      panel.addEventListener('mousedown', onPointerDown);
+      panel.addEventListener('touchstart', onPointerDown, { passive: false });
+    });
+  });
 }

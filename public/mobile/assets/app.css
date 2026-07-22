@@ -1887,82 +1887,13 @@ header {
   display: flex !important;
 }
 
-/* Layout Rearrange & Drag Handles */
-.layout-control-bar {
-  position: fixed;
-  left: 20px;
-  bottom: 20px;
-  z-index: 10000;
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.layout-toggle-btn, .layout-reset-all-btn {
-  background: var(--card, #ffffff);
-  border: 2.5px solid var(--ink, #18181b);
-  box-shadow: 4px 4px 0 var(--shadow, #18181b);
-  border-radius: 20px;
-  padding: 0.45rem 0.9rem;
-  font-family: var(--font-body, 'Nunito', sans-serif);
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--ink, #18181b);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  user-select: none;
-  transition: transform 0.15s ease, background 0.15s ease;
-}
-
-.layout-toggle-btn.active {
-  background: var(--accent, #e83a60);
-  color: #ffffff;
-}
-
-.layout-toggle-btn:hover, .layout-reset-all-btn:hover {
-  transform: translateY(-2px);
-}
-
-.panel-drag-handle {
-  display: none;
-  background: var(--tint, rgba(232,58,96,0.1));
-  border-bottom: 2px dashed var(--ink, #18181b);
-  padding: 0.35rem 0.6rem;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--ink, #18181b);
-  cursor: grab;
-  user-select: none;
-  border-radius: 12px 12px 0 0;
-  margin: -12px -12px 8px -12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.panel-drag-handle:active {
-  cursor: grabbing;
-}
-
-.panel-reset-btn {
-  background: transparent;
-  border: none;
-  font-weight: 900;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: var(--muted);
-  padding: 0 4px;
-}
-
-.panel-reset-btn:hover {
-  color: var(--accent);
-}
-
-body.customize-layout-active .panel-drag-handle {
-  display: flex !important;
-}
-
-body.customize-layout-active [data-dragged="true"] {
-  outline: 2px dashed var(--accent, #e83a60);
+/* Hold-to-Swap Panel Elevation */
+.panel-swapping-active {
+  transform: scale(1.025) !important;
+  box-shadow: 0 12px 24px var(--shadow, rgba(0,0,0,0.25)) !important;
+  outline: 2.5px dashed var(--accent, #e83a60) !important;
+  z-index: 1000 !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+  cursor: grabbing !important;
+  user-select: none !important;
 }
