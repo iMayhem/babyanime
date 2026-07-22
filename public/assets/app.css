@@ -2280,3 +2280,37 @@ footer {
   cursor: grabbing !important;
   user-select: none !important;
 }
+
+/* Global Lock on Text Selection & Image Dragging */
+body, 
+.card, 
+.anime-card, 
+.shelf-item, 
+.ep-btn, 
+.pill-opt, 
+.genre-tag, 
+.room-card, 
+.airing-card, 
+.details-box, 
+.episodes-panel, 
+.player-column, 
+.sidebar-column, 
+.airing-sidebar, 
+.header-search-wrap, 
+.nav-links,
+img {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+
+/* Allow text selection strictly inside input & textarea controls */
+input, 
+textarea {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
