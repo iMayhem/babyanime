@@ -325,7 +325,7 @@ function createAnimeCardHTML(anime) {
   `;
 }
 
-// --- SEAMLESS CSS-ORDER HOLD-TO-SWAP ENGINE (NO BUFFERING / NO FLICKER) ---
+// --- SEAMLESS CSS-ORDER HOLD-TO-SWAP ENGINE (STABLE & FLICKER-FREE) ---
 function setupHoldToSwap() {
   const oldControls = document.getElementById('layoutControlWrap');
   if (oldControls) oldControls.remove();
@@ -339,6 +339,23 @@ function setupHoldToSwap() {
   let preventNextClick = false;
   let lastSwapTime = 0;
   let lastSwappedTarget = null;
+
+  // Restore saved CSS order for main layout containers on load
+  document.querySelectorAll('.schedule-sidebar, .watch-container, .sidebar-column, .home-layout, .rooms-grid, .shelves-container').forEach(container => {
+    const containerId = container.id || container.className.split(' ')[0];
+    const savedMap = localStorage.getItem('babyanime_order_map_' + containerId);
+    if (savedMap) {
+      try {
+        const orderMap = JSON.parse(savedMap);
+        Array.from(container.children).forEach((child, idx) => {
+          const id = child.id || `${containerId}_item_${idx}`;
+          if (orderMap[id] !== undefined) {
+            child.style.order = orderMap[id];
+          }
+        });
+      } catch (err) {}
+    }
+  });
 
   // Intercept click event on document if we just completed a swap
   document.addEventListener('click', (e) => {
@@ -355,7 +372,7 @@ function setupHoldToSwap() {
     if (!target) return null;
     const tag = target.tagName.toLowerCase();
     if (['input', 'select', 'textarea', 'option', 'iframe'].includes(tag)) return null;
-    if (target.closest('input, select, textarea, iframe')) return null;
+    if (target.closest('input, select, textarea, iframe, .clr-dot, .schedule-tab-btn, .tab-btn, #themeBtn')) return null;
 
     return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
   }
@@ -440,7 +457,7 @@ function setupHoldToSwap() {
     if (e.cancelable) e.preventDefault();
 
     const now = Date.now();
-    if (now - lastSwapTime < 220) return;
+    if (now - lastSwapTime < 280) return;
 
     const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
     const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
@@ -454,14 +471,22 @@ function setupHoldToSwap() {
     const targetItem = targetUnder.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
 
     if (targetItem && targetItem !== draggedElem && targetItem.parentNode === parentContainer && targetItem !== lastSwappedTarget) {
+      const rect = targetItem.getBoundingClientRect();
+      const isVertical = parentContainer.offsetHeight > parentContainer.offsetWidth;
+      const midPoint = isVertical ? rect.top + rect.height / 2 : rect.left + rect.width / 2;
+      const currentPos = isVertical ? clientY : clientX;
+
       const draggedOrder = parseInt(draggedElem.style.order || 0);
       const targetOrder = parseInt(targetItem.style.order || 0);
 
-      draggedElem.style.order = targetOrder;
-      targetItem.style.order = draggedOrder;
+      // Only swap when cursor crosses the midpoint of the target item
+      if ((draggedOrder < targetOrder && currentPos > midPoint) || (draggedOrder > targetOrder && currentPos < midPoint)) {
+        draggedElem.style.order = targetOrder;
+        targetItem.style.order = draggedOrder;
 
-      lastSwappedTarget = targetItem;
-      lastSwapTime = now;
+        lastSwappedTarget = targetItem;
+        lastSwapTime = now;
+      }
     }
   }
 
