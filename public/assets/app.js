@@ -325,20 +325,15 @@ function createAnimeCardHTML(anime) {
   `;
 }
 
-// --- SEAMLESS CSS-ORDER HOLD-TO-SWAP ENGINE (STABLE & FLICKER-FREE) ---
+// --- TAP-TO-SELECT & TAP-TO-SWAP LAYOUT ENGINE ---
 function setupHoldToSwap() {
   const oldControls = document.getElementById('layoutControlWrap');
   if (oldControls) oldControls.remove();
   document.querySelectorAll('.panel-drag-handle').forEach(h => h.remove());
 
+  let selectedElem = null;
   let holdTimer = null;
-  let isSwapping = false;
-  let draggedElem = null;
-  let parentContainer = null;
-  let startX = 0, startY = 0;
   let preventNextClick = false;
-  let lastSwapTime = 0;
-  let lastSwappedTarget = null;
 
   // Restore saved CSS order for main layout containers on load
   document.querySelectorAll('.schedule-sidebar, .watch-container, .sidebar-column, .home-layout, .rooms-grid, .shelves-container').forEach(container => {
@@ -357,7 +352,7 @@ function setupHoldToSwap() {
     }
   });
 
-  // Intercept click event on document if we just completed a swap
+  // Intercept click event on document if a swap tap just completed
   document.addEventListener('click', (e) => {
     if (preventNextClick) {
       e.preventDefault();
@@ -377,35 +372,24 @@ function setupHoldToSwap() {
     return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
   }
 
+  function clearSelection() {
+    if (selectedElem) {
+      selectedElem.classList.remove('panel-selected-active');
+      selectedElem = null;
+    }
+  }
+
   function onPointerDown(e) {
     if (e.type === 'mousedown' && e.button !== 0) return;
 
     const item = getSwappableItem(e.target);
-    if (!item || !item.parentNode) return;
+    if (!item || !item.parentNode) {
+      clearSelection();
+      return;
+    }
 
     const container = item.parentNode;
     if (container.children.length < 2) return;
-
-    const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-    const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
-
-    startX = pageX;
-    startY = pageY;
-
-    // Restore saved order if exists
-    const containerId = container.id || container.className.split(' ')[0];
-    const savedMap = localStorage.getItem('babyanime_order_map_' + containerId);
-    if (savedMap) {
-      try {
-        const orderMap = JSON.parse(savedMap);
-        Array.from(container.children).forEach((child, idx) => {
-          const id = child.id || `${containerId}_item_${idx}`;
-          if (orderMap[id] !== undefined) {
-            child.style.order = orderMap[id];
-          }
-        });
-      } catch (err) {}
-    }
 
     // Initialize CSS order for siblings if missing
     Array.from(container.children).forEach((child, idx) => {
@@ -414,112 +398,58 @@ function setupHoldToSwap() {
       }
     });
 
-    holdTimer = setTimeout(() => {
-      isSwapping = true;
-      preventNextClick = true;
-      draggedElem = item;
-      parentContainer = container;
+    // If an item is already selected
+    if (selectedElem) {
+      if (selectedElem === item) {
+        // Tapped same item -> Deselect
+        clearSelection();
+        preventNextClick = true;
+        return;
+      }
 
-      draggedElem.classList.add('panel-swapping-active');
-      if (navigator.vibrate) navigator.vibrate(35);
+      if (selectedElem.parentNode === container) {
+        // Tapped another item in same container -> SWAP INSTANTLY!
+        const orderA = parseInt(selectedElem.style.order || 0);
+        const orderB = parseInt(item.style.order || 0);
 
-      document.addEventListener('mousemove', onPointerMove, { passive: false });
-      document.addEventListener('mouseup', onPointerUp);
-      document.addEventListener('touchmove', onPointerMove, { passive: false });
-      document.addEventListener('touchend', onPointerUp);
-    }, 180);
+        selectedElem.style.order = orderB;
+        item.style.order = orderA;
 
-    document.addEventListener('mouseup', cancelHold);
-    document.addEventListener('touchend', cancelHold);
-    document.addEventListener('mousemove', checkEarlyCancel);
-    document.addEventListener('touchmove', checkEarlyCancel);
-  }
+        // Save layout order map
+        const containerId = container.id || container.className.split(' ')[0];
+        const orderMap = {};
+        Array.from(container.children).forEach((c, idx) => {
+          const id = c.id || `${containerId}_item_${idx}`;
+          orderMap[id] = c.style.order;
+        });
+        localStorage.setItem('babyanime_order_map_' + containerId, JSON.stringify(orderMap));
 
-  function checkEarlyCancel(e) {
-    if (isSwapping) return;
-    const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-    const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
-    if (Math.hypot(pageX - startX, pageY - startY) > 8) {
-      cancelHold();
-    }
-  }
-
-  function cancelHold() {
-    if (holdTimer) clearTimeout(holdTimer);
-    document.removeEventListener('mouseup', cancelHold);
-    document.removeEventListener('touchend', cancelHold);
-    document.removeEventListener('mousemove', checkEarlyCancel);
-    document.removeEventListener('touchmove', checkEarlyCancel);
-  }
-
-  function onPointerMove(e) {
-    if (!isSwapping || !draggedElem || !parentContainer) return;
-    if (e.cancelable) e.preventDefault();
-
-    const now = Date.now();
-    if (now - lastSwapTime < 280) return;
-
-    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-
-    draggedElem.style.pointerEvents = 'none';
-    const targetUnder = document.elementFromPoint(clientX, clientY);
-    draggedElem.style.pointerEvents = '';
-
-    if (!targetUnder) return;
-
-    const targetItem = targetUnder.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section');
-
-    if (targetItem && targetItem !== draggedElem && targetItem.parentNode === parentContainer && targetItem !== lastSwappedTarget) {
-      const rect = targetItem.getBoundingClientRect();
-      const isVertical = parentContainer.offsetHeight > parentContainer.offsetWidth;
-      const midPoint = isVertical ? rect.top + rect.height / 2 : rect.left + rect.width / 2;
-      const currentPos = isVertical ? clientY : clientX;
-
-      const draggedOrder = parseInt(draggedElem.style.order || 0);
-      const targetOrder = parseInt(targetItem.style.order || 0);
-
-      // Only swap when cursor crosses the midpoint of the target item
-      if ((draggedOrder < targetOrder && currentPos > midPoint) || (draggedOrder > targetOrder && currentPos < midPoint)) {
-        draggedElem.style.order = targetOrder;
-        targetItem.style.order = draggedOrder;
-
-        lastSwappedTarget = targetItem;
-        lastSwapTime = now;
+        clearSelection();
+        preventNextClick = true;
+        if (navigator.vibrate) navigator.vibrate(40);
+        return;
+      } else {
+        // Tapped item in different container -> Switch selection
+        clearSelection();
       }
     }
-  }
 
-  function onPointerUp(e) {
-    cancelHold();
-    if (!isSwapping) return;
-    isSwapping = false;
+    // Press & hold (160ms) to select
+    holdTimer = setTimeout(() => {
+      selectedElem = item;
+      selectedElem.classList.add('panel-selected-active');
+      if (navigator.vibrate) navigator.vibrate(30);
+      preventNextClick = true;
+    }, 160);
 
-    if (draggedElem) {
-      draggedElem.classList.remove('panel-swapping-active');
-      draggedElem = null;
+    function cancelHoldTimer() {
+      if (holdTimer) clearTimeout(holdTimer);
+      document.removeEventListener('mouseup', cancelHoldTimer);
+      document.removeEventListener('touchend', cancelHoldTimer);
     }
 
-    lastSwappedTarget = null;
-
-    document.removeEventListener('mousemove', onPointerMove);
-    document.removeEventListener('mouseup', onPointerUp);
-    document.removeEventListener('touchmove', onPointerMove);
-    document.removeEventListener('touchend', onPointerUp);
-
-    if (parentContainer) {
-      const containerId = parentContainer.id || parentContainer.className.split(' ')[0];
-      const orderMap = {};
-      Array.from(parentContainer.children).forEach((c, idx) => {
-        const id = c.id || `${containerId}_item_${idx}`;
-        orderMap[id] = c.style.order;
-      });
-      localStorage.setItem('babyanime_order_map_' + containerId, JSON.stringify(orderMap));
-    }
-
-    setTimeout(() => {
-      preventNextClick = false;
-    }, 120);
+    document.addEventListener('mouseup', cancelHoldTimer);
+    document.addEventListener('touchend', cancelHoldTimer);
   }
 
   document.addEventListener('mousedown', onPointerDown);
