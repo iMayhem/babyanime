@@ -24,7 +24,20 @@
       <div class="brand-container">
         <a href="/" class="logo-text">baby<span>anime</span></a>
       </div>
+
+      <!-- Header Search Bar -->
+      <div class="search-bar-container header-search-wrap">
+        <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search anime titles...">
+      </div>
+
       <div class="toggles">
+        <button type="button" class="tt tab-btn active" id="tabHome" style="font-weight:800;">Home</button>
+        <button type="button" class="tt tab-btn" id="tabBrowse" style="font-weight:800;">Browse</button>
+        <button type="button" class="tt tab-btn" id="tabParty" style="font-weight:800;">Party</button>
         <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -35,35 +48,93 @@
     </header>
 
     <main>
-      <!-- Hero Section -->
-      <section class="hero" style="margin-bottom: 1.5rem;">
-        <h1>watch anime.</h1>
-        <svg class="squig" viewBox="0 0 160 13" fill="none" aria-hidden="true">
-          <path d="M3 8.5 C 16 2.5, 28 12, 42 7.5 S 68 2.5, 82 8.5 S 108 12.5, 122 6.5 S 148 4, 157 8.5" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
-        </svg>
-        <p>No ads, no tracking. Stream your favorite anime by simply providing an AniList or MAL ID.</p>
-      </section>
-
-      <!-- Category Navigation Tabs -->
-      <nav class="tab-row">
-        <button type="button" class="tab-btn active" id="tabHome">Home</button>
-        <button type="button" class="tab-btn" id="tabBrowse">Browse Catalog</button>
-      </nav>
 
       <!-- HOME VIEW -->
       <div id="homeView">
-        <!-- Search Section -->
-        <section class="search-section">
-          <div class="search-bar-container">
-            <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="searchInput" class="search-input" placeholder="Search anime titles...">
-          </div>
-        </section>
 
-        <!-- Dynamic Search Results Section (Hidden by default) -->
+        <div class="home-layout">
+          <!-- Left Column: Airing Schedule & Upcoming -->
+          <aside class="schedule-sidebar">
+            <!-- Color Theme Picker -->
+            <div class="card" style="margin-bottom:1rem;padding:0.6rem 0.8rem;">
+              <div style="font-size:0.75rem;font-weight:800;color:var(--muted);margin-bottom:0.4rem;">Theme</div>
+              <div style="display:flex;gap:0.5rem;">
+                <button class="clr-dot" data-clr="pink" style="background:#e25c5c;" title="Pink"></button>
+                <button class="clr-dot" data-clr="green" style="background:#2e9e5e;" title="Green"></button>
+                <button class="clr-dot" data-clr="blue" style="background:#4a8fe0;" title="Blue"></button>
+                <button class="clr-dot" data-clr="purple" style="background:#9b6fcf;" title="Purple"></button>
+                <button class="clr-dot" data-clr="orange" style="background:#e8823a;" title="Orange"></button>
+              </div>
+            </div>
+            <!-- Airing Schedule Card -->
+            <div class="card schedule-card" style="margin-bottom: 1.5rem;">
+              <div class="schedule-header">
+                <div class="schedule-title-row">
+                  <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <h2 class="schedule-title">Airing Schedule</h2>
+                </div>
+                <div class="schedule-date" id="scheduleDateLabel">Loading...</div>
+              </div>
+
+              <!-- Day Selector Tabs -->
+              <div class="schedule-tabs" id="scheduleTabs">
+                <button type="button" class="schedule-tab-btn" data-day-idx="0">Mon</button>
+                <button type="button" class="schedule-tab-btn" data-day-idx="1">Tue</button>
+                <button type="button" class="schedule-tab-btn" data-day-idx="2">Wed</button>
+                <button type="button" class="schedule-tab-btn" data-day-idx="3">Thu</button>
+                <button type="button" class="schedule-tab-btn" data-day-idx="4">Fri</button>
+                <button type="button" class="schedule-tab-btn" data-day-idx="5">Sat</button>
+                <button type="button" class="schedule-tab-btn" data-day-idx="6">Sun</button>
+              </div>
+
+              <div class="schedule-list" id="scheduleList">
+                <div class="loading-container"><div class="spinner"></div></div>
+              </div>
+            </div>
+
+            <!-- Top Airing Card -->
+            <div class="card schedule-card" style="margin-bottom: 1.5rem;">
+              <div class="schedule-header">
+                <div class="schedule-title-row">
+                  <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                  <h2 class="schedule-title">Top Airing</h2>
+                </div>
+                <div class="schedule-date">Popular Releasing Shows</div>
+              </div>
+              <div class="schedule-list" id="topAiringSidebarList">
+                <div class="loading-container"><div class="spinner"></div></div>
+              </div>
+            </div>
+
+            <!-- Upcoming Shows Card -->
+            <div class="card schedule-card">
+              <div class="schedule-header">
+                <div class="schedule-title-row">
+                  <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                  <h2 class="schedule-title">Upcoming Shows</h2>
+                </div>
+                <div class="schedule-date">Next Season & Beyond</div>
+              </div>
+              <div class="schedule-list" id="upcomingSidebarList">
+                <div class="loading-container"><div class="spinner"></div></div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Right Column: Main Content -->
+          <div class="home-main-content">
+            <!-- Dynamic Search Results Section (Hidden by default) -->
         <section id="searchResultsSection" style="display: none;">
           <div class="section-title">
             <h2>Search Results</h2>
@@ -129,7 +200,9 @@
             <div class="loading-container"><div class="spinner"></div></div>
           </div>
         </section>
-      </div>
+          </div> <!-- .home-main-content -->
+        </div> <!-- .home-layout -->
+      </div> <!-- #homeView -->
 
       <!-- BROWSE CATALOG VIEW -->
       <div id="browseView" style="display: none;">
@@ -177,6 +250,163 @@
             <button type="button" class="btn-primary" id="loadMoreBtn" style="max-width: 220px; margin: 0 auto; font-size: 0.95rem; padding: 0.6rem 1.2rem;">Load More</button>
           </div>
         </section>
+      </div>
+
+      <!-- WATCH TOGETHER NATIVE VIEW -->
+      <div id="partyView" style="display: none; margin-bottom: 3rem;">
+        
+        <!-- LOBBY SCREEN -->
+        <div id="partyLobbyScreen">
+          <div class="party-lobby-header">
+            <div class="party-lobby-title">
+              <h2>Watch Together</h2>
+              <p>Host watch parties and chat with friends in real time.</p>
+            </div>
+            <button type="button" class="btn-primary" id="lobbyCreateRoomBtn">+ Create Party Room</button>
+          </div>
+          
+          <div class="rooms-grid" id="lobbyRoomsGrid">
+            <!-- Room cards dynamically populated here -->
+          </div>
+        </div>
+
+        <!-- CREATE ROOM SCREEN -->
+        <div id="partyCreateScreen" style="display: none;">
+          <div class="card party-form-card">
+            <div class="party-lobby-header" style="margin-bottom: 1.5rem;">
+              <div class="party-lobby-title">
+                <h2>Create Watch Room</h2>
+                <p>Set up a room to invite friends to watch together.</p>
+              </div>
+            </div>
+            <form id="partyCreateForm">
+              <div class="form-group">
+                <label class="form-label" for="partyRoomNameInput">Room Name</label>
+                <input type="text" id="partyRoomNameInput" class="form-input" placeholder="My Watch Lounge" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="partyAnimeTitleInput">Anime Title</label>
+                <input type="text" id="partyAnimeTitleInput" class="form-input" placeholder="e.g. Renegade Immortal" required>
+              </div>
+              <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label class="form-label" for="partyEpisodeInput">Episode</label>
+                  <input type="number" id="partyEpisodeInput" class="form-input" min="1" value="1" required>
+                </div>
+                <div>
+                  <label class="form-label" for="partyServerInput">Server</label>
+                  <select id="partyServerInput" class="form-input" style="height: 43px;">
+                    <option value="aniplay_ani">AnimePlay (AniList)</option>
+                    <option value="aniplay_mal">AnimePlay (MAL)</option>
+                    <option value="moviesrc_mal">Movie-Src (MAL)</option>
+                    <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
+                    <option value="vidsrc_to">VidSrc.to (MAL)</option>
+                  </select>
+                </div>
+              </div>
+              <input type="hidden" id="partyAnimeIdInput">
+              <div class="form-actions">
+                <button type="button" class="tt" id="partyCreateCancelBtn" style="padding: 0.6rem 1.2rem;">Cancel</button>
+                <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem;">Launch Room</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- WORKSPACE SCREEN (ROOM ACTIVE) -->
+        <div id="partyWorkspaceScreen" style="display: none;">
+          <div class="party-workspace">
+            <div class="party-workspace-header">
+              <div class="party-workspace-title">
+                <h3 id="workspaceRoomName">Late Night Room</h3>
+                <p>Watching: <span id="workspaceAnimeTitle" style="color: var(--accent); font-weight: 800;">Renegade Immortal</span></p>
+              </div>
+              <div class="party-workspace-actions">
+                <button type="button" class="tt" id="workspaceInviteBtn" style="padding: 0.5rem 0.9rem; font-size: 0.85rem;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right: 2px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Copy Invite
+                </button>
+                <button type="button" class="tt" id="workspaceLeaveBtn" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; background: var(--bg-hover); border-color: var(--ink);">
+                  Leave Party
+                </button>
+              </div>
+            </div>
+
+            <!-- Left: Video Player column -->
+            <div class="party-player-col">
+              <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border: 2px solid var(--ink); border-radius: 16px; overflow: hidden; box-shadow: 5px 5px 0 var(--shadow);">
+                <iframe id="partyPlayerIframe" style="position: absolute; top:0; left:0; width:100%; height:100%; border:none;" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>
+              </div>
+              
+              <!-- Stream settings below player -->
+              <div class="card" style="padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-weight: 800; font-size: 0.85rem; color: var(--muted); text-transform: uppercase;">Streaming Server:</span>
+                  <select id="partyWorkspaceServerInput" class="form-input" style="height: 36px; padding: 0.3rem 0.6rem; font-size: 0.85rem; width: auto; min-width: 180px;">
+                    <option value="aniplay_ani">AnimePlay (AniList)</option>
+                    <option value="aniplay_mal">AnimePlay (MAL)</option>
+                    <option value="moviesrc_mal">Movie-Src (MAL)</option>
+                    <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
+                    <option value="vidsrc_to">VidSrc.to (MAL)</option>
+                  </select>
+                </div>
+                <div style="font-weight: 800; font-size: 0.85rem; color: var(--teal);">
+                  🟢 3 users online
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Chat & Episodes sidebar -->
+            <div class="party-sidebar-col">
+              
+              <!-- Tabbed panel for Chat / Episodes -->
+              <div class="card" style="padding: 1rem;">
+                <div style="display: flex; border-bottom: 2px dashed var(--line); padding-bottom: 0.6rem; margin-bottom: 0.8rem; gap: 0.5rem;">
+                  <button type="button" class="tab-btn active" id="partySidebarTabChat" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px;">Chat</button>
+                  <button type="button" class="tab-btn" id="partySidebarTabEpisodes" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px;">Episodes</button>
+                </div>
+
+                <!-- Chat Panel -->
+                <div id="partySidebarChatContent" class="party-chat-panel">
+                  <div class="party-chat-messages" id="partyChatMessages">
+                    <!-- Chat bubbles populated dynamically -->
+                  </div>
+                  <form id="partyChatInputForm" class="party-chat-input-area">
+                    <input type="text" id="partyChatInput" class="party-chat-input" placeholder="Type a message..." required>
+                    <button type="submit" class="party-chat-send-btn">Send</button>
+                  </form>
+                </div>
+
+                <!-- Episodes Panel -->
+                <div id="partySidebarEpisodesContent" style="display: none; max-height: 400px; overflow-y: auto; padding: 0.5rem;">
+                  <!-- Episode Jump Input Row -->
+                  <div style="display: flex; gap: 0.4rem; margin-bottom: 0.8rem; align-items: center;">
+                    <input type="number" id="partyWorkspaceEpJumpInput" class="form-input" placeholder="Jump to Ep" style="height: 34px; padding: 0.3rem 0.6rem; font-size: 0.85rem; flex-grow: 1;" min="1">
+                    <button type="button" class="party-chat-send-btn" id="partyWorkspaceEpJumpBtn" style="padding: 0.3rem 0.6rem; height: 34px; line-height: 20px;">Go</button>
+                  </div>
+                  <div class="episode-grid" id="partyWorkspaceEpisodesGrid">
+                    <!-- Episode list buttons populated dynamically -->
+                  </div>
+                  <!-- Load More Button -->
+                  <div id="partyEpisodesLoadMoreWrap" style="text-align: center; margin-top: 1rem; display: none;">
+                    <button type="button" class="tt" id="partyEpisodesLoadMoreBtn" style="padding: 0.4rem 1rem; font-size: 0.8rem; font-weight: 800; border-color: var(--ink);">
+                      Load Next 100
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- General toast notifier -->
+      <div class="party-toast" id="partyToast">
+        <span>Invite link copied to clipboard!</span>
       </div>
 
     </main>
@@ -257,24 +487,39 @@
     // Views
     const homeView = document.getElementById('homeView');
     const browseView = document.getElementById('browseView');
+    const partyView = document.getElementById('partyView');
     
     // Tab buttons
     const tabHome = document.getElementById('tabHome');
     const tabBrowse = document.getElementById('tabBrowse');
+    const tabParty = document.getElementById('tabParty');
 
     tabHome.addEventListener('click', () => {
       tabHome.classList.add('active');
       tabBrowse.classList.remove('active');
+      tabParty.classList.remove('active');
       homeView.style.display = 'block';
       browseView.style.display = 'none';
+      partyView.style.display = 'none';
     });
 
     tabBrowse.addEventListener('click', () => {
       tabBrowse.classList.add('active');
       tabHome.classList.remove('active');
+      tabParty.classList.remove('active');
       homeView.style.display = 'none';
       browseView.style.display = 'block';
+      partyView.style.display = 'none';
       loadBrowseResults(false);
+    });
+
+    tabParty.addEventListener('click', () => {
+      tabParty.classList.add('active');
+      tabHome.classList.remove('active');
+      tabBrowse.classList.remove('active');
+      homeView.style.display = 'none';
+      browseView.style.display = 'none';
+      partyView.style.display = 'block';
     });
 
     // Load Watch History & Bookmarks on home load
@@ -283,7 +528,72 @@
       renderWatchlist();
       loadHomeShelves();
       setupBrowseFilters();
+      setupAiringSchedule();
+      loadTopAiringSidebar();
+      loadUpcomingSidebar();
+      setupColorPicker();
+
+      // Check for search parameter in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('search');
+      if (searchQuery) {
+        searchInput.value = searchQuery;
+        performSearch(searchQuery);
+      }
+
+      // Initialize Watch Together logic
+      setupWatchTogether();
+
+      // Check if we should switch to the party tab on load
+      const tabParam = urlParams.get('tab');
+      const roomParam = urlParams.get('room');
+      if (tabParam === 'party' || roomParam) {
+        tabParty.click();
+        
+        if (roomParam) {
+          // Allow DOM and state to boot before joining
+          setTimeout(() => {
+            joinRoom(roomParam);
+          }, 100);
+        } else {
+          const mediaParam = urlParams.get('media');
+          const titleParam = urlParams.get('title');
+          
+          if (mediaParam && titleParam) {
+            // Trigger prefill and open creation screen
+            document.getElementById('lobbyCreateRoomBtn').click();
+            document.getElementById('partyRoomNameInput').value = `${titleParam} Watching Lobby`;
+            document.getElementById('partyAnimeTitleInput').value = titleParam;
+            
+            let rawId = mediaParam;
+            let activeEp = 1;
+            if (mediaParam.includes('_ep')) {
+              const parts = mediaParam.split('_ep');
+              rawId = parts[0];
+              activeEp = parseInt(parts[1]) || 1;
+            }
+            document.getElementById('partyAnimeIdInput').value = rawId;
+            document.getElementById('partyEpisodeInput').value = activeEp;
+          }
+        }
+      }
     });
+
+    function setupColorPicker() {
+      const dots = document.querySelectorAll('.clr-dot');
+      const root = document.documentElement;
+      const saved = localStorage.getItem('clr');
+      dots.forEach(btn => {
+        const clr = btn.getAttribute('data-clr');
+        if (clr === saved) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          dots.forEach(d => d.classList.remove('active'));
+          btn.classList.add('active');
+          root.setAttribute('data-clr', clr);
+          localStorage.setItem('clr', clr);
+        });
+      });
+    }
 
     function renderHistory() {
       const history = getWatchHistory();
@@ -374,6 +684,9 @@
               }
               format
               episodes
+              nextAiringEpisode {
+                episode
+              }
               averageScore
               popularity
               status
@@ -524,6 +837,9 @@
               }
               format
               episodes
+              nextAiringEpisode {
+                episode
+              }
               averageScore
               popularity
               status
@@ -608,6 +924,11 @@
         return;
       }
       
+      // Auto-switch to home tab if search is active
+      if (homeView.style.display === 'none') {
+        tabHome.click();
+      }
+      
       searchTimeout = setTimeout(() => {
         performSearch(queryText);
       }, 500);
@@ -634,6 +955,9 @@
               }
               format
               episodes
+              nextAiringEpisode {
+                episode
+              }
               averageScore
               popularity
               status
@@ -664,6 +988,875 @@
       searchInput.value = '';
       searchResultsSection.style.display = 'none';
     });
+
+    // Airing Schedule Logic
+    async function setupAiringSchedule() {
+      const scheduleTabs = document.getElementById('scheduleTabs');
+      if (!scheduleTabs) return;
+
+      const tabButtons = scheduleTabs.querySelectorAll('.schedule-tab-btn');
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+      // Map JS day index to our tab index (0 = Mon, ..., 6 = Sun)
+      const currentDayIdx = currentDay === 0 ? 6 : currentDay - 1;
+
+      // Highlight current day tab
+      tabButtons.forEach((btn, idx) => {
+        if (idx === currentDayIdx) {
+          btn.classList.add('active');
+        }
+        btn.addEventListener('click', () => {
+          tabButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          loadDaySchedule(idx);
+        });
+      });
+
+      // Load today's schedule initially
+      loadDaySchedule(currentDayIdx);
+    }
+
+    async function loadDaySchedule(dayIdx) {
+      const listContainer = document.getElementById('scheduleList');
+      const dateLabel = document.getElementById('scheduleDateLabel');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+
+      // Calculate Unix timestamp range for the selected day of the current week
+      const now = new Date();
+      const currentDay = now.getDay();
+      const dayOffset = currentDay === 0 ? 6 : currentDay - 1;
+      
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - dayOffset + dayIdx);
+      targetDate.setHours(0, 0, 0, 0);
+
+      const startTimestamp = Math.floor(targetDate.getTime() / 1000);
+      const endTimestamp = startTimestamp + (24 * 60 * 60);
+
+      // Update date label in sidebar
+      const options = { weekday: 'long', month: 'short', day: 'numeric' };
+      dateLabel.textContent = targetDate.toLocaleDateString([], options);
+
+      const query = `
+        query ($page: Int, $perPage: Int, $airingAt_greater: Int, $airingAt_lesser: Int) {
+          Page(page: $page, perPage: $perPage) {
+            airingSchedules(airingAt_greater: $airingAt_greater, airingAt_lesser: $airingAt_lesser, sort: TIME) {
+              id
+              episode
+              airingAt
+              media {
+                id
+                idMal
+                title {
+                  romaji
+                  english
+                  native
+                  userPreferred
+                }
+                coverImage {
+                  large
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        page: 1,
+        perPage: 40,
+        airingAt_greater: startTimestamp,
+        airingAt_lesser: endTimestamp
+      };
+
+      try {
+        const data = await queryAniList(query, variables);
+        if (data && data.Page && data.Page.airingSchedules && data.Page.airingSchedules.length > 0) {
+          // Filter out items without media or cover images
+          const schedules = data.Page.airingSchedules.filter(item => item.media && item.media.coverImage && item.media.coverImage.large);
+          
+          if (schedules.length > 0) {
+            listContainer.innerHTML = schedules.map(item => {
+              const anime = item.media;
+              const titleText = anime.title.english || anime.title.romaji || anime.title.userPreferred || 'Unknown Anime';
+              const coverImg = anime.coverImage.large;
+              
+              // Watch URL
+              const watchUrl = `/watch.html?id=${anime.id}`;
+              
+              // Format airing time
+              const dateObj = new Date(item.airingAt * 1000);
+              const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+              
+              // Countdown status
+              const nowSec = Math.floor(Date.now() / 1000);
+              const diff = item.airingAt - nowSec;
+              let countdownText = '';
+              let countdownClass = '';
+              
+              if (diff > 0) {
+                const hours = Math.floor(diff / 3600);
+                const minutes = Math.floor((diff % 3600) / 60);
+                if (hours > 0) {
+                  countdownText = `in ${hours}h ${minutes}m`;
+                } else {
+                  countdownText = `in ${minutes}m`;
+                }
+                countdownClass = 'upcoming';
+              } else {
+                countdownText = 'Aired';
+                countdownClass = 'aired';
+              }
+              
+              return `
+                <div class="schedule-item" onclick="window.location.href='${watchUrl}'">
+                  <img class="schedule-thumb" src="${coverImg}" alt="${titleText}" loading="lazy">
+                  <div class="schedule-details">
+                    <h3 class="schedule-item-title" title="${titleText}">${titleText}</h3>
+                    <div class="schedule-item-meta">
+                      <span class="schedule-ep">Ep ${item.episode}</span>
+                      <span class="schedule-time-badge">${timeString}</span>
+                    </div>
+                    <div class="schedule-countdown ${countdownClass}">${countdownText}</div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          } else {
+            listContainer.innerHTML = '<div class="schedule-empty">No airing shows scheduled for this day.</div>';
+          }
+        } else {
+          listContainer.innerHTML = '<div class="schedule-empty">No airing shows scheduled for this day.</div>';
+        }
+      } catch (err) {
+        console.error('Error loading schedule:', err);
+        listContainer.innerHTML = '<div class="schedule-empty">Failed to load schedule.</div>';
+      }
+    }
+
+    async function loadTopAiringSidebar() {
+      const listContainer = document.getElementById('topAiringSidebarList');
+      if (!listContainer) return;
+
+      const query = `
+        query {
+          Page(page: 1, perPage: 15) {
+            media(status: RELEASING, type: ANIME, sort: POPULARITY_DESC, isAdult: false) {
+              id
+              idMal
+              title {
+                romaji
+                english
+                native
+                userPreferred
+              }
+              coverImage {
+                large
+              }
+              averageScore
+              episodes
+              nextAiringEpisode {
+                episode
+              }
+            }
+          }
+        }
+      `;
+
+      try {
+        const data = await queryAniList(query, {});
+        if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
+          const processed = cleanAndSortMediaList(data.Page.media, true); // preserveOrder = true
+          
+          if (processed.length > 0) {
+            listContainer.innerHTML = processed.slice(0, 10).map(anime => {
+              const titleText = anime.title.english || anime.title.romaji || anime.title.userPreferred || 'Unknown Anime';
+              const coverImg = anime.coverImage.large;
+              
+              // Watch URL
+              const watchUrl = `/watch.html?id=${anime.id}`;
+              
+              // Score formatting
+              const scoreText = anime.averageScore ? `★ ${(anime.averageScore / 10).toFixed(1)}` : '★ -. -';
+              
+              return `
+                <div class="schedule-item" onclick="window.location.href='${watchUrl}'">
+                  <img class="schedule-thumb" src="${coverImg}" alt="${titleText}" loading="lazy">
+                  <div class="schedule-details">
+                    <h3 class="schedule-item-title" title="${titleText}">${titleText}</h3>
+                    <div class="schedule-item-meta">
+                      <span class="schedule-ep" style="color: var(--accent); font-weight: 800;">${scoreText}</span>
+                      <span class="schedule-time-badge">Airing</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          } else {
+            listContainer.innerHTML = '<div class="schedule-empty">No airing shows found.</div>';
+          }
+        } else {
+          listContainer.innerHTML = '<div class="schedule-empty">No airing shows found.</div>';
+        }
+      } catch (err) {
+        console.error('Error loading top airing sidebar:', err);
+        listContainer.innerHTML = '<div class="schedule-empty">Failed to load top airing shows.</div>';
+      }
+    }
+
+    async function loadUpcomingSidebar() {
+      const listContainer = document.getElementById('upcomingSidebarList');
+      if (!listContainer) return;
+
+      const query = `
+        query {
+          Page(page: 1, perPage: 15) {
+            media(status: NOT_YET_RELEASED, type: ANIME, sort: POPULARITY_DESC, isAdult: false) {
+              id
+              idMal
+              title {
+                romaji
+                english
+                native
+                userPreferred
+              }
+              coverImage {
+                large
+              }
+              season
+              seasonYear
+              startDate {
+                year
+                month
+                day
+              }
+            }
+          }
+        }
+      `;
+
+      try {
+        const data = await queryAniList(query, {});
+        if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
+          const processed = cleanAndSortMediaList(data.Page.media, true); // preserveOrder = true
+          
+          if (processed.length > 0) {
+            listContainer.innerHTML = processed.slice(0, 10).map(anime => {
+              const titleText = anime.title.english || anime.title.romaji || anime.title.userPreferred || 'Unknown Anime';
+              const coverImg = anime.coverImage.large;
+              
+              // Watch URL
+              const watchUrl = `/watch.html?id=${anime.id}`;
+              
+              // Format release date or season
+              let releaseText = '';
+              if (anime.startDate && anime.startDate.year) {
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const monthStr = anime.startDate.month ? `${monthNames[anime.startDate.month - 1]} ` : '';
+                const dayStr = anime.startDate.day ? `${anime.startDate.day}, ` : '';
+                releaseText = `${monthStr}${dayStr}${anime.startDate.year}`;
+              } else if (anime.season && anime.seasonYear) {
+                releaseText = `${anime.season} ${anime.seasonYear}`;
+              } else {
+                releaseText = 'TBA';
+              }
+              
+              return `
+                <div class="schedule-item" onclick="window.location.href='${watchUrl}'">
+                  <img class="schedule-thumb" src="${coverImg}" alt="${titleText}" loading="lazy">
+                  <div class="schedule-details">
+                    <h3 class="schedule-item-title" title="${titleText}">${titleText}</h3>
+                    <div class="schedule-item-meta">
+                      <span class="schedule-ep" style="color: var(--teal);">${releaseText}</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          } else {
+            listContainer.innerHTML = '<div class="schedule-empty">No upcoming shows found.</div>';
+          }
+        } else {
+          listContainer.innerHTML = '<div class="schedule-empty">No upcoming shows found.</div>';
+        }
+      } catch (err) {
+        console.error('Error loading upcoming sidebar:', err);
+        listContainer.innerHTML = '<div class="schedule-empty">Failed to load upcoming shows.</div>';
+      }
+    }
+
+    // Watch Together Native State & Logic
+    let partyRooms = [];
+    let partyActiveRoom = null;
+    let partyChatInterval = null;
+
+    const dummyChatUsers = ['Hina', 'Goku_99', 'Luffy_Pirate', 'Sasuke_Uchiha', 'Miku_Vocal', 'Naruto_Dattebayo', 'vocaloid_fan', 'isekai_enjoyer'];
+    const dummyReplies = [
+      "Whoa, this episode is insane!",
+      "I love the soundtrack of this show.",
+      "The animation quality is so good here.",
+      "Wait, what just happened?",
+      "Did he really just say that? 😂",
+      "This part always gives me chills.",
+      "Anyone here watching this for the first time?",
+      "Sub over Dub any day!",
+      "Let's gooo!",
+      "This anime is a masterpiece honestly."
+    ];
+
+    function setupWatchTogether() {
+      // Elements
+      const lobbyScreen = document.getElementById('partyLobbyScreen');
+      const createScreen = document.getElementById('partyCreateScreen');
+      const workspaceScreen = document.getElementById('partyWorkspaceScreen');
+      
+      const lobbyCreateBtn = document.getElementById('lobbyCreateRoomBtn');
+      const createCancelBtn = document.getElementById('partyCreateCancelBtn');
+      const createForm = document.getElementById('partyCreateForm');
+      
+      const roomNameInput = document.getElementById('partyRoomNameInput');
+      const animeTitleInput = document.getElementById('partyAnimeTitleInput');
+      const animeIdInput = document.getElementById('partyAnimeIdInput');
+      const episodeInput = document.getElementById('partyEpisodeInput');
+      const serverInput = document.getElementById('partyServerInput');
+      
+      const workspaceRoomName = document.getElementById('workspaceRoomName');
+      const workspaceAnimeTitle = document.getElementById('workspaceAnimeTitle');
+      const workspaceInviteBtn = document.getElementById('workspaceInviteBtn');
+      const workspaceLeaveBtn = document.getElementById('workspaceLeaveBtn');
+      const workspaceServerInput = document.getElementById('partyWorkspaceServerInput');
+      const playerIframe = document.getElementById('partyPlayerIframe');
+      
+      const sidebarTabChat = document.getElementById('partySidebarTabChat');
+      const sidebarTabEpisodes = document.getElementById('partySidebarTabEpisodes');
+      const chatContent = document.getElementById('partySidebarChatContent');
+      const episodesContent = document.getElementById('partySidebarEpisodesContent');
+      
+      const chatMessages = document.getElementById('partyChatMessages');
+      const chatInputForm = document.getElementById('partyChatInputForm');
+      const chatInput = document.getElementById('partyChatInput');
+      const episodesGrid = document.getElementById('partyWorkspaceEpisodesGrid');
+      
+      const toast = document.getElementById('partyToast');
+
+      // Initialize default rooms in localStorage if not exists
+      const savedRooms = localStorage.getItem('babyanime_party_rooms_v2');
+      if (savedRooms) {
+        partyRooms = JSON.parse(savedRooms);
+      } else {
+        partyRooms = [
+          {
+            id: 'lounge-1',
+            name: 'Frieren Beyond Journey Lounge',
+            animeTitle: 'Frieren: Beyond Journey\'s End',
+            animeId: '154587',
+            episode: 1,
+            host: 'elf_elder',
+            watching: 6,
+            episodesCount: 28,
+            image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154587-n2755ZtpeS2y.jpg'
+          },
+          {
+            id: 'lounge-2',
+            name: 'Demon Slayer Corps Basecamp',
+            animeTitle: 'Demon Slayer: Kimetsu no Yaiba',
+            animeId: '101922',
+            episode: 1,
+            host: 'tanjiro_water',
+            watching: 4,
+            episodesCount: 26,
+            image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-W3vhgZ68JZ0f.jpg'
+          },
+          {
+            id: 'lounge-3',
+            name: 'Shingeki no Kyojin Screening',
+            animeTitle: 'Attack on Titan',
+            animeId: '16498',
+            episode: 1,
+            host: 'eren_yeager',
+            watching: 8,
+            episodesCount: 25,
+            image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-738517.jpg'
+          }
+        ];
+        localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
+      }
+
+      // Render Lobby
+      function renderLobby() {
+        const grid = document.getElementById('lobbyRoomsGrid');
+        grid.innerHTML = partyRooms.map(room => `
+          <div class="card room-card">
+            <div class="room-card-head">
+              <img class="room-card-thumb" src="${room.image || 'https://placehold.co/120x160?text=Anime'}" alt="${room.animeTitle}">
+              <div class="room-card-details">
+                <h4 class="room-card-name" title="${room.name}">${room.name}</h4>
+                <p class="room-card-anime" title="${room.animeTitle}">${room.animeTitle} - Ep ${room.episode}</p>
+                <div class="room-card-meta">
+                  <span class="room-card-host">Host: <strong>${room.host}</strong></span>
+                  <span class="room-card-watching">${room.watching} watching</span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn-primary join-room-btn" data-id="${room.id}" style="font-size:0.85rem; padding:0.45rem 0.8rem; margin-top:0.4rem;">Join Room</button>
+          </div>
+        `).join('');
+
+        // Bind Join Buttons
+        grid.querySelectorAll('.join-room-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            joinRoom(id);
+          });
+        });
+      }
+
+      // Join Room
+      window.joinRoom = function(roomId) {
+        const room = partyRooms.find(r => r.id === roomId);
+        if (!room) {
+          alert('Party room not found!');
+          return;
+        }
+
+        partyVisibleEpisodesLimit = 100;
+        partyActiveRoom = room;
+        workspaceRoomName.textContent = room.name;
+        workspaceAnimeTitle.textContent = room.animeTitle;
+        workspaceServerInput.value = 'aniplay_ani'; // default
+
+        // Load Player
+        updatePlayer('aniplay_ani', room.animeId, room.episode);
+
+        // Render Episodes List — fetch fresh episode count for ongoing shows
+        (async () => {
+          let epCount = room.episodesCount;
+          if (!epCount || epCount < room.episode) {
+            try {
+              const q = `query($id:Int){Media(id:$id){episodes nextAiringEpisode{episode}}}`;
+              const d = await queryAniList(q, { id: parseInt(room.animeId) || 0 });
+              if (d && d.Media) {
+                epCount = d.Media.episodes || (d.Media.nextAiringEpisode ? d.Media.nextAiringEpisode.episode - 1 : null);
+              }
+            } catch (_) {}
+            epCount = epCount || 9999;
+            room.episodesCount = epCount;
+            const rooms = JSON.parse(localStorage.getItem('babyanime_party_rooms_v2') || '[]');
+            const idx = rooms.findIndex(r => r.id === roomId);
+            if (idx !== -1) { rooms[idx].episodesCount = epCount; localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(rooms)); }
+          }
+          renderEpisodes(room.animeId, room.episode, epCount);
+        })();
+
+        // Populate initial chats
+        chatMessages.innerHTML = `
+          <div class="chat-message">
+            <span class="chat-message-user host-user">🤖 System</span>
+            <span class="chat-message-text" style="color: var(--muted); font-style: italic;">Welcome to "${room.name}"! Share the invite URL to watch together.</span>
+          </div>
+          <div class="chat-message">
+            <span class="chat-message-user host-user">👑 ${room.host}</span>
+            <span class="chat-message-text">Welcome in everyone! Grab some snacks 🍿</span>
+          </div>
+          <div class="chat-message">
+            <span class="chat-message-user">Hina</span>
+            <span class="chat-message-text">Yay! Glad to watch this ep together.</span>
+          </div>
+        `;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Switch screens
+        lobbyScreen.style.display = 'none';
+        createScreen.style.display = 'none';
+        workspaceScreen.style.display = 'block';
+
+        // Update URL
+        const newUrl = `/?tab=party&room=${room.id}`;
+        window.history.pushState({}, '', newUrl);
+
+        // Start chat simulation
+        if (partyChatInterval) clearInterval(partyChatInterval);
+        partyChatInterval = setInterval(() => {
+          if (!partyActiveRoom) return;
+          const user = dummyChatUsers[Math.floor(Math.random() * dummyChatUsers.length)];
+          const text = dummyReplies[Math.floor(Math.random() * dummyReplies.length)];
+          appendMessage(user, text);
+        }, 15000); // Send simulated message every 15 seconds
+      };
+
+      // Append Chat Message
+      function appendMessage(user, text, isSystem = false) {
+        const msg = document.createElement('div');
+        msg.className = 'chat-message';
+        if (isSystem) {
+          msg.innerHTML = `
+            <span class="chat-message-user host-user">🤖 System</span>
+            <span class="chat-message-text" style="color: var(--muted); font-style: italic;">${text}</span>
+          `;
+        } else {
+          const isHost = partyActiveRoom && user === partyActiveRoom.host;
+          msg.innerHTML = `
+            <span class="chat-message-user ${isHost ? 'host-user' : ''}">${isHost ? '👑 ' : ''}${user}</span>
+            <span class="chat-message-text">${text}</span>
+          `;
+        }
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Render Episode Buttons with Load More pagination
+      let partyVisibleEpisodesLimit = 100;
+
+      function renderEpisodes(animeId, activeEp, totalEps) {
+        const loadMoreWrap = document.getElementById('partyEpisodesLoadMoreWrap');
+        const loadMoreBtn = document.getElementById('partyEpisodesLoadMoreBtn');
+        const jumpInput = document.getElementById('partyWorkspaceEpJumpInput');
+        
+        jumpInput.value = activeEp;
+
+        if (!totalEps || totalEps < activeEp) {
+          totalEps = Math.max(activeEp, 9999);
+        }
+
+        // Ensure the active episode is within the visible limit initially
+        if (activeEp > partyVisibleEpisodesLimit) {
+          // Round up to the nearest hundred that contains activeEp
+          partyVisibleEpisodesLimit = Math.ceil(activeEp / 100) * 100;
+        }
+
+        // Make sure limit doesn't exceed totalEps
+        const maxToShow = Math.min(partyVisibleEpisodesLimit, totalEps);
+
+        // Hide/Show Load More button
+        if (partyVisibleEpisodesLimit < totalEps) {
+          loadMoreWrap.style.display = 'block';
+        } else {
+          loadMoreWrap.style.display = 'none';
+        }
+
+        // Render episode buttons
+        episodesGrid.innerHTML = '';
+        for (let i = 1; i <= maxToShow; i++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `ep-btn ${i === partyActiveRoom.episode ? 'active' : ''}`;
+          btn.textContent = i;
+          btn.addEventListener('click', () => {
+            partyActiveRoom.episode = i;
+            const matched = partyRooms.find(r => r.id === partyActiveRoom.id);
+            if (matched) matched.episode = i;
+            localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
+
+            // Reload player
+            updatePlayer(workspaceServerInput.value, animeId, i);
+            
+            // Highlight active button
+            episodesGrid.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            jumpInput.value = i;
+
+            // Chat log
+            appendMessage('System', `Room updated to Episode ${i}`, true);
+          });
+          episodesGrid.appendChild(btn);
+        }
+
+        // Bind Load More action
+        loadMoreBtn.onclick = () => {
+          partyVisibleEpisodesLimit += 100;
+          renderEpisodes(animeId, partyActiveRoom.episode, totalEps);
+        };
+      }
+
+      // Format & Load player source URL
+      function updatePlayer(serverId, animeId, episode) {
+        let url = '';
+        switch(serverId) {
+          case 'aniplay_ani':
+            url = `https://animeplay.cfd/stream/ani/${animeId}/${episode}/sub`;
+            break;
+          case 'aniplay_mal':
+            url = `https://animeplay.cfd/stream/mal/${animeId}/${episode}/sub`;
+            break;
+          case 'moviesrc_mal':
+            url = `https://movie-src.xyz/v1/embed/anime/${animeId}/${episode}/sub`;
+            break;
+          case 'vidsrc_cc':
+            url = `https://vidsrc.cc/v2/embed/anime/${animeId}/${episode}/sub`;
+            break;
+          case 'vidsrc_to':
+            url = `https://vidsrc.to/embed/anime/${animeId}/${episode}`;
+            break;
+        }
+        playerIframe.src = url;
+      }
+
+      // Create Form Cancel click
+      createCancelBtn.addEventListener('click', () => {
+        createScreen.style.display = 'none';
+        lobbyScreen.style.display = 'block';
+      });
+
+      // Lobby Create Room click
+      lobbyCreateBtn.addEventListener('click', () => {
+        // Clear inputs
+        roomNameInput.value = '';
+        animeTitleInput.value = '';
+        animeIdInput.value = '';
+        episodeInput.value = '1';
+        serverInput.value = 'aniplay_ani';
+
+        lobbyScreen.style.display = 'none';
+        createScreen.style.display = 'block';
+      });
+
+      // Workspace Leave Party
+      workspaceLeaveBtn.addEventListener('click', () => {
+        if (partyChatInterval) clearInterval(partyChatInterval);
+        partyActiveRoom = null;
+        playerIframe.src = '';
+        
+        workspaceScreen.style.display = 'none';
+        lobbyScreen.style.display = 'block';
+
+        // Update URL back to default party tab
+        window.history.pushState({}, '', '/?tab=party');
+        renderLobby();
+      });
+
+      // Jump Episode Button click
+      const epJumpBtn = document.getElementById('partyWorkspaceEpJumpBtn');
+      const epJumpInput = document.getElementById('partyWorkspaceEpJumpInput');
+      
+      epJumpBtn.addEventListener('click', () => {
+        if (!partyActiveRoom) return;
+        const targetEp = parseInt(epJumpInput.value);
+        if (isNaN(targetEp) || targetEp < 1 || targetEp > (partyActiveRoom.episodesCount || 10000)) {
+          alert('Invalid episode number!');
+          return;
+        }
+
+        // Update active episode
+        partyActiveRoom.episode = targetEp;
+        const matched = partyRooms.find(r => r.id === partyActiveRoom.id);
+        if (matched) matched.episode = targetEp;
+        localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
+
+        // Reload player
+        updatePlayer(workspaceServerInput.value, partyActiveRoom.animeId, targetEp);
+
+        // Re-render episodes grid (which automatically switches the select range if needed!)
+        renderEpisodes(partyActiveRoom.animeId, targetEp, partyActiveRoom.episodesCount || 12);
+
+        // System log
+        appendMessage('System', `Room updated to Episode ${targetEp}`, true);
+      });
+
+      // Workspace Copy Invite link
+      workspaceInviteBtn.addEventListener('click', () => {
+        if (!partyActiveRoom) return;
+        const inviteUrl = `${window.location.origin}/?room=${partyActiveRoom.id}`;
+        navigator.clipboard.writeText(inviteUrl).then(() => {
+          toast.classList.add('active');
+          setTimeout(() => {
+            toast.classList.remove('active');
+          }, 2000);
+        });
+      });
+
+      // Chat input submit
+      chatInputForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if (!text) return;
+        appendMessage('You', text);
+        chatInput.value = '';
+
+        // Simulate helper response after 1.5s
+        setTimeout(() => {
+          if (!partyActiveRoom) return;
+          const user = dummyChatUsers[Math.floor(Math.random() * dummyChatUsers.length)];
+          const textOptions = [
+            "Nice!",
+            "Agreed",
+            "Exactly what I was thinking!",
+            "Wait, really? 😮",
+            "Ahaha yes!",
+            "Same",
+            "Wait, let me watch that part again"
+          ];
+          const response = textOptions[Math.floor(Math.random() * textOptions.length)];
+          appendMessage(user, response);
+        }, 1500);
+      });
+
+      // Sidebar Tab Switching
+      sidebarTabChat.addEventListener('click', () => {
+        sidebarTabChat.classList.add('active');
+        sidebarTabEpisodes.classList.remove('active');
+        chatContent.style.display = 'flex';
+        episodesContent.style.display = 'none';
+      });
+
+      sidebarTabEpisodes.addEventListener('click', () => {
+        sidebarTabEpisodes.classList.add('active');
+        sidebarTabChat.classList.remove('active');
+        chatContent.style.display = 'none';
+        episodesContent.style.display = 'block';
+      });
+
+      // Workspace Server Switch
+      workspaceServerInput.addEventListener('change', () => {
+        if (!partyActiveRoom) return;
+        updatePlayer(workspaceServerInput.value, partyActiveRoom.animeId, partyActiveRoom.episode);
+        appendMessage('System', `Server provider switched to: ${workspaceServerInput.options[workspaceServerInput.selectedIndex].text}`, true);
+      });
+
+      // Create Form Submit
+      createForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const rName = roomNameInput.value.trim() || 'Cozy Lounge';
+        const aTitle = animeTitleInput.value.trim();
+        const rEp = parseInt(episodeInput.value) || 1;
+        const rServer = serverInput.value;
+        let aId = animeIdInput.value;
+        let epCount = 12;
+        let imgUrl = 'https://placehold.co/120x160?text=Anime';
+
+        // Show spinner / loading state
+        const submitBtn = createForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Searching AniList...';
+
+        try {
+          if (!aId) {
+            // Search AniList for input title
+            const aniQuery = `
+              query ($search: String) {
+                Page(page: 1, perPage: 1) {
+                  media(search: $search, type: ANIME) {
+                    id
+                    title {
+                      english
+                      romaji
+                      userPreferred
+                    }
+                    coverImage {
+                      large
+                    }
+                    episodes
+                    nextAiringEpisode {
+                      episode
+                    }
+                  }
+                }
+              }
+            `;
+            const data = await queryAniList(aniQuery, { search: aTitle });
+            if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
+              const matched = data.Page.media[0];
+              aId = matched.id;
+              epCount = matched.episodes || (matched.nextAiringEpisode ? matched.nextAiringEpisode.episode - 1 : 9999);
+              imgUrl = matched.coverImage.large;
+            } else {
+              // fallback dummy
+              aId = 'mock-' + Math.floor(Math.random() * 100000);
+            }
+          } else {
+            // we already had ID from watch.html, let's fetch matching epCount and cover image
+            const aniQuery = `
+              query ($id: Int) {
+                Media(id: $id) {
+                  coverImage {
+                    large
+                  }
+                  episodes
+                  nextAiringEpisode {
+                    episode
+                  }
+                }
+              }
+            `;
+            const numericId = parseInt(aId);
+            if (!isNaN(numericId)) {
+              const data = await queryAniList(aniQuery, { id: numericId });
+              if (data && data.Media) {
+                epCount = data.Media.episodes || (data.Media.nextAiringEpisode ? data.Media.nextAiringEpisode.episode - 1 : 9999);
+                imgUrl = data.Media.coverImage.large;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Error querying AniList for created room:', err);
+          aId = aId || 'mock-' + Math.floor(Math.random() * 100000);
+        }
+
+        const newRoomId = 'room-' + Date.now();
+        const newRoomObj = {
+          id: newRoomId,
+          name: rName,
+          animeTitle: aTitle,
+          animeId: aId,
+          episode: rEp,
+          host: 'You',
+          watching: 1,
+          episodesCount: epCount,
+          image: imgUrl
+        };
+
+        // Add to array, save in localStorage
+        partyRooms.unshift(newRoomObj);
+        localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
+
+        // Join created room
+        joinRoom(newRoomId);
+
+        // Restore submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Launch Room';
+      });
+
+      // Dynamically fetch fresh cover image URLs to prevent CDN 404s
+      async function fetchFreshMockCovers() {
+        try {
+          const ids = partyRooms.map(r => parseInt(r.animeId)).filter(id => !isNaN(id));
+          if (ids.length === 0) return;
+
+          const query = `
+            query ($ids: [Int]) {
+              Page(page: 1, perPage: 10) {
+                media(id_in: $ids, type: ANIME) {
+                  id
+                  coverImage {
+                    large
+                  }
+                }
+              }
+            }
+          `;
+          const data = await queryAniList(query, { ids });
+          if (data && data.Page && data.Page.media) {
+            data.Page.media.forEach(item => {
+              const matchedRoom = partyRooms.find(r => parseInt(r.animeId) === item.id);
+              if (matchedRoom) {
+                matchedRoom.image = item.coverImage.large;
+              }
+            });
+            localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
+            renderLobby();
+          }
+        } catch (err) {
+          console.warn('Failed to fetch fresh mock cover images:', err);
+        }
+      }
+
+      // Initial Render
+      renderLobby();
+      fetchFreshMockCovers();
+    }
   </script>
 </body>
 </html>

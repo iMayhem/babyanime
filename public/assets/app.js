@@ -5,6 +5,8 @@
   const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const currentTheme = savedTheme || (systemDark ? 'dark' : 'light');
   root.setAttribute('data-theme', currentTheme);
+  const savedClr = localStorage.getItem('clr');
+  if (savedClr) root.setAttribute('data-clr', savedClr);
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -208,7 +210,8 @@ function createAnimeCardHTML(anime) {
   const formatText = anime.format || anime.type || '';
   const typeBadge = formatText ? `<div class="type-badge">${formatText}</div>` : '';
   const yearText = anime.seasonYear || (anime.aired && anime.aired.prop && anime.aired.prop.from && anime.aired.prop.from.year) || '';
-  const epsText = anime.episodes ? `${anime.episodes} Ep` : '';
+  const epsCount = anime.episodes || (anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : null);
+  const epsText = epsCount ? `${epsCount} Ep` : '';
   const metaText = [yearText, epsText].filter(Boolean).join(' · ');
 
   return `

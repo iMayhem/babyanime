@@ -15,6 +15,8 @@
         <a href="index.html" class="logo-text">baby<span>anime</span></a>
       </div>
       <div class="toggles">
+        <button type="button" class="tt tab-btn active" id="tabHome" style="font-weight:800;">Home</button>
+        <button type="button" class="tt tab-btn" id="tabBrowse" style="font-weight:800;">Browse</button>
         <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -25,20 +27,6 @@
     </header>
 
     <main>
-      <!-- Hero Section -->
-      <section class="hero" style="margin-bottom: 1.5rem;">
-        <h1>watch anime.</h1>
-        <svg class="squig" viewBox="0 0 160 13" fill="none" aria-hidden="true">
-          <path d="M3 8.5 C 16 2.5, 28 12, 42 7.5 S 68 2.5, 82 8.5 S 108 12.5, 122 6.5 S 148 4, 157 8.5" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
-        </svg>
-        <p>No ads, no tracking. Stream your favorite anime by simply providing an AniList or MAL ID.</p>
-      </section>
-
-      <!-- Category Navigation Tabs -->
-      <nav class="tab-row">
-        <button type="button" class="tab-btn active" id="tabHome">Home</button>
-        <button type="button" class="tab-btn" id="tabBrowse">Browse Catalog</button>
-      </nav>
 
       <!-- HOME VIEW -->
       <div id="homeView">
@@ -52,6 +40,16 @@
             <input type="text" id="searchInput" class="search-input" placeholder="Search anime titles...">
           </div>
         </section>
+
+        <!-- Color Theme Picker -->
+        <div style="display:flex;gap:0.5rem;padding:0 0 0.6rem;align-items:center;">
+          <span style="font-size:0.7rem;font-weight:800;color:var(--muted);">Theme</span>
+          <button class="clr-dot" data-clr="pink" style="background:#e25c5c;" title="Pink"></button>
+          <button class="clr-dot" data-clr="green" style="background:#2e9e5e;" title="Green"></button>
+          <button class="clr-dot" data-clr="blue" style="background:#4a8fe0;" title="Blue"></button>
+          <button class="clr-dot" data-clr="purple" style="background:#9b6fcf;" title="Purple"></button>
+          <button class="clr-dot" data-clr="orange" style="background:#e8823a;" title="Orange"></button>
+        </div>
 
         <!-- Dynamic Search Results Section (Hidden by default) -->
         <section id="searchResultsSection" style="display: none;">
@@ -273,7 +271,24 @@
       renderWatchlist();
       loadHomeShelves();
       setupBrowseFilters();
+      setupColorPicker();
     });
+
+    function setupColorPicker() {
+      const dots = document.querySelectorAll('.clr-dot');
+      const root = document.documentElement;
+      const saved = localStorage.getItem('clr');
+      dots.forEach(btn => {
+        const clr = btn.getAttribute('data-clr');
+        if (clr === saved) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          dots.forEach(d => d.classList.remove('active'));
+          btn.classList.add('active');
+          root.setAttribute('data-clr', clr);
+          localStorage.setItem('clr', clr);
+        });
+      });
+    }
 
     function renderHistory() {
       const history = getWatchHistory();
@@ -364,6 +379,9 @@
               }
               format
               episodes
+              nextAiringEpisode {
+                episode
+              }
               averageScore
               popularity
               status
@@ -514,6 +532,9 @@
               }
               format
               episodes
+              nextAiringEpisode {
+                episode
+              }
               averageScore
               popularity
               status
@@ -624,6 +645,9 @@
               }
               format
               episodes
+              nextAiringEpisode {
+                episode
+              }
               averageScore
               popularity
               status

@@ -16,6 +16,14 @@
   <title>Watch Anime - babyanime</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" onerror="this.href='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>'">
   <link rel="stylesheet" href="/assets/app.css">
+  <link rel="preconnect" href="https://animeplay.cfd">
+  <link rel="preconnect" href="https://movie-src.xyz">
+  <link rel="preconnect" href="https://vidsrc.cc">
+  <link rel="preconnect" href="https://vidsrc.to">
+  <link rel="dns-prefetch" href="https://animeplay.cfd">
+  <link rel="dns-prefetch" href="https://movie-src.xyz">
+  <link rel="dns-prefetch" href="https://vidsrc.cc">
+  <link rel="dns-prefetch" href="https://vidsrc.to">
   <style>    /* Watch page specific additions */
     .btn-row {
       display: flex;
@@ -95,6 +103,45 @@
       background: var(--ink);
       color: var(--card);
     }
+
+    .ep-nav-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+    .ep-nav-btn {
+      flex: 1;
+      padding: 0.4rem;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-align: center;
+    }
+    .ep-nav-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+    .ep-nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .ep-page-info {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .ep-btn.unaired {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -103,8 +150,20 @@
       <div class="brand-container">
         <a href="/" class="logo-text">baby<span>anime</span></a>
       </div>
+
+      <!-- Header Search Bar (Redirects to Home) -->
+      <div class="search-bar-container header-search-wrap">
+        <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search anime titles...">
+      </div>
+
       <div class="toggles">
-        <a href="/" class="tt" style="font-weight:800; text-decoration:none;">← Home</a>
+        <a href="/" class="tt" style="font-weight:800; text-decoration:none;">Home</a>
+        <a href="/?tab=browse" class="tt" style="font-weight:800; text-decoration:none;">Browse</a>
+        <a href="/?tab=party" class="tt" style="font-weight:800; text-decoration:none;">Party</a>
         <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -166,6 +225,7 @@
                   <span id="badgeFormat" class="meta-badge">TV</span>
                   <span id="badgeSeason" class="meta-badge">Fall 2026</span>
                   <span id="badgeEpisodes" class="meta-badge">- Episodes</span>
+                  <span id="badgeNextAiring" class="meta-badge" style="display:none;"></span>
                 </div>
               </div>
             </div>
@@ -200,6 +260,17 @@
 
         <!-- Sidebar / Episodes panel -->
         <div class="sidebar-panel">
+          <!-- Color Theme Picker -->
+          <div class="card" style="margin-bottom:0.8rem;padding:0.5rem 0.7rem;">
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <span style="font-size:0.7rem;font-weight:800;color:var(--muted);">Theme</span>
+              <button class="clr-dot" data-clr="pink" style="background:#e25c5c;" title="Pink"></button>
+              <button class="clr-dot" data-clr="green" style="background:#2e9e5e;" title="Green"></button>
+              <button class="clr-dot" data-clr="blue" style="background:#4a8fe0;" title="Blue"></button>
+              <button class="clr-dot" data-clr="purple" style="background:#9b6fcf;" title="Purple"></button>
+              <button class="clr-dot" data-clr="orange" style="background:#e8823a;" title="Orange"></button>
+            </div>
+          </div>
           <div class="card episodes-panel">
             <div class="episodes-header">
               <span>Episodes</span>
@@ -212,6 +283,12 @@
               </div>
             </div>
 
+            <div class="ep-nav-row">
+              <button type="button" class="ep-nav-btn" id="epPrevBtn">← Prev 100</button>
+              <span class="ep-page-info" id="epPageInfo"></span>
+              <button type="button" class="ep-nav-btn" id="epNextBtn">Next 100 →</button>
+            </div>
+
             <!-- Episode Jump / Quick Input -->
             <div class="ep-jump-card">
               <span class="selector-label" style="flex-grow:1;">Jump to:</span>
@@ -219,10 +296,14 @@
               <button type="button" id="epJumpBtn" class="ep-jump-btn">Go</button>
             </div>
 
-            <div class="btn-row">
-              <button type="button" class="bookmark-btn" id="bookmarkBtn">
+            <div class="btn-row" style="display: flex; gap: 0.6rem; margin-top: 0.8rem;">
+              <button type="button" class="bookmark-btn" id="bookmarkBtn" style="flex: 1;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 <span id="bookmarkText">Watchlist</span>
+              </button>
+              <button type="button" class="bookmark-btn" id="partyBtn" style="flex: 1; background: var(--teal); color: #fff; border-color: var(--ink);">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>Party</span>
               </button>
             </div>
           </div>
@@ -252,6 +333,7 @@
     let activeEpisode = 1;
     let activeServer = 'aniplay_ani';
     let activeAudio = 'sub';
+    const EPISODES_PER_PAGE = 100;
 
     // Parse URL params
     const urlParams = new URLSearchParams(window.location.search);
@@ -259,6 +341,7 @@
     const malId = urlParams.get('mal_id');
     const startEp = parseInt(urlParams.get('ep')) || 1;
     activeEpisode = startEp;
+    let epPage = Math.floor(activeEpisode / EPISODES_PER_PAGE) + 1;
 
     // Elements
     const loadingScreen = document.getElementById('loadingScreen');
@@ -302,8 +385,12 @@
         return;
       }
       
+      // Start loading the player immediately using URL params
+      startPlayerEarly();
+      
       await loadAnimeDetails();
       setupControls();
+      setupColorPicker();
     });
 
     // Fetch details from AniList (with MAL fallback)
@@ -326,6 +413,9 @@
             }
             bannerImage
             episodes
+            nextAiringEpisode {
+              episode
+            }
             format
             status
             season
@@ -349,6 +439,9 @@
         const data = await queryAniList(query, variables);
         if (data && data.Media) {
           activeAnime = data.Media;
+          if (!activeAnime.episodes && activeAnime.nextAiringEpisode) {
+            activeAnime.episodes = activeAnime.nextAiringEpisode.episode - 1;
+          }
           activeAnime.type = anilistId ? 'anilist' : 'mal'; // Store lookup context
           renderMetadata();
           renderEpisodes();
@@ -362,12 +455,11 @@
         }
       } catch (err) {
         console.warn('AniList fetch failed, attempting MAL Jikan API fallback:', err);
-        // Attempt Jikan (MAL) fallback if MAL ID was provided
-        if (malId) {
+        const fallbackMalId = malId || anilistId;
+        if (fallbackMalId) {
           try {
-            const malData = await fetchMALMetadata(parseInt(malId));
+            const malData = await fetchMALMetadata(parseInt(fallbackMalId));
             if (malData) {
-              // Convert Jikan data structure to a compatible format
               activeAnime = {
                 id: null,
                 idMal: malData.mal_id,
@@ -407,7 +499,7 @@
             showError('Failed to fetch anime metadata from both AniList and Jikan backup API.');
           }
         } else {
-          showError('Failed to find anime on AniList. (No MyAnimeList ID supplied for fallback lookup)');
+          showError('Failed to find anime on AniList.');
         }
       }
     }
@@ -434,6 +526,25 @@
       badgeSeason.textContent = activeAnime.season && activeAnime.seasonYear ? `${activeAnime.season} ${activeAnime.seasonYear}` : (activeAnime.seasonYear || 'Unknown');
       badgeEpisodes.textContent = activeAnime.episodes ? `${activeAnime.episodes} Ep` : 'Ongoing';
       
+      const nextBadge = document.getElementById('badgeNextAiring');
+      if (activeAnime.nextAiringEpisode && activeAnime.status === 'RELEASING') {
+        const date = new Date(activeAnime.nextAiringEpisode.airingAt * 1000);
+        const now = new Date();
+        const diff = date - now;
+        let label;
+        if (diff > 0) {
+          const days = Math.floor(diff / 86400000);
+          const hours = Math.floor((diff % 86400000) / 3600000);
+          label = days > 0 ? `Ep ${activeAnime.nextAiringEpisode.episode} in ${days}d ${hours}h` : `Ep ${activeAnime.nextAiringEpisode.episode} in ${hours}h`;
+        } else {
+          label = `Ep ${activeAnime.nextAiringEpisode.episode} aired`;
+        }
+        nextBadge.textContent = label;
+        nextBadge.style.display = '';
+      } else {
+        nextBadge.style.display = 'none';
+      }
+      
       // Info rows
       infoAnilistId.textContent = activeAnime.id || 'N/A';
       infoMalId.textContent = activeAnime.idMal || 'N/A';
@@ -446,26 +557,46 @@
 
     // Render episodes grid
     function renderEpisodes() {
-      // Determine max episodes
-      const maxEpisodes = activeAnime.episodes || 100; // Default to 100 if ongoing/null
+      const maxEpisodes = activeAnime.episodes || (activeAnime.nextAiringEpisode?.episode ? activeAnime.nextAiringEpisode.episode - 1 : 9999);
+      const totalPages = Math.ceil(maxEpisodes / EPISODES_PER_PAGE);
+      
+      if (epPage < 1) epPage = 1;
+      if (epPage > totalPages) epPage = totalPages;
+
+      const start = (epPage - 1) * EPISODES_PER_PAGE + 1;
+      const end = Math.min(epPage * EPISODES_PER_PAGE, maxEpisodes);
+
+      const nextAiringEp = activeAnime.nextAiringEpisode?.episode;
       let html = '';
-      
-      for (let i = 1; i <= maxEpisodes; i++) {
+      for (let i = start; i <= end; i++) {
         const isActive = i === activeEpisode;
-        html += `<button type="button" class="ep-btn ${isActive ? 'active' : ''}" data-ep="${i}">${i}</button>`;
+        const isUnaired = nextAiringEp && i >= nextAiringEp;
+        const cls = `ep-btn${isActive ? ' active' : ''}${isUnaired ? ' unaired' : ''}`;
+        html += `<button type="button" class="${cls}" data-ep="${i}"${isUnaired ? ' disabled' : ''}>${i}</button>`;
       }
-      
       episodesGrid.innerHTML = html;
+
       episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
       epJumpInput.value = activeEpisode;
-      
-      // Episode click
+
       document.querySelectorAll('.ep-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const ep = parseInt(btn.getAttribute('data-ep'));
           changeEpisode(ep);
         });
       });
+
+      // Pagination controls
+      const prevBtn = document.getElementById('epPrevBtn');
+      const nextBtn = document.getElementById('epNextBtn');
+      const pageInfo = document.getElementById('epPageInfo');
+      if (prevBtn && nextBtn && pageInfo) {
+        prevBtn.disabled = epPage <= 1;
+        nextBtn.disabled = epPage >= totalPages;
+        pageInfo.textContent = `${start}–${end}`;
+        prevBtn.onclick = () => { epPage--; renderEpisodes(); };
+        nextBtn.onclick = () => { epPage++; renderEpisodes(); };
+      }
     }
 
     // Update bookmark button look
@@ -483,23 +614,9 @@
     // Handle episode change
     function changeEpisode(epNum) {
       activeEpisode = epNum;
-      
-      // Update active class in grid
-      document.querySelectorAll('.ep-btn').forEach(btn => {
-        const ep = parseInt(btn.getAttribute('data-ep'));
-        if (ep === activeEpisode) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
-      });
-      
-      episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
-      epJumpInput.value = activeEpisode;
-      
+      epPage = Math.floor((activeEpisode - 1) / EPISODES_PER_PAGE) + 1;
+      renderEpisodes();
       updatePlayer();
-      
-      // Add to watch history
       addToHistory(activeAnime, activeEpisode);
     }
 
@@ -552,9 +669,52 @@
         const isFav = toggleBookmark(activeAnime);
         updateBookmarkBtnState();
       });
+
+      // Watch Together Button click
+      const partyBtn = document.getElementById('partyBtn');
+      if (partyBtn) {
+        partyBtn.addEventListener('click', () => {
+          const title = activeAnime.title.english || activeAnime.title.romaji || 'Anime';
+          const epStr = activeEpisode ? `_ep${activeEpisode}` : '';
+          const catalogId = `${activeAnime.id || activeAnime.idMal}${epStr}`;
+          window.location.href = `/?tab=party&media=${encodeURIComponent(catalogId)}&title=${encodeURIComponent(title)}`;
+        });
+      }
+
+      // Search input enter redirect to home with query
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const q = searchInput.value.trim();
+            if (q) {
+              window.location.href = `/?search=${encodeURIComponent(q)}`;
+            }
+          }
+        });
+      }
     }
 
-    // Update Iframe Source URL
+    // Start player early using URL params (before API call completes)
+    function startPlayerEarly() {
+      const id = anilistId || malId;
+      if (!id) return;
+      const server = serverSelect ? serverSelect.value : 'aniplay_ani';
+      let url;
+      if (server === 'aniplay_ani' || server === 'aniplay_mal') {
+        const mode = anilistId ? 'ani' : 'mal';
+        url = `https://animeplay.cfd/stream/${mode}/${id}/${activeEpisode}/${activeAudio}`;
+      } else if (server === 'moviesrc_mal') {
+        url = `https://movie-src.xyz/v1/embed/anime/${id}/${activeEpisode}/${activeAudio}`;
+      } else if (server === 'vidsrc_cc') {
+        url = `https://vidsrc.cc/v2/embed/anime/${id}/${activeEpisode}/${activeAudio}`;
+      } else if (server === 'vidsrc_to') {
+        url = `https://vidsrc.to/embed/anime/${id}/${activeEpisode}`;
+      }
+      if (url) playerIframe.src = url;
+    }
+
+    // Update Iframe Source URL (uses full API data)
     function updatePlayer() {
       let url = '';
       const mal = activeAnime.idMal;
@@ -592,6 +752,22 @@
       
       // Save to history on load
       addToHistory(activeAnime, activeEpisode);
+    }
+
+    function setupColorPicker() {
+      const dots = document.querySelectorAll('.clr-dot');
+      const root = document.documentElement;
+      const saved = localStorage.getItem('clr');
+      dots.forEach(btn => {
+        const clr = btn.getAttribute('data-clr');
+        if (clr === saved) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          dots.forEach(d => d.classList.remove('active'));
+          btn.classList.add('active');
+          root.setAttribute('data-clr', clr);
+          localStorage.setItem('clr', clr);
+        });
+      });
     }
 
     // Error display
