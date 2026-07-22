@@ -404,18 +404,35 @@ function setupHoldToSwap() {
         return;
       }
 
-      if (selectedElem.parentNode === container) {
-        // Tapped another item in same container -> SWAP INSTANTLY!
-        const orderA = parseInt(selectedElem.style.order || 0);
-        const orderB = parseInt(item.style.order || 0);
+      // Check if elements share same parent OR can swap top-level grid columns
+      let itemA = selectedElem;
+      let itemB = item;
 
-        selectedElem.style.order = orderB;
-        item.style.order = orderA;
+      if (itemA.parentNode !== itemB.parentNode) {
+        const topParentA = itemA.closest('.watch-container, .home-layout, .layout-container');
+        const topParentB = itemB.closest('.watch-container, .home-layout, .layout-container');
+        if (topParentA && topParentA === topParentB) {
+          itemA = Array.from(topParentA.children).find(c => c.contains(selectedElem));
+          itemB = Array.from(topParentA.children).find(c => c.contains(item));
+        }
+      }
+
+      if (itemA && itemB && itemA !== itemB && itemA.parentNode === itemB.parentNode) {
+        const swapContainer = itemA.parentNode;
+        Array.from(swapContainer.children).forEach((c, idx) => {
+          if (!c.style.order) c.style.order = idx;
+        });
+
+        const orderA = parseInt(itemA.style.order || 0);
+        const orderB = parseInt(itemB.style.order || 0);
+
+        itemA.style.order = orderB;
+        itemB.style.order = orderA;
 
         // Save layout order map
-        const containerId = container.id || container.className.split(' ')[0];
+        const containerId = swapContainer.id || swapContainer.className.split(' ')[0];
         const orderMap = {};
-        Array.from(container.children).forEach((c, idx) => {
+        Array.from(swapContainer.children).forEach((c, idx) => {
           const id = c.id || `${containerId}_item_${idx}`;
           orderMap[id] = c.style.order;
         });
@@ -426,7 +443,7 @@ function setupHoldToSwap() {
         if (navigator.vibrate) navigator.vibrate(40);
         return;
       } else {
-        // Tapped item in different container -> Switch selection
+        // Tapped item in unrelated container -> Switch selection
         clearSelection();
       }
     }
