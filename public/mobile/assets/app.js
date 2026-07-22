@@ -330,7 +330,7 @@ function setupHoldToSwap() {
   document.querySelectorAll('.panel-drag-handle').forEach(h => h.remove());
   document.body.classList.remove('customize-layout-active');
 
-  const containers = document.querySelectorAll('.watch-container, .sidebar-column, .layout-container, .rooms-grid, .shelves-container, .selector-row');
+  const containers = document.querySelectorAll('.watch-container, .sidebar-column, .layout-container, .rooms-grid, .shelves-container, .shelf-items, .shelf-grid, .anime-grid, .selector-row, .pills-group, .ep-grid, .episode-grid, .ep-nav-row, .badge-row, .genre-tags, .btn-row, .airing-tabs, .top-airing-list, .airing-schedule-grid, .header-search-wrap, .nav-links');
 
   containers.forEach(container => {
     const containerId = container.id || container.className.split(' ')[0];
@@ -360,8 +360,8 @@ function setupHoldToSwap() {
 
       function onPointerDown(e) {
         const targetTag = e.target.tagName.toLowerCase();
-        if (['input', 'select', 'button', 'a', 'textarea', 'option'].includes(targetTag)) return;
-        if (e.target.closest('input, select, button, a, iframe')) return;
+        if (['input', 'select', 'textarea', 'option'].includes(targetTag)) return;
+        if (e.target.closest('input, select, textarea, iframe')) return;
 
         if (e.type === 'mousedown' && e.button !== 0) return;
 
