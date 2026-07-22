@@ -925,7 +925,16 @@ header {
 }
 
 @media (max-width: 780px) {
-  .sticker-card { display: none !important; }
+  .sticker-card {
+    right: 12px;
+    bottom: 80px;
+    width: 70px;
+    padding: 5px 5px 4px;
+  }
+  .sticker-card img {
+    width: 55px;
+    height: 55px;
+  }
 }
 
 

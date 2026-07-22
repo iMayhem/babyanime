@@ -26,7 +26,7 @@ function setupTheme() {
   });
 }
 
-// Animated Anime Sticker Card
+// Animated Anime Sticker Card with Draggable functionality
 function setupMascot() {
   const card = document.getElementById('stickerCard');
   const img  = document.getElementById('stickerImg');
@@ -46,16 +46,12 @@ function setupMascot() {
 
   function loadSticker(idx) {
     const s = stickers[idx];
-    // Fade out
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(12px) scale(0.92)';
+    img.style.opacity = '0';
     setTimeout(() => {
       img.src = `https://media.giphy.com/media/${s.id}/giphy.gif`;
       if (lbl) lbl.textContent = s.name;
-      // Fade back in
-      card.style.opacity = '1';
-      card.style.transform = 'translateY(0) scale(1)';
-    }, 350);
+      img.style.opacity = '1';
+    }, 200);
   }
 
   // Load initial sticker
@@ -67,14 +63,113 @@ function setupMascot() {
     loadSticker(current);
   }, 30000);
 
-  // Click to cycle manually
+  // --- DRAGGABLE & CLICK SYSTEM ---
   card.style.pointerEvents = 'auto';
-  card.style.cursor = 'pointer';
-  card.title = 'Click to change character';
-  card.addEventListener('click', () => {
-    current = (current + 1) % stickers.length;
-    loadSticker(current);
-  });
+  card.style.cursor = 'grab';
+  card.title = 'Drag to move anywhere • Click to change character';
+
+  // Restore saved position from localStorage if exists
+  const savedPos = localStorage.getItem('babyanime_mascot_pos');
+  if (savedPos) {
+    try {
+      const pos = JSON.parse(savedPos);
+      if (typeof pos.left === 'number' && typeof pos.top === 'number') {
+        card.style.left = `${pos.left}px`;
+        card.style.top = `${pos.top}px`;
+        card.style.right = 'auto';
+        card.style.bottom = 'auto';
+        card.style.animation = 'none'; // disable float when custom placed
+      }
+    } catch (e) {}
+  }
+
+  let isDragging = false;
+  let hasMoved = false;
+  let startX = 0, startY = 0;
+  let initialLeft = 0, initialTop = 0;
+
+  function onPointerDown(e) {
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    
+    isDragging = true;
+    hasMoved = false;
+
+    const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+    const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+
+    startX = pageX;
+    startY = pageY;
+
+    const rect = card.getBoundingClientRect();
+    initialLeft = rect.left + window.scrollX;
+    initialTop = rect.top + window.scrollY;
+
+    card.style.cursor = 'grabbing';
+    card.style.transition = 'none';
+    card.style.animation = 'none';
+
+    document.addEventListener('mousemove', onPointerMove, { passive: false });
+    document.addEventListener('mouseup', onPointerUp);
+    document.addEventListener('touchmove', onPointerMove, { passive: false });
+    document.addEventListener('touchend', onPointerUp);
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+
+    const pageX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+    const pageY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+
+    const deltaX = pageX - startX;
+    const deltaY = pageY - startY;
+
+    if (Math.hypot(deltaX, deltaY) > 4) {
+      hasMoved = true;
+      if (e.cancelable) e.preventDefault();
+    }
+
+    if (!hasMoved) return;
+
+    let newLeft = initialLeft + deltaX - window.scrollX;
+    let newTop = initialTop + deltaY - window.scrollY;
+
+    const maxLeft = window.innerWidth - card.offsetWidth - 10;
+    const maxTop = window.innerHeight - card.offsetHeight - 10;
+
+    newLeft = Math.max(10, Math.min(newLeft, maxLeft));
+    newTop = Math.max(10, Math.min(newTop, maxTop));
+
+    card.style.left = `${newLeft}px`;
+    card.style.top = `${newTop}px`;
+    card.style.right = 'auto';
+    card.style.bottom = 'auto';
+    card.style.position = 'fixed';
+  }
+
+  function onPointerUp(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    card.style.cursor = 'grab';
+
+    document.removeEventListener('mousemove', onPointerMove);
+    document.removeEventListener('mouseup', onPointerUp);
+    document.removeEventListener('touchmove', onPointerMove);
+    document.removeEventListener('touchend', onPointerUp);
+
+    if (hasMoved) {
+      const rect = card.getBoundingClientRect();
+      localStorage.setItem('babyanime_mascot_pos', JSON.stringify({
+        left: rect.left,
+        top: rect.top
+      }));
+    } else {
+      current = (current + 1) % stickers.length;
+      loadSticker(current);
+    }
+  }
+
+  card.addEventListener('mousedown', onPointerDown);
+  card.addEventListener('touchstart', onPointerDown, { passive: false });
 }
 
 // GraphQL Query Helper for AniList
