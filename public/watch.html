@@ -330,6 +330,63 @@
       font-family: 'Nunito', sans-serif;
       letter-spacing: 0.02em;
     }
+
+    /* ── Scraper Status Overlay ── */
+    .scraper-status {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.4s;
+    }
+    .scraper-status.hidden {
+      opacity: 0;
+    }
+    .s-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.45rem 0.15rem 0.35rem;
+      border-radius: 8px;
+      font-size: 0.6rem;
+      font-weight: 800;
+      font-family: 'Nunito', sans-serif;
+      background: rgba(0,0,0,0.6);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+      backdrop-filter: blur(4px);
+      transition: all 0.25s;
+    }
+    .s-chip .s-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background 0.25s;
+    }
+    .s-chip .s-dot.idle { background: rgba(255,255,255,0.25); }
+    .s-chip .s-dot.scraping {
+      background: #f0c040;
+      animation: s-pulse 0.6s ease-in-out infinite alternate;
+    }
+    .s-chip .s-dot.found { background: #2e9e5e; }
+    .s-chip .s-dot.empty { background: rgba(255,255,255,0.25); }
+    .s-chip .s-dot.error { background: #e25c5c; }
+    .s-chip .s-count {
+      font-size: 0.55rem;
+      color: rgba(255,255,255,0.5);
+      margin-left: 0.1rem;
+    }
+    @keyframes s-pulse {
+      from { box-shadow: 0 0 0 0 rgba(240,192,64,0.5); }
+      to { box-shadow: 0 0 0 4px rgba(240,192,64,0); }
+    }
+    .s-chip.done { opacity: 0.6; }
+    .s-chip.done .s-dot.found { opacity: 1; }
   </style>
 </head>
 <body>
@@ -379,6 +436,7 @@
           </div>
           <!-- Video Player wrapper -->
           <div class="player-wrapper" id="playerWrapper">
+            <div class="scraper-status" id="scraperStatus"></div>
             <video id="playerVideo" class="player-iframe" playsinline></video>
             <div class="ctrl-bar" id="ctrlBar">
               <div class="ctrl-row ctrl-seek-row">
@@ -1278,6 +1336,91 @@
         });
       });
     }
+
+    // ── Scraper Status Overlay ──
+    const scraperStatusEl = document.getElementById('scraperStatus');
+    let scraperStates = {};
+    let sseConnected = false;
+
+    function connectScraperSSE() {
+      const evtSource = new EventSource(`${SCRAPER_API}/admin/events`);
+      evtSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'config' && Array.isArray(data.scrapers)) {
+            data.scrapers.forEach(s => {
+              if (!scraperStates[s.name]) scraperStates[s.name] = 'idle';
+            });
+          } else if (data.type === 'provider_start') {
+            scraperStates[data.provider] = 'scraping';
+          } else if (data.type === 'provider_done') {
+            scraperStates[data.provider] = data.sourceCount > 0 ? 'found' : 'empty';
+          } else if (data.type === 'provider_error') {
+            scraperStates[data.provider] = 'error';
+          } else if (data.type === 'provider_skip') {
+            scraperStates[data.provider] = 'idle';
+          } else if (data.type === 'stream') {
+            // Keep status visible for 5s after stream result
+            if (scraperStatusEl) {
+              scraperStatusEl.classList.remove('hidden');
+            }
+          }
+          renderScraperChips();
+        } catch {}
+      };
+      evtSource.onerror = () => {
+        sseConnected = false;
+        setTimeout(connectScraperSSE, 3000);
+      };
+      evtSource.onopen = () => { sseConnected = true; };
+    }
+
+    function renderScraperChips() {
+      if (!scraperStatusEl) return;
+      const entries = Object.entries(scraperStates);
+      if (entries.length === 0) return;
+
+      const hasActive = entries.some(([, s]) => s === 'scraping');
+
+      scraperStatusEl.innerHTML = entries.map(([name, state]) => `
+        <span class="s-chip${state !== 'scraping' ? ' done' : ''}">
+          <span class="s-dot ${state}"></span>
+          ${name}
+          ${state === 'found' ? '<span class="s-count">✓</span>' : ''}
+          ${state === 'error' ? '<span class="s-count">✗</span>' : ''}
+          ${state === 'empty' ? '<span class="s-count">-</span>' : ''}
+        </span>
+      `).join('');
+
+      scraperStatusEl.classList.toggle('hidden', !hasActive);
+
+      if (!hasActive) {
+        setTimeout(() => {
+          if (!Object.values(scraperStates).some(s => s === 'scraping')) {
+            scraperStatusEl.classList.add('hidden');
+          }
+        }, 4000);
+      }
+    }
+
+    // Reset scraper states when a new stream is requested
+    function resetScraperStates() {
+      const now = Date.now();
+      for (const key of Object.keys(scraperStates)) {
+        scraperStates[key] = 'idle';
+      }
+      if (scraperStatusEl) scraperStatusEl.classList.remove('hidden');
+      renderScraperChips();
+    }
+
+    // Patch updatePlayer to reset scraper states
+    const origUpdatePlayer = updatePlayer;
+    updatePlayer = function() {
+      resetScraperStates();
+      origUpdatePlayer();
+    };
+
+    connectScraperSSE();
 
     // Error display
     function showError(msg) {

@@ -63,7 +63,7 @@ app.get("/api/stream", async (req, res) => {
     if (provider && provider !== "all") {
       sources = await providers.runProvider(provider, resolved, audio || "sub");
     } else {
-      sources = await providers.runAll(resolved, audio || "sub");
+      sources = await providers.runAll(resolved, audio || "sub", broadcastScraperUsage);
     }
 
     res.json({

@@ -45,7 +45,7 @@ function loadProviders() {
   console.log(`[Providers] ${loadedProviders.length}/${enabled.length} providers loaded`);
 }
 
-async function runAll(resolved, audio = "sub") {
+async function runAll(resolved, audio = "sub", onEvent = null) {
   const { tmdbId, anilistId, type, season, episode } = resolved;
   const results = [];
 
@@ -55,7 +55,12 @@ async function runAll(resolved, audio = "sub") {
       if (provider.name === "AnimeKai" && anilistId) {
         id = `anilist:${anilistId}`;
       }
-      if (!id) return;
+      if (!id) {
+        if (onEvent) onEvent({ type: "provider_skip", provider: provider.name, reason: "no id", timestamp: Date.now() });
+        return;
+      }
+
+      if (onEvent) onEvent({ type: "provider_start", provider: provider.name, timestamp: Date.now() });
 
       const timeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("timeout")), 30000)
@@ -66,8 +71,12 @@ async function runAll(resolved, audio = "sub") {
         timeout,
       ]);
 
-      if (!Array.isArray(streams) || streams.length === 0) return;
+      if (!Array.isArray(streams) || streams.length === 0) {
+        if (onEvent) onEvent({ type: "provider_done", provider: provider.name, sourceCount: 0, timestamp: Date.now() });
+        return;
+      }
 
+      let count = 0;
       for (const s of streams) {
         if (!s || !s.url) continue;
         results.push({
@@ -79,11 +88,16 @@ async function runAll(resolved, audio = "sub") {
           headers: s.headers || {},
           subtitles: s.subtitles || [],
         });
+        count++;
       }
+
+      if (onEvent) onEvent({ type: "provider_done", provider: provider.name, sourceCount: count, timestamp: Date.now() });
     } catch (err) {
+      const msg = err.message !== "timeout" ? err.message : "timeout";
       if (err.message !== "timeout") {
         console.warn(`[${provider.name}] Error: ${err.message}`);
       }
+      if (onEvent) onEvent({ type: "provider_error", provider: provider.name, error: msg, timestamp: Date.now() });
     }
   });
 
