@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provider Admin - babyanime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0efe9;
+    --card: #ffffff;
+    --ink: #1a1a2e;
+    --muted: #8888a0;
+    --accent: #e25c5c;
+    --green: #2e9e5e;
+    --shadow: #333f5c;
+    --teal: #0e9594;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 2rem 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+  .card {
+    background: var(--card);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    box-shadow: 5px 5px 0 var(--shadow);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Scraper list */
+  .scraper-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid #e8e8e0;
+    transition: background 0.1s;
+  }
+  .scraper-item:last-child { border-bottom: none; }
+  .scraper-item:hover { background: #f8f7f2; }
+
+  .scraper-name {
+    flex: 1;
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+  .scraper-name.disabled {
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
+
+  .order-btn {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--ink);
+    font-weight: 900;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+    box-shadow: 2px 2px 0 var(--shadow);
+  }
+  .order-btn:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--shadow); }
+  .order-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--shadow); }
+  .order-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 2px solid var(--ink);
+    background: #ddd;
+    transition: 0.15s;
+  }
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    top: 2px;
+    left: 2px;
+    transition: 0.15s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--green); }
+  .toggle input:checked + .toggle-slider::after { transform: translateX(20px); }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    border: 1.5px solid var(--ink);
+  }
+  .badge.online { background: var(--green); color: #fff; }
+  .badge.offline { background: #ddd; color: var(--muted); }
+
+  /* Activity feed */
+  #activityFeed {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-bottom: 1px solid #f0efe9;
+    animation: fadeIn 0.2s;
+  }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-provider {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: var(--accent);
+    color: #fff;
+  }
+  .activity-count {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .activity-time {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.65rem;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.3rem;
+  }
+  .status-dot.live { background: var(--green); }
+  .status-dot.idle { background: #ccc; }
+
+  .empty-state {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .save-msg {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    border: 2px solid var(--ink);
+    background: var(--green);
+    color: #fff;
+    box-shadow: 3px 3px 0 var(--shadow);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .save-msg.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <h1>baby<span>anime</span></h1>
+  <div class="subtitle">Provider Admin Panel — realtime scraper control</div>
+
+  <div class="card">
+    <div class="card-title">Scrapers <span style="font-weight:400;text-transform:none;color:var(--muted);font-size:0.75rem;">— drag to reorder</span></div>
+    <div id="scraperList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Live Activity</div>
+    <div id="activityFeed"><div class="empty-state">Waiting for streams...</div></div>
+  </div>
+
+  <div class="save-msg" id="saveMsg">Saved</div>
+
+<script>
+const API = '/api/admin';
+
+async function loadScrapers() {
+  const resp = await fetch(`${API}/scrapers`);
+  const data = await resp.json();
+  renderScrapers(data.scrapers);
+}
+
+function renderScrapers(scrapers) {
+  const list = document.getElementById('scraperList');
+  list.innerHTML = scrapers.map((s, i) => `
+    <div class="scraper-item" data-name="${s.name}">
+      <button class="order-btn" onclick="moveUp('${s.name}')" ${i === 0 ? 'disabled' : ''}>▲</button>
+      <button class="order-btn" onclick="moveDown('${s.name}')" ${i === scrapers.length - 1 ? 'disabled' : ''}>▼</button>
+      <span class="scraper-name ${s.enabled ? '' : 'disabled'}">${s.name}</span>
+      <span class="badge ${s.enabled ? 'online' : 'offline'}">${s.enabled ? 'ON' : 'OFF'}</span>
+      <label class="toggle">
+        <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleScraper('${s.name}', this.checked)">
+        <div class="toggle-slider"></div>
+      </label>
+    </div>
+  `).join('');
+}
+
+async function toggleScraper(name, enabled) {
+  const resp = await fetch(`${API}/scrapers/toggle`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  const data = await resp.json();
+  if (data.success) showSave();
+}
+
+async function moveUp(name) {
+  const scrapers = getCurrentOrder();
+  const idx = scrapers.indexOf(name);
+  if (idx <= 0) return;
+  scrapers.splice(idx, 1);
+  scrapers.splice(idx - 1, 0, name);
+  await reorder(scrapers);
+}
+
+async function moveDown(name) {
+  const scrapers = getCurrentOrder();
+  const idx = scrapers.indexOf(name);
+  if (idx < 0 || idx >= scrapers.length - 1) return;
+  scrapers.splice(idx, 1);
+  scrapers.splice(idx + 1, 0, name);
+  await reorder(scrapers);
+}
+
+function getCurrentOrder() {
+  const items = document.querySelectorAll('.scraper-item');
+  return Array.from(items).map(el => el.dataset.name);
+}
+
+async function reorder(names) {
+  const resp = await fetch(`${API}/scrapers/reorder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ names }),
+  });
+  const data = await resp.json();
+  if (data.success) { renderScrapers(data.scrapers); showSave(); }
+}
+
+function showSave() {
+  const el = document.getElementById('saveMsg');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// SSE realtime activity
+const activityFeed = document.getElementById('activityFeed');
+let activityCount = 0;
+
+function connectSSE() {
+  const evtSource = new EventSource(`${API}/events`);
+  evtSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'config') {
+        renderScrapers(data.scrapers);
+      } else if (data.type === 'stream') {
+        addActivity(data);
+      }
+    } catch {}
+  };
+  evtSource.onerror = () => {
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+function addActivity(data) {
+  const providers = Object.entries(data.providerCounts || {});
+  if (providers.length === 0) return;
+
+  activityCount++;
+  const title = (data.anime && data.anime.title) || 'Unknown';
+  const ep = (data.anime && data.anime.episode) || '?';
+  const time = new Date(data.timestamp || Date.now()).toLocaleTimeString();
+
+  if (activityFeed.querySelector('.empty-state')) {
+    activityFeed.innerHTML = '';
+  }
+
+  const div = document.createElement('div');
+  div.className = 'activity-item';
+  div.innerHTML = `
+    <span class="status-dot live"></span>
+    <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
+    <span class="badge" style="background:var(--teal);color:#fff;border:none;">Ep ${ep}</span>
+    <span>${providers.map(([p, c]) => `<span class="activity-provider">${p}${c > 1 ? ` ×${c}` : ''}</span>`).join(' ')}</span>
+    <span class="activity-count">${data.totalSources} src</span>
+    <span class="activity-time">${time}</span>
+  `;
+  activityFeed.prepend(div);
+
+  while (activityFeed.children.length > 50) {
+    activityFeed.lastChild.remove();
+  }
+}
+
+loadScrapers();
+connectSSE();
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 const path = require("path");
+const admin = require("./admin");
 
 const PROVIDERS = [
   { name: "AllAnime", file: "allanime.js" },
@@ -16,7 +17,18 @@ const PROVIDERS = [
 let loadedProviders = [];
 
 function loadProviders() {
-  loadedProviders = PROVIDERS.map((p) => {
+  const enabled = admin.getEnabledProviders();
+  const sorted = PROVIDERS.slice().sort((a, b) => {
+    const orderA = enabled.indexOf(a.name);
+    const orderB = enabled.indexOf(b.name);
+    return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB);
+  });
+
+  loadedProviders = sorted.map((p) => {
+    if (!enabled.includes(p.name)) {
+      console.log(`[Providers] ${p.name} disabled by admin, skipping`);
+      return null;
+    }
     try {
       const mod = require(path.join(__dirname, "api", p.file));
       if (typeof mod.getStreams !== "function") {
@@ -30,7 +42,7 @@ function loadProviders() {
       return null;
     }
   }).filter(Boolean);
-  console.log(`[Providers] ${loadedProviders.length}/${PROVIDERS.length} providers loaded`);
+  console.log(`[Providers] ${loadedProviders.length}/${enabled.length} providers loaded`);
 }
 
 async function runAll(resolved, audio = "sub") {
