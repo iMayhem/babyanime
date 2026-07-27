@@ -167,7 +167,31 @@ app.get("/api/stream-proxy", async (req, res) => {
   const range = req.headers["range"];
   if (range) fetchHeaders["Range"] = range;
 
+  // Detect if this is a direct video file (not an HLS playlist candidate)
+  const isVideoFile = /\.(mp4|mkv|webm|avi|mov|flv)(\?|$)/i.test(targetUrl);
+
   try {
+    // For direct video files: follow all redirects and send browser to the final URL
+    // This avoids streaming large video files through the VPS (causes 504 timeouts)
+    if (isVideoFile && !range) {
+      let currentUrl = targetUrl;
+      let hops = 0;
+      while (hops++ < 10) {
+        const resp = await fetch(currentUrl, { headers: fetchHeaders, redirect: "manual" });
+        const location = resp.headers.get("location");
+        if ((resp.status === 301 || resp.status === 302 || resp.status === 307 || resp.status === 308) && location) {
+          currentUrl = location.startsWith("//") ? "https:" + location : location;
+          // Update referer for next hop
+          fetchHeaders["Referer"] = new URL(currentUrl).origin + "/";
+        } else {
+          // Final URL — redirect browser here so it fetches directly
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          return res.redirect(302, currentUrl);
+        }
+      }
+      return res.status(502).json({ error: "Too many redirects" });
+    }
+
     const resp = await fetch(targetUrl, { headers: fetchHeaders, redirect: "follow" });
 
     let contentType = resp.headers.get("Content-Type") || "application/octet-stream";
