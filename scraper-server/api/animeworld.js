@@ -97,11 +97,7 @@ function getStreamFromPage(_0x1fa3eb) {
       "X-Requested-With": "XMLHttpRequest"
     }).then(function (_0x14bda9) {
       var _0x4faccf = _0x14bda9.videoSource || _0x14bda9.securedLink;
-      // Rewrite blocked zephyrflick CDN to accessible as-cdn21 (same content, different hostname)
-      if (_0x4faccf) _0x4faccf = _0x4faccf.replace(/play\.zephyrflick\.top/g, "as-cdn21.top");
-      if (!_0x4faccf) {
-        return null;
-      }
+      if (!_0x4faccf) return null;
       var _0x1705c6 = _0x4faccf.match(/\/cdn\/hls\/([a-f0-9]+)\//);
       var _0x49751f = _0x1705c6 ? _0x1705c6[1] : _0x31984c;
       var _0x25d23f = PLAYER + "/cdn/down/" + _0x49751f + "/Subtitle/subtitle_eng.srt";

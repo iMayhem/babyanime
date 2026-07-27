@@ -297,26 +297,23 @@ app.get("/api/fresh-stream", async (req, res) => {
     const json = await postResp.json();
 
     let videoUrl = json.videoSource || json.securedLink;
-    if (!videoUrl) return res.status(404).json({ error: "No videoSource in CDN response" });
-
-    // Normalize CDN domain (zephyrflick → as-cdn21 which is accessible)
-    videoUrl = videoUrl.replace(/play\.zephyrflick\.top/g, "as-cdn21.top");
-    const referer = cdnBase.replace(/play\.zephyrflick\.top/g, "as-cdn21.top") + "/";
+    const referer = cdnBase + "/";
 
     _freshStreamCache.set(ep_url, { url: videoUrl, referer, ts: Date.now() });
 
-    await _serveFreshM3U8(req, res, videoUrl, referer, UA);
+    await _serveFreshM3U8(req, res, ep_url, videoUrl, referer, UA);
   } catch (err) {
     console.error("[fresh-stream] Error:", err.message);
     res.status(502).json({ error: err.message });
   }
 });
 
-async function _serveFreshM3U8(req, res, videoUrl, referer, UA) {
+async function _serveFreshM3U8(req, res, ep_url, videoUrl, referer, UA) {
   const m3u8Resp = await fetch(videoUrl, {
     headers: { "Referer": referer, "Origin": referer.replace(/\/$/, ""), "User-Agent": UA },
   });
   if (!m3u8Resp.ok) {
+    _freshStreamCache.delete(ep_url);
     res.status(m3u8Resp.status).json({ error: "CDN returned " + m3u8Resp.status });
     return;
   }
