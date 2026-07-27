@@ -1341,6 +1341,8 @@
     const scraperStatusEl = document.getElementById('scraperStatus');
     let scraperStates = {};
     let sseConnected = false;
+    let sseReady = false;
+    let pendingStreamLoad = false;
 
     function connectScraperSSE() {
       const evtSource = new EventSource(`${SCRAPER_API}/admin/events`);
@@ -1351,6 +1353,11 @@
             data.scrapers.forEach(s => {
               if (!scraperStates[s.name]) scraperStates[s.name] = 'idle';
             });
+            sseReady = true;
+            if (pendingStreamLoad) {
+              pendingStreamLoad = false;
+              resetScraperStates();
+            }
           } else if (data.type === 'provider_start') {
             scraperStates[data.provider] = 'scraping';
           } else if (data.type === 'provider_done') {
@@ -1360,9 +1367,10 @@
           } else if (data.type === 'provider_skip') {
             scraperStates[data.provider] = 'idle';
           } else if (data.type === 'stream') {
-            // Keep status visible for 5s after stream result
-            if (scraperStatusEl) {
-              scraperStatusEl.classList.remove('hidden');
+            for (const [provider] of Object.entries(data.providerCounts || {})) {
+              if (scraperStates[provider] === 'scraping' || scraperStates[provider] === 'idle') {
+                scraperStates[provider] = 'found';
+              }
             }
           }
           renderScraperChips();
@@ -1392,30 +1400,34 @@
         </span>
       `).join('');
 
-      scraperStatusEl.classList.toggle('hidden', !hasActive);
+      scraperStatusEl.classList.remove('hidden');
+      if (window._scraperHideTimer) clearTimeout(window._scraperHideTimer);
 
       if (!hasActive) {
-        setTimeout(() => {
-          if (!Object.values(scraperStates).some(s => s === 'scraping')) {
-            scraperStatusEl.classList.add('hidden');
-          }
-        }, 4000);
+        window._scraperHideTimer = setTimeout(() => {
+          scraperStatusEl.classList.add('hidden');
+          window._scraperHideTimer = null;
+        }, 6000);
       }
     }
 
-    // Reset scraper states when a new stream is requested
     function resetScraperStates() {
-      const now = Date.now();
-      for (const key of Object.keys(scraperStates)) {
-        scraperStates[key] = 'idle';
+      if (window._scraperHideTimer) {
+        clearTimeout(window._scraperHideTimer);
+        window._scraperHideTimer = null;
       }
-      if (scraperStatusEl) scraperStatusEl.classList.remove('hidden');
+      for (const key of Object.keys(scraperStates)) scraperStates[key] = 'idle';
+      scraperStatusEl.classList.remove('hidden');
       renderScraperChips();
     }
 
-    // Patch updatePlayer to reset scraper states
     const origUpdatePlayer = updatePlayer;
     updatePlayer = function() {
+      if (!sseReady) {
+        pendingStreamLoad = true;
+        origUpdatePlayer();
+        return;
+      }
       resetScraperStates();
       origUpdatePlayer();
     };
