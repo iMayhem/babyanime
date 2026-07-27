@@ -193,6 +193,22 @@ async function scrapeVidsrcTo(malId, ep) {
   return extractVideoUrl(html);
 }
 
+// ---------- Arceus (Miruro pipe) ----------
+async function scrapeArceus(anilistId, ep, audio) {
+  const arceusHost = process.env.ARCEUS_HOST || 'http://127.0.0.1:5000';
+  try {
+    const resp = await fetch(
+      `${arceusHost}/stream?anilist_id=${anilistId}&ep=${ep}&audio=${audio}`,
+      { signal: AbortSignal.timeout(20000) }
+    );
+    const body = await resp.json();
+    if (body.streams && body.streams.length > 0) {
+      return body.streams[0].url;
+    }
+  } catch {}
+  return null;
+}
+
 // ---------- Main ----------
 async function scrapeAll(anilistId, malId, ep, audio) {
   const results = {};
@@ -200,6 +216,7 @@ async function scrapeAll(anilistId, malId, ep, audio) {
 
   const tasks = [];
   if (anilistId) tasks.push({ k: 'aniplay_ani', fn: () => scrapeAnimeplay(anilistId, ep, audio, false) });
+  if (anilistId) tasks.push({ k: 'arceus', fn: () => scrapeArceus(anilistId, ep, audio) });
   tasks.push({ k: 'aniplay_mal', fn: () => scrapeAnimeplay(id, ep, audio, true) });
   tasks.push({ k: 'moviesrc_mal', fn: () => scrapeMoviesrc(id, ep, audio) });
   tasks.push({ k: 'vidsrc_cc', fn: () => scrapeVidsrcCc(id, ep, audio) });
@@ -215,4 +232,4 @@ async function scrapeAll(anilistId, malId, ep, audio) {
   return results;
 }
 
-module.exports = { scrapeAll };
+module.exports = { scrapeAll, scrapeArceus };

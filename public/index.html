@@ -301,6 +301,7 @@
                     <option value="moviesrc_mal">Movie-Src (MAL)</option>
                     <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
                     <option value="vidsrc_to">VidSrc.to (MAL)</option>
+                    <option value="arceus">Arceus (Miruro)</option>
                   </select>
                 </div>
               </div>
@@ -348,6 +349,7 @@
                     <option value="moviesrc_mal">Movie-Src (MAL)</option>
                     <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
                     <option value="vidsrc_to">VidSrc.to (MAL)</option>
+                    <option value="arceus">Arceus (Miruro)</option>
                   </select>
                 </div>
                 <div style="font-weight: 800; font-size: 0.85rem; color: var(--teal);">
@@ -1596,6 +1598,9 @@
             break;
           case 'vidsrc_to':
             url = `https://vidsrc.to/embed/anime/${animeId}/${episode}`;
+            break;
+          case 'arceus':
+            url = `https://animeplay.cfd/stream/mal/${animeId}/${episode}/sub`;
             break;
         }
         playerIframe.src = url;

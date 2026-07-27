@@ -183,6 +183,7 @@
                 <option value="moviesrc_mal">Movie-Src (MAL ID)</option>
                 <option value="vidsrc_cc">VidSrc.cc (MAL ID)</option>
                 <option value="vidsrc_to">VidSrc.to (MAL ID)</option>
+                <option value="arceus">Arceus (Miruro Pipe)</option>
               </select>
             </div>
 
@@ -724,7 +725,7 @@
     }
 
     // Update Iframe Source URL
-    function updatePlayer() {
+    async function updatePlayer() {
       const displayTitle = activeAnime.title ? (activeAnime.title.english || activeAnime.title.romaji || activeAnime.title.userPreferred) : 'Anime';
       const playerHeaderTitle = document.getElementById('playerHeaderTitle');
       if (playerHeaderTitle) {
@@ -737,24 +738,52 @@
       
       const playerVideo = document.getElementById('playerVideo');
 
-      if (activeServer === 'custom_proxy') {
+      if (activeServer === 'custom_proxy' || activeServer === 'arceus') {
         playerIframe.style.display = 'none';
         playerVideo.style.display = 'block';
 
-        const mal = activeAnime.idMal || activeAnime.id;
-        // Cloudflare Worker Proxy Endpoint
-        const streamUrl = `https://stream-proxy.babyanime.workers.dev/api/stream?id=${mal}&ep=${activeEpisode}&sub=${activeAudio}`;
-
-        if (Hls.isSupported()) {
-          if (window.hlsInstance) window.hlsInstance.destroy();
-          const hls = new Hls();
-          hls.loadSource(streamUrl);
-          hls.attachMedia(playerVideo);
-          window.hlsInstance = hls;
-        } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
-          playerVideo.src = streamUrl;
+        if (activeServer === 'arceus') {
+          const ani = activeAnime.id;
+          const arceusUrl = `/arceus?anilist_id=${ani}&ep=${activeEpisode}&audio=${activeAudio}`;
+          try {
+            const resp = await fetch(arceusUrl);
+            const data = await resp.json();
+            if (data.stream_url) {
+              const streamUrl = data.stream_url;
+              if (Hls.isSupported()) {
+                if (window.hlsInstance) window.hlsInstance.destroy();
+                const hls = new Hls();
+                hls.loadSource(streamUrl);
+                hls.attachMedia(playerVideo);
+                window.hlsInstance = hls;
+              } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
+                playerVideo.src = streamUrl;
+              } else {
+                playerVideo.src = streamUrl;
+              }
+            } else {
+              playerVideo.style.display = 'none';
+              playerIframe.style.display = 'block';
+            }
+          } catch {
+            playerVideo.style.display = 'none';
+            playerIframe.style.display = 'block';
+          }
         } else {
-          playerVideo.src = streamUrl;
+          const mal = activeAnime.idMal || activeAnime.id;
+          const streamUrl = `https://stream-proxy.babyanime.workers.dev/api/stream?id=${mal}&ep=${activeEpisode}&sub=${activeAudio}`;
+
+          if (Hls.isSupported()) {
+            if (window.hlsInstance) window.hlsInstance.destroy();
+            const hls = new Hls();
+            hls.loadSource(streamUrl);
+            hls.attachMedia(playerVideo);
+            window.hlsInstance = hls;
+          } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
+            playerVideo.src = streamUrl;
+          } else {
+            playerVideo.src = streamUrl;
+          }
         }
       } else {
         if (window.hlsInstance) {

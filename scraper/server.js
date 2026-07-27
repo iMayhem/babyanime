@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { scrapeAll } = require('./scraper');
+const { scrapeAll, scrapeArceus } = require('./scraper');
 
 const app = express();
 app.use(cors());
@@ -14,7 +14,8 @@ const REFERER_MAP = {
   aniplay_mal: 'https://animeplay.cfd/',
   moviesrc_mal: 'https://movie-src.xyz/',
   vidsrc_cc: 'https://vidsrc.cc/',
-  vidsrc_to: 'https://vidsrc.to/'
+  vidsrc_to: 'https://vidsrc.to/',
+  arceus: ''
 };
 
 app.get('/', (req, res) => {
@@ -47,6 +48,18 @@ app.get('/scrape', async (req, res) => {
   }
 
   res.json(response);
+});
+
+app.get('/arceus', async (req, res) => {
+  const { anilist_id, ep, audio } = req.query;
+  if (!anilist_id) return res.status(400).json({ error: 'anilist_id required' });
+  const start = Date.now();
+  try {
+    const url = await scrapeArceus(anilist_id, parseInt(ep || '1'), audio || 'sub');
+    res.json({ query: { anilist_id, ep, audio }, stream_url: url, time_ms: Date.now() - start });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/redirect', (req, res) => {
