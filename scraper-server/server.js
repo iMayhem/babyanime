@@ -163,6 +163,10 @@ app.get("/api/stream-proxy", async (req, res) => {
     fetchHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
   }
 
+  // Forward Range header for video seeking
+  const range = req.headers["range"];
+  if (range) fetchHeaders["Range"] = range;
+
   try {
     const resp = await fetch(targetUrl, { headers: fetchHeaders, redirect: "follow" });
     const contentType = resp.headers.get("Content-Type") || "application/octet-stream";
@@ -192,7 +196,17 @@ app.get("/api/stream-proxy", async (req, res) => {
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges");
+    res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "public, max-age=3600");
+
+    // Pass through CDN response headers for video playback
+    const passHeaders = ["content-range", "content-length", "content-disposition"];
+    for (const key of passHeaders) {
+      const val = resp.headers.get(key);
+      if (val) res.setHeader(key, val);
+    }
+
     res.status(resp.status);
     if (typeof body === "string") {
       res.send(body);
