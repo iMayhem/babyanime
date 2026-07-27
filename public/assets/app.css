@@ -585,7 +585,7 @@ header {
 
 .recent-progress-fill {
   height: 100%;
-  background: var(--teal);
+  background: var(--accent);
   border-radius: 99px;
 }
 
@@ -795,8 +795,8 @@ header {
 }
 
 .meta-badge {
-  background: var(--tint);
-  color: var(--accent);
+  background: var(--bg);
+  color: var(--muted);
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.15rem 0.45rem;
