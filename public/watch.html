@@ -331,6 +331,35 @@
       letter-spacing: 0.02em;
     }
 
+    /* ── Big Play Overlay ── */
+    .big-play-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 72px;
+      height: 72px;
+      background: rgba(0,0,0,0.65);
+      border: 3px solid rgba(255,255,255,0.85);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      z-index: 6;
+      transition: transform 0.15s ease, background 0.15s ease, opacity 0.2s ease;
+      pointer-events: auto;
+    }
+    .big-play-overlay:hover {
+      transform: translate(-50%, -50%) scale(1.12);
+      background: var(--accent, #e25c5c);
+    }
+    .big-play-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     /* ── Scraper Status Overlay ── */
     .scraper-status {
       position: absolute;
@@ -438,6 +467,9 @@
           <div class="player-wrapper" id="playerWrapper">
             <div class="scraper-status" id="scraperStatus"></div>
             <video id="playerVideo" class="player-iframe" playsinline></video>
+            <div class="big-play-overlay" id="bigPlayOverlay" title="Play">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
+            </div>
             <div class="ctrl-bar" id="ctrlBar">
               <div class="ctrl-row ctrl-seek-row">
                 <input type="range" class="seek-bar" id="seekBar" value="0" min="0" step="0.1">
@@ -657,6 +689,7 @@
     const qualityPills = document.getElementById('qualityPills');
     const qualitySection = document.getElementById('qualitySection');
     const sourceBadge = document.getElementById('sourceBadge');
+    const bigPlayOverlay = document.getElementById('bigPlayOverlay');
     
     const detailsPoster = document.getElementById('detailsPoster');
     const detailsTitleRomaji = document.getElementById('detailsTitleRomaji');
@@ -1115,7 +1148,7 @@
         }
       };
 
-      const isM3u8 = url.includes('.m3u8') || proxiedUrl.includes('stream-proxy');
+      const isM3u8 = url.includes('.m3u8') || url.includes('/fresh-stream') || proxiedUrl.includes('.m3u8');
 
       if (isM3u8 && typeof Hls !== 'undefined' && Hls.isSupported()) {
         const hls = new Hls({
@@ -1264,6 +1297,7 @@
     function setupPlayerControls() {
       playBtn.addEventListener('click', togglePlay);
       playerVideo.addEventListener('click', togglePlay);
+      bigPlayOverlay.addEventListener('click', togglePlay);
       playerVideo.addEventListener('play', updatePlayBtn);
       playerVideo.addEventListener('pause', updatePlayBtn);
 
@@ -1368,9 +1402,11 @@
     }
 
     function updatePlayBtn() {
-      playBtn.innerHTML = playerVideo.paused
+      const paused = playerVideo.paused;
+      playBtn.innerHTML = paused
         ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'
         : '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+      bigPlayOverlay.classList.toggle('hidden', !paused);
     }
 
     function updateSeekBar() {
