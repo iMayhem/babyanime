@@ -477,16 +477,6 @@
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
                 <option value="scraper_all" selected>🔍 All Scrapers (Auto)</option>
-                <option value="scraper_AllAnime">AllAnime</option>
-                <option value="scraper_AniDB">AniDB</option>
-                <option value="scraper_AnikoTV">AnikoTV</option>
-                <option value="scraper_AnimeSama">Anime-Sama</option>
-                <option value="scraper_AnimeKai">AnimeKai</option>
-                <option value="scraper_AnimePahe">AnimePahe</option>
-                <option value="scraper_AnimeSalt">AnimeSalt</option>
-                <option value="scraper_Animetsu">Animetsu</option>
-                <option value="scraper_AnimeWorld">AnimeWorld</option>
-                <option value="scraper_KissKH">KissKH</option>
               </select>
             </div>
 
@@ -1080,15 +1070,22 @@
       return url;
     }
 
-    function playStreamUrl(url, headers, providerName) {
+    // Track which source index is currently playing for auto-fallback
+    let activeSourceIndex = 0;
+
+    function playStreamUrl(url, headers, providerName, sourceIdx) {
+      // Destroy any existing HLS instance
       if (window.hlsInstance) {
-        window.hlsInstance.destroy();
+        try { window.hlsInstance.destroy(); } catch (_) {}
         window.hlsInstance = null;
       }
       playerVideo.src = '';
-      playerVideo.pause();
+      playerVideo.load();
+
+      if (sourceIdx !== undefined) activeSourceIndex = sourceIdx;
 
       const proxiedUrl = proxyStreamUrl(url, headers);
+      console.log('[Player] Loading source', activeSourceIndex, providerName, proxiedUrl.substring(0, 80));
 
       if (providerName) {
         sourceBadge.textContent = providerName;
@@ -1097,18 +1094,66 @@
         sourceBadge.style.display = 'none';
       }
 
-      if (proxiedUrl.includes('.m3u8') && Hls.isSupported()) {
-        const hls = new Hls();
+      const tryNextSource = () => {
+        const next = activeSourceIndex + 1;
+        if (next < scraperSources.length) {
+          console.log('[Player] Source failed, trying next:', next);
+          const s = scraperSources[next];
+          // update quality pill selection
+          qualityPills.querySelectorAll('.pill-opt').forEach(b => {
+            b.classList.toggle('active', parseInt(b.dataset.idx) === next);
+          });
+          playStreamUrl(s.url, s.headers, s.provider, next);
+        } else {
+          console.warn('[Player] All sources exhausted.');
+          sourceBadge.textContent = '⚠ No working source';
+          sourceBadge.style.display = '';
+        }
+      };
+
+      const isM3u8 = url.includes('.m3u8') || proxiedUrl.includes('stream-proxy');
+
+      if (isM3u8 && typeof Hls !== 'undefined' && Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90,
+        });
+        window.hlsInstance = hls;
+
         hls.loadSource(proxiedUrl);
         hls.attachMedia(playerVideo);
-        window.hlsInstance = hls;
+
+        hls.once(Hls.Events.MANIFEST_PARSED, () => {
+          playerVideo.playbackRate = playbackSpeed;
+          playerVideo.play().catch(() => {
+            // Autoplay blocked — user must click play, that's fine
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.warn('[HLS] Fatal error:', data.type, data.details);
+            hls.destroy();
+            window.hlsInstance = null;
+            tryNextSource();
+          }
+        });
+
       } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari native HLS
         playerVideo.src = proxiedUrl;
+        playerVideo.load();
+        playerVideo.playbackRate = playbackSpeed;
+        playerVideo.play().catch(() => {});
+        playerVideo.onerror = tryNextSource;
       } else {
         playerVideo.src = proxiedUrl;
+        playerVideo.load();
+        playerVideo.playbackRate = playbackSpeed;
+        playerVideo.play().catch(() => {});
+        playerVideo.onerror = tryNextSource;
       }
-      playerVideo.play().catch(() => {});
-      playerVideo.playbackRate = playbackSpeed;
     }
 
     function renderScraperQualityPills(sources) {
@@ -1116,17 +1161,11 @@
         qualitySection.style.display = 'none';
         return;
       }
-      const seen = {};
-      const unique = sources.filter(s => {
-        const key = s.quality || 'Auto';
-        if (seen[key]) return false;
-        seen[key] = true;
-        return true;
-      });
 
-      qualityPills.innerHTML = unique.map((s, i) =>
-        `<button type="button" class="pill-opt${i === 0 ? ' active' : ''}" data-quality="${s.quality}" data-idx="${i}" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">${s.quality}</button>`
-      ).join('');
+      qualityPills.innerHTML = sources.map((s, i) => {
+        const label = `${s.provider} · ${s.quality || 'Auto'}`;
+        return `<button type="button" class="pill-opt${i === 0 ? ' active' : ''}" data-idx="${i}" style="padding: 0.25rem 0.6rem; font-size: 0.8em;">${label}</button>`;
+      }).join('');
       qualitySection.style.display = 'flex';
 
       qualityPills.querySelectorAll('.pill-opt').forEach(btn => {
@@ -1134,9 +1173,37 @@
           qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const idx = parseInt(btn.dataset.idx);
-          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider);
+          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx);
         });
       });
+    }
+
+    // Dynamically rebuild the server dropdown to show only providers that have sources
+    function populateServerDropdown(sources) {
+      // Collect unique providers from results
+      const seen = new Set();
+      const providers = [];
+      for (const s of sources) {
+        if (!seen.has(s.provider)) {
+          seen.add(s.provider);
+          providers.push(s.provider);
+        }
+      }
+
+      // Save current selection
+      const current = serverSelect.value;
+
+      // Rebuild options: always keep "All" at top, then one per provider
+      serverSelect.innerHTML = `<option value="scraper_all">🔍 All (${sources.length} sources)</option>`
+        + providers.map(p => `<option value="scraper_${p}">${p}</option>`).join('');
+
+      // Restore selection if still valid
+      if ([...serverSelect.options].some(o => o.value === current)) {
+        serverSelect.value = current;
+      } else {
+        serverSelect.value = 'scraper_all';
+        activeServer = 'scraper_all';
+      }
     }
 
     async function loadScraperStreams() {
@@ -1152,15 +1219,34 @@
       try {
         const resp = await fetch(`${SCRAPER_API}/stream?${params}`);
         const data = await resp.json();
-        if (!data.success || !data.sources || data.sources.length === 0) return;
+
+        if (!data.success || !data.sources || data.sources.length === 0) {
+          sourceBadge.textContent = '⚠ No sources found';
+          sourceBadge.style.display = '';
+          return;
+        }
 
         scraperSources = data.sources;
+        activeSourceIndex = 0;
+
+        // Show only providers that actually returned sources in the dropdown
+        populateServerDropdown(scraperSources);
         renderScraperQualityPills(scraperSources);
-        if (scraperSources.length > 0) {
-          playStreamUrl(scraperSources[0].url, scraperSources[0].headers, scraperSources[0].provider);
+
+        // Filter to selected provider if not "all"
+        let toPlay = scraperSources;
+        if (provider !== 'all') {
+          toPlay = scraperSources.filter(s => s.provider === provider);
+          if (toPlay.length === 0) toPlay = scraperSources; // fallback to all
         }
+
+        // Start with the first source
+        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, 0);
+
       } catch (err) {
         console.error('Failed to load scraper stream:', err);
+        sourceBadge.textContent = '⚠ Scraper error';
+        sourceBadge.style.display = '';
       }
     }
 

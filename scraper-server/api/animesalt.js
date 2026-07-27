@@ -1,5 +1,5 @@
 var TMDB_KEY = "d80ba92bc7cefe3359668d30d06f3305";
-var BASE = "https://animesalt.ac";
+var BASE = "https://animesalt.link";
 var CDN = "https://as-cdn21.top";
 var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
 function httpGet(_0x39f343, _0x32b163) {
@@ -44,8 +44,8 @@ function searchSite(_0x29bee3, _0x531a8c, _0x1bbd9c) {
     var _0x157bb5;
     while ((_0x157bb5 = _0x8cb95a.exec(_0x258fe5)) !== null) {
       var _0x1aa24f = _0x157bb5[1];
-      var _0x21e9e4 = _0x1aa24f.match(/href="(https:\/\/animesalt\.ac\/(series|movies)\/([^\/\"]+)\/?)\"/);
-      var _0x1004a4 = _0x1aa24f.match(/class="entry-title"[^>]*>([^<]+)</);
+      var _0x21e9e4 = _0x1aa24f.match(/href="(https:\/\/animesalt\.(?:ac|link|net)\/(series|movies)\/([^\/\"]+)\/?)\"/);
+      var _0x1004a4 = _0x1aa24f.match(/class="entry-title"[^\>]*\>([^\<]+)\</);
       var _0x491d22 = _0x1aa24f.match(/class="year"[^>]*>(\d{4})</);
       if (_0x21e9e4 && _0x1004a4) {
         var _0x1a8c9b = _0x21e9e4[3];
@@ -158,7 +158,7 @@ function getEpisodeUrl(_0x2ee78f, _0x3882e2, _0x2ad633) {
   });
 }
 function getEpisodeUrlFromHtml(_0x4a5f89, _0xc0da63, _0x5912b5) {
-  var _0x118fb1 = new RegExp("href=\"(https://animesalt\\.ac/episode/[^\"]*" + _0xc0da63 + "x" + _0x5912b5 + "[^\"]*)\"");
+  var _0x118fb1 = new RegExp("href=\"(https://animesalt\\.(?:ac|link|net)/episode/[^\"]*" + _0xc0da63 + "x" + _0x5912b5 + "[^\"]*)\"");
   var _0x4c25e6 = _0x4a5f89.match(_0x118fb1);
   if (_0x4c25e6) {
     return _0x4c25e6[1];
@@ -169,7 +169,7 @@ function getStreamFromPage(_0x25488e) {
   return httpGet(_0x25488e, {
     Referer: BASE + "/"
   }).then(function (_0x3dd519) {
-    var _0x681dbf = _0x3dd519.match(/src="(https:\/\/as-cdn\d+\.top\/video\/([a-f0-9]+))"/);
+    var _0x681dbf = _0x3dd519.match(/(?:src|data-src)="(https:\/\/as-cdn\d+\.top\/video\/([a-f0-9]+))"/);
     if (!_0x681dbf) {
       console.log("[AnimeSalt] No player on: " + _0x25488e);
       return null;

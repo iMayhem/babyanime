@@ -1,5 +1,5 @@
 var TMDB_KEY = "d80ba92bc7cefe3359668d30d06f3305";
-var BASE = "https://watchanimeworld.net";
+var BASE = "https://watchanimeworld.top";
 var PLAYER = "https://play.zephyrflick.top";
 var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 function httpGet(_0x4dd1ad, _0x12d8c2) {
@@ -35,7 +35,7 @@ function searchSite(_0x440768, _0x287a36) {
     Referer: BASE + "/"
   }).then(function (_0x14e8ed) {
     var _0x3df02a = [];
-    var _0x348335 = /href="(https:\/\/watchanimeworld\.net\/(series|movies)\/([^\/\"]+)\/)"/g;
+    var _0x348335 = /href="(https:\/\/watchanimeworld\.(?:net|top|com)\/(series|movies)\/([^\/\"]+)\/)"/g;
     var _0x2eee89;
     while ((_0x2eee89 = _0x348335.exec(_0x14e8ed)) !== null) {
       var _0x282822 = _0x2eee89[1];
@@ -71,7 +71,7 @@ function getEpisodeUrl(_0x251373, _0x5d2023, _0x31ccd1) {
       Referer: _0x251373
     }).then(function (_0x89d2aa) {
       var _0x5a4ea0 = _0x5d2023 + "x" + _0x31ccd1 + "/";
-      var _0x1bb854 = /href="(https:\/\/watchanimeworld\.net\/episode\/([^"]+))"/g;
+      var _0x1bb854 = /href="(https:\/\/watchanimeworld\.(?:net|top|com)\/episode\/([^"]+))"/g;
       var _0x59c515;
       while ((_0x59c515 = _0x1bb854.exec(_0x89d2aa)) !== null) {
         if (_0x59c515[1].indexOf(_0x5a4ea0) !== -1) {
@@ -97,6 +97,8 @@ function getStreamFromPage(_0x1fa3eb) {
       "X-Requested-With": "XMLHttpRequest"
     }).then(function (_0x14bda9) {
       var _0x4faccf = _0x14bda9.videoSource || _0x14bda9.securedLink;
+      // Rewrite blocked zephyrflick CDN to accessible as-cdn21 (same content, different hostname)
+      if (_0x4faccf) _0x4faccf = _0x4faccf.replace(/play\.zephyrflick\.top/g, "as-cdn21.top");
       if (!_0x4faccf) {
         return null;
       }
@@ -145,8 +147,8 @@ function getStreams(_0x387a61, _0x59d3a5, _0x260966, _0x5edfe9) {
         url: _0x231866.url,
         quality: "1080p",
         headers: {
-          Referer: PLAYER + "/",
-          Origin: PLAYER,
+          Referer: "https://as-cdn21.top/",
+          Origin: "https://as-cdn21.top",
           "User-Agent": UA,
           Connection: "keep-alive"
         },
