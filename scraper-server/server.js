@@ -150,6 +150,61 @@ app.use("/api/stream", (req, res, next) => {
   next();
 });
 
+// Stream proxy for CDN URLs (VPS fetches with scraper headers)
+app.get("/api/stream-proxy", async (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) return res.status(400).json({ error: "Missing url" });
+
+  const fetchHeaders = {};
+  if (req.query.r) fetchHeaders["Referer"] = req.query.r;
+  if (req.query.o) fetchHeaders["Origin"] = req.query.o;
+  if (req.query.ua) fetchHeaders["User-Agent"] = req.query.ua;
+  if (!fetchHeaders["User-Agent"]) {
+    fetchHeaders["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  }
+
+  try {
+    const resp = await fetch(targetUrl, { headers: fetchHeaders, redirect: "follow" });
+    const contentType = resp.headers.get("Content-Type") || "application/octet-stream";
+
+    const isM3U8 = targetUrl.includes(".m3u8") || contentType.includes("m3u8");
+    let body = resp.body;
+
+    if (isM3U8 && resp.ok) {
+      const text = await resp.text();
+      const streamProxyBase = `${req.protocol}://${req.get("host")}/api/stream-proxy?url=`;
+      const extraParams = [];
+      if (req.query.r) extraParams.push(`r=${encodeURIComponent(req.query.r)}`);
+      if (req.query.o) extraParams.push(`o=${encodeURIComponent(req.query.o)}`);
+      if (req.query.ua) extraParams.push(`ua=${encodeURIComponent(req.query.ua)}`);
+      const extraStr = extraParams.length ? "&" + extraParams.join("&") : "";
+
+      const lines = text.split("\n").map(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) return line;
+        const resolved = trimmed.startsWith("http://") || trimmed.startsWith("https://")
+          ? trimmed
+          : new URL(trimmed, targetUrl).href;
+        return `${streamProxyBase}${encodeURIComponent(resolved)}${extraStr}`;
+      });
+      body = lines.join("\n");
+    }
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.status(resp.status);
+    if (typeof body === "string") {
+      res.send(body);
+    } else {
+      const { Readable } = require("stream");
+      Readable.fromWeb(body).pipe(res);
+    }
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 app.get("/api/tmdb-proxy", async (req, res) => {
   try {
     const { path: tmdbPath } = req.query;
