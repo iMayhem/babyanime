@@ -1055,6 +1055,10 @@
     }
 
     function proxyStreamUrl(url, headers) {
+      if (!url) return url;
+      if (url.startsWith(SCRAPER_API) || url.includes('/api/fresh-stream') || url.includes('/api/stream-proxy')) {
+        return url;
+      }
       if (STREAM_PROXY && !url.startsWith(location.origin) && !url.startsWith('http://localhost')) {
         let proxyUrl = `${STREAM_PROXY}${encodeURIComponent(url)}`;
         if (headers) {

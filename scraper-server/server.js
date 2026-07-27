@@ -169,38 +169,58 @@ app.get("/api/stream-proxy", async (req, res) => {
 
   try {
     const resp = await fetch(targetUrl, { headers: fetchHeaders, redirect: "follow" });
-    const contentType = resp.headers.get("Content-Type") || "application/octet-stream";
 
-    const isM3U8 = targetUrl.includes(".m3u8") || contentType.includes("m3u8");
-    let body = resp.body;
+    let contentType = resp.headers.get("Content-Type") || "application/octet-stream";
+    const isM3u8Candidate = targetUrl.includes(".m3u8") || contentType.includes("m3u8") || targetUrl.includes("/hls/") || targetUrl.includes("/cdn/hls/") || targetUrl.includes("/p/");
 
-    if (isM3U8 && resp.ok) {
+    if (resp.ok && isM3u8Candidate) {
       const text = await resp.text();
-      const streamProxyBase = `${req.protocol}://${req.get("host")}/api/stream-proxy?url=`;
-      const extraParams = [];
-      if (req.query.r) extraParams.push(`r=${encodeURIComponent(req.query.r)}`);
-      if (req.query.o) extraParams.push(`o=${encodeURIComponent(req.query.o)}`);
-      if (req.query.ua) extraParams.push(`ua=${encodeURIComponent(req.query.ua)}`);
-      const extraStr = extraParams.length ? "&" + extraParams.join("&") : "";
+      if (text.trim().startsWith("#EXTM3U")) {
+        const host = req.get("host") || "proxy.babyanime.top";
+        const proto = req.get("x-forwarded-proto") || "https";
+        const streamProxyBase = `${proto}://${host}/api/stream-proxy?url=`;
 
-      const lines = text.split("\n").map(line => {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) return line;
-        const resolved = trimmed.startsWith("http://") || trimmed.startsWith("https://")
-          ? trimmed
-          : new URL(trimmed, targetUrl).href;
-        return `${streamProxyBase}${encodeURIComponent(resolved)}${extraStr}`;
-      });
-      body = lines.join("\n");
+        const extraParams = [];
+        if (req.query.r) extraParams.push(`r=${encodeURIComponent(req.query.r)}`);
+        if (req.query.o) extraParams.push(`o=${encodeURIComponent(req.query.o)}`);
+        if (req.query.ua) extraParams.push(`ua=${encodeURIComponent(req.query.ua)}`);
+        const extraStr = extraParams.length ? "&" + extraParams.join("&") : "";
+
+        const proxyUrl = (rawUrl) => {
+          const resolved = rawUrl.startsWith("http://") || rawUrl.startsWith("https://")
+            ? rawUrl
+            : new URL(rawUrl, targetUrl).href;
+          return `${streamProxyBase}${encodeURIComponent(resolved)}${extraStr}`;
+        };
+
+        const lines = text.split("\n").map(line => {
+          const trimmed = line.trim();
+          if (!trimmed) return line;
+          if (trimmed.startsWith("#")) {
+            return trimmed.replace(/URI="([^"]+)"/g, (_, uri) => `URI="${proxyUrl(uri)}"`);
+          }
+          return proxyUrl(trimmed);
+        });
+
+        res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
+        res.setHeader("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges");
+        res.setHeader("Accept-Ranges", "bytes");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        return res.send(lines.join("\n"));
+      } else {
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges");
+        res.setHeader("Accept-Ranges", "bytes");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        return res.send(text);
+      }
     }
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges");
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "public, max-age=3600");
 
-    // Pass through CDN response headers for video playback
     const passHeaders = ["content-range", "content-length", "content-disposition"];
     for (const key of passHeaders) {
       const val = resp.headers.get(key);
@@ -208,12 +228,8 @@ app.get("/api/stream-proxy", async (req, res) => {
     }
 
     res.status(resp.status);
-    if (typeof body === "string") {
-      res.send(body);
-    } else {
-      const { Readable } = require("stream");
-      Readable.fromWeb(body).pipe(res);
-    }
+    const { Readable } = require("stream");
+    Readable.fromWeb(resp.body).pipe(res);
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -239,9 +255,6 @@ const _freshStreamCache = new Map(); // episodeUrl -> {url, headers, ts}
 app.get("/api/fresh-stream", async (req, res) => {
   const { ep_url, scraper, r, o } = req.query;
   if (!ep_url) return res.status(400).json({ error: "Missing ep_url" });
-
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
 
   try {
     const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
@@ -332,7 +345,6 @@ async function _serveFreshM3U8(req, res, videoUrl, referer, UA) {
   }).join("\n");
 
   res.setHeader("Content-Type", contentType);
-  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-cache");
   res.send(rewritten);
 }
