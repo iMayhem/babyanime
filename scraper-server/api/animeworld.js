@@ -107,6 +107,7 @@ function getStreamFromPage(_0x1fa3eb) {
       var _0x25d23f = PLAYER + "/cdn/down/" + _0x49751f + "/Subtitle/subtitle_eng.srt";
       return {
         url: _0x4faccf,
+        episodeUrl: _0x1fa3eb,
         subtitle: _0x25d23f
       };
     });
@@ -141,17 +142,14 @@ function getStreams(_0x387a61, _0x59d3a5, _0x260966, _0x5edfe9) {
         _0x2eb541([]);
         return;
       }
+      // Use fresh-stream URL to avoid CDN token expiry
+      var _0xfreshUrl = "https://proxy.babyanime.top/api/fresh-stream?ep_url=" + encodeURIComponent(_0x231866.episodeUrl || _0x231866.url);
       _0x2eb541([{
         name: "🗡️ AnimeWorld",
         title: "AnimeWorld • Multi-Audio 1080p",
-        url: _0x231866.url,
+        url: _0xfreshUrl,
         quality: "1080p",
-        headers: {
-          Referer: "https://as-cdn21.top/",
-          Origin: "https://as-cdn21.top",
-          "User-Agent": UA,
-          Connection: "keep-alive"
-        },
+        headers: {},
         subtitles: _0x231866.subtitle ? [{
           url: _0x231866.subtitle,
           lang: "en",

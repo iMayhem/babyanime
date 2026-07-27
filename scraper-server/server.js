@@ -232,6 +232,112 @@ app.get("/api/tmdb-proxy", async (req, res) => {
   }
 });
 
+// ── Fresh Stream Proxy: re-fetches CDN token on every request to avoid expiry ──
+// Used by AnimeSalt and AnimeWorld whose CDN URLs expire after a few minutes.
+const _freshStreamCache = new Map(); // episodeUrl -> {url, headers, ts}
+
+app.get("/api/fresh-stream", async (req, res) => {
+  const { ep_url, scraper, r, o } = req.query;
+  if (!ep_url) return res.status(400).json({ error: "Missing ep_url" });
+
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+
+  try {
+    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36";
+
+    // Check cache first (30-second window, CDN tokens last ~5min)
+    const cached = _freshStreamCache.get(ep_url);
+    if (cached && (Date.now() - cached.ts) < 30000) {
+      return await _serveFreshM3U8(req, res, cached.url, cached.referer, UA);
+    }
+
+    // Re-fetch the episode page to get a fresh player hash
+    const pageResp = await fetch(ep_url, {
+      headers: { "User-Agent": UA, "Referer": r || "https://animesalt.link/" },
+      redirect: "follow",
+    });
+    if (!pageResp.ok) return res.status(502).json({ error: "Episode page fetch failed: " + pageResp.status });
+    const pageHtml = await pageResp.text();
+
+    // Extract CDN player iframe
+    const playerMatch = pageHtml.match(/(?:src|data-src)="(https:\/\/(?:as-cdn\d+\.top|play\.zephyrflick\.top)\/video\/([a-f0-9]+))"/);
+    if (!playerMatch) return res.status(404).json({ error: "No player found on page" });
+
+    const cdnBase = playerMatch[1].split("/video/")[0];
+    const hash = playerMatch[2];
+    const siteBase = new URL(ep_url).origin;
+
+    // POST to get fresh signed URL
+    const postResp = await fetch(`${cdnBase}/player/index.php?data=${hash}&do=getVideo`, {
+      method: "POST",
+      headers: {
+        "User-Agent": UA,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Referer": siteBase + "/",
+        "Origin": cdnBase,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: `hash=${hash}&r=${encodeURIComponent(siteBase + "/")}`,
+    });
+    if (!postResp.ok) return res.status(502).json({ error: "CDN POST failed: " + postResp.status });
+    const json = await postResp.json();
+
+    let videoUrl = json.videoSource || json.securedLink;
+    if (!videoUrl) return res.status(404).json({ error: "No videoSource in CDN response" });
+
+    // Normalize CDN domain (zephyrflick → as-cdn21 which is accessible)
+    videoUrl = videoUrl.replace(/play\.zephyrflick\.top/g, "as-cdn21.top");
+    const referer = cdnBase.replace(/play\.zephyrflick\.top/g, "as-cdn21.top") + "/";
+
+    _freshStreamCache.set(ep_url, { url: videoUrl, referer, ts: Date.now() });
+
+    await _serveFreshM3U8(req, res, videoUrl, referer, UA);
+  } catch (err) {
+    console.error("[fresh-stream] Error:", err.message);
+    res.status(502).json({ error: err.message });
+  }
+});
+
+async function _serveFreshM3U8(req, res, videoUrl, referer, UA) {
+  const m3u8Resp = await fetch(videoUrl, {
+    headers: { "Referer": referer, "Origin": referer.replace(/\/$/, ""), "User-Agent": UA },
+  });
+  if (!m3u8Resp.ok) {
+    res.status(m3u8Resp.status).json({ error: "CDN returned " + m3u8Resp.status });
+    return;
+  }
+
+  const text = await m3u8Resp.text();
+  const contentType = m3u8Resp.headers.get("Content-Type") || "application/vnd.apple.mpegurl";
+
+  // Rewrite all URLs through our stream-proxy so HLS.js can fetch them cross-origin
+  const proxyBase = `https://proxy.babyanime.top/api/stream-proxy?url=`;
+  const extraParams = `&r=${encodeURIComponent(referer)}&o=${encodeURIComponent(referer.replace(/\/$/, ""))}&ua=${encodeURIComponent(UA)}`;
+
+  const proxyUrl = (rawUrl) => {
+    const abs = rawUrl.startsWith("http") ? rawUrl : new URL(rawUrl, videoUrl).href;
+    return `${proxyBase}${encodeURIComponent(abs)}${extraParams}`;
+  };
+
+  const rewritten = text.split("\n").map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return line;
+    // Rewrite URI= attributes in HLS tags (#EXT-X-MEDIA, #EXT-X-I-FRAME-STREAM-INF, etc.)
+    if (trimmed.startsWith("#")) {
+      return trimmed.replace(/URI="([^"]+)"/g, (_, uri) => `URI="${proxyUrl(uri)}"`);
+    }
+    // Bare segment/playlist lines
+    return proxyUrl(trimmed);
+  }).join("\n");
+
+  res.setHeader("Content-Type", contentType);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "no-cache");
+  res.send(rewritten);
+}
+
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(` BabyAnime Scraper Server`);

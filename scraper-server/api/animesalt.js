@@ -194,6 +194,7 @@ function getStreamFromPage(_0x25488e) {
       console.log("[AnimeSalt] Stream found!");
       return {
         url: _0x10c352,
+        episodeUrl: _0x25488e,
         subtitle: _0x519d10,
         cdnBase: _0x713a36
       };
@@ -237,16 +238,16 @@ function getStreams(_0x43e975, _0x44d28e, _0x393c01, _0x8724db) {
         return;
       }
       var _0xebc5df = _0x4bfd6d.cdnBase || CDN;
+      // Return a fresh-stream URL that re-fetches the token on each play request
+      // This avoids md5/expires token expiry for the player
+      var _0xepUrl = _0x4bfd6d.episodeUrl || _0x4bfd6d.url;
+      var _0xfreshUrl = "https://proxy.babyanime.top/api/fresh-stream?ep_url=" + encodeURIComponent(_0xepUrl);
       _0x2605eb([{
         name: "🧂 AnimeSalt",
         title: "AnimeSalt • Multi-Audio",
-        url: _0x4bfd6d.url,
+        url: _0xfreshUrl,
         quality: "720p",
-        headers: {
-          Referer: _0xebc5df + "/",
-          Origin: _0xebc5df,
-          "User-Agent": UA
-        },
+        headers: {},
         subtitles: _0x4bfd6d.subtitle ? [{
           url: _0x4bfd6d.subtitle,
           lang: "en",
