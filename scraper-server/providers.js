@@ -2,16 +2,7 @@ const path = require("path");
 const admin = require("./admin");
 
 const PROVIDERS = [
-  { name: "AllAnime", file: "allanime.js" },
-  { name: "AniDB", file: "anidb.js" },
-  { name: "AnikoTV", file: "anikototv.js" },
-  { name: "AnimeSama", file: "anime-sama.js" },
-  { name: "AnimeKai", file: "animekai.js" },
-  { name: "AnimePahe", file: "animepahe.js" },
-  { name: "AnimeSalt", file: "animesalt.js" },
-  { name: "Animetsu", file: "animetsu.js" },
-  { name: "AnimeWorld", file: "animeworld.js" },
-  { name: "KissKH", file: "kisskh.js" },
+  { name: "Eren", file: "anisnatch.js" },
 ];
 
 let loadedProviders = [];
@@ -52,7 +43,7 @@ async function runAll(resolved, audio = "sub", onEvent = null) {
   const tasks = loadedProviders.map(async (provider) => {
     try {
       let id = tmdbId;
-      if (provider.name === "AnimeKai" && anilistId) {
+      if ((provider.name === "Eren" || provider.name === "AniSnatch") && anilistId) {
         id = `anilist:${anilistId}`;
       }
       if (!id) {
@@ -119,7 +110,7 @@ async function runProvider(providerName, resolved, audio = "sub") {
 
   const { tmdbId, anilistId, type, season, episode } = resolved;
   let id = tmdbId;
-  if (provider.name === "AnimeKai" && anilistId) {
+  if ((provider.name === "Eren" || provider.name === "AniSnatch") && anilistId) {
     id = `anilist:${anilistId}`;
   }
   if (!id) return [];

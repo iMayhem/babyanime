@@ -4,8 +4,7 @@ const path = require('path');
 const CONFIG_PATH = path.join(__dirname, 'scraper-config.json');
 
 const DEFAULT_PROVIDERS = [
-  'AllAnime', 'AniDB', 'AnikoTV', 'AnimeSama', 'AnimeKai',
-  'AnimePahe', 'AnimeSalt', 'Animetsu', 'AnimeWorld', 'KissKH',
+  'Eren'
 ];
 
 function loadConfig() {
@@ -39,34 +38,41 @@ function getScrapers() {
 
 function toggleScraper(name) {
   const config = loadConfig();
-  const idx = config.scrapers.findIndex(s => s.name === name);
-  if (idx >= 0) {
-    config.scrapers[idx].enabled = !config.scrapers[idx].enabled;
-  } else {
-    const order = DEFAULT_PROVIDERS.indexOf(name);
-    if (order === -1) return null;
-    config.scrapers.push({ name, enabled: false, order });
-  }
+  const scrapers = getScrapers();
+  const target = scrapers.find(s => s.name === name);
+  if (!target) return scrapers;
+
+  target.enabled = !target.enabled;
+  config.scrapers = scrapers;
   saveConfig(config);
-  return getScrapers().find(s => s.name === name);
+  return scrapers;
 }
 
-function reorderScrapers(names) {
+function reorderScrapers(newOrderNames) {
   const config = loadConfig();
-  config.scrapers = names.map((name, i) => {
-    const existing = config.scrapers.find(s => s.name === name);
+  const current = getScrapers();
+
+  const reordered = newOrderNames.map((name, i) => {
+    const item = current.find(s => s.name === name);
     return {
       name,
-      enabled: existing ? existing.enabled : true,
+      enabled: item ? item.enabled : true,
       order: i,
     };
   });
+
+  config.scrapers = reordered;
   saveConfig(config);
-  return getScrapers();
+  return reordered;
 }
 
 function getEnabledProviders() {
-  return getScrapers().filter(s => s.enabled).map(s => s.name);
+  return ['Eren'];
 }
 
-module.exports = { getScrapers, toggleScraper, reorderScrapers, getEnabledProviders };
+module.exports = {
+  getScrapers,
+  toggleScraper,
+  reorderScrapers,
+  getEnabledProviders,
+};

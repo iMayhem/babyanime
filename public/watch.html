@@ -188,30 +188,52 @@
       width: 100%;
       height: 6px;
       border-radius: 3px;
-      background: rgba(255,255,255,0.25);
+      background: linear-gradient(to right, var(--accent, #e25c5c) 0%, var(--accent, #e25c5c) 0%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.2) 100%);
       outline: none;
       cursor: pointer;
+      transition: height 0.1s ease;
+    }
+
+    .seek-bar:hover {
+      height: 8px;
     }
 
     .seek-bar::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: var(--accent, #e25c5c);
-      border: 2px solid var(--ink);
-      box-shadow: 2px 2px 0 var(--shadow);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--accent, #e25c5c);
       cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .seek-bar::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+      box-shadow: 0 0 0 4px var(--accent, #e25c5c), 0 0 10px rgba(226,92,92,0.5);
     }
 
     .seek-bar::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: var(--accent, #e25c5c);
-      border: 2px solid var(--ink);
-      box-shadow: 2px 2px 0 var(--shadow);
+      background: #fff;
+      border: 3px solid var(--accent, #e25c5c);
       cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .seek-bar::-moz-range-progress {
+      background: var(--accent, #e25c5c);
+      border-radius: 3px;
+      height: 6px;
+    }
+
+    .seek-bar::-moz-range-track {
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      height: 6px;
     }
 
     .ctrl-btn {
@@ -360,7 +382,88 @@
       pointer-events: none;
     }
 
-    /* ── Scraper Status Overlay ── */
+    /* ── Buffering / Loading Spinner ── */
+    .buf-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56px;
+      height: 56px;
+      z-index: 7;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .buf-spinner.visible {
+      opacity: 1;
+    }
+    .buf-spinner svg {
+      width: 100%;
+      height: 100%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Quality Selector ── */
+    .quality-wrap {
+      position: relative;
+    }
+    .quality-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .quality-btn:hover { background: rgba(255,255,255,0.2); }
+    .quality-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      background: rgba(15,15,20,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 6px 0;
+      min-width: 110px;
+      z-index: 20;
+      display: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+    }
+    .quality-menu.open { display: block; }
+    .quality-opt {
+      padding: 7px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quality-opt:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .quality-opt.active { color: var(--accent,#e25c5c); }
+    .quality-opt .q-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent,#e25c5c);
+      opacity: 0;
+      flex-shrink: 0;
+    }
+    .quality-opt.active .q-dot { opacity: 1; }
+
     .scraper-status {
       position: absolute;
       top: 0.5rem;
@@ -460,13 +563,20 @@
         <!-- Player Column -->
         <div class="player-column">
           <div class="card player-card" style="padding:0.45rem 0.8rem;margin-bottom:0.4rem;font-weight:800;font-size:0.8rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
-            <span>🎬 Video Player</span>
+            <span id="playerAnimeTitle">🎬 Video Player</span>
             <span style="font-size:0.75rem;opacity:0.7;">Hold / Tap to Swap</span>
           </div>
           <!-- Video Player wrapper -->
           <div class="player-wrapper" id="playerWrapper">
             <div class="scraper-status" id="scraperStatus"></div>
             <video id="playerVideo" class="player-iframe" playsinline></video>
+            <!-- Loading spinner -->
+            <div class="buf-spinner" id="bufSpinner">
+              <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
+                <path d="M25 5 A20 20 0 0 1 45 25" stroke="var(--accent,#e25c5c)" stroke-width="5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div class="big-play-overlay" id="bigPlayOverlay" title="Play">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
             </div>
@@ -483,6 +593,14 @@
                 <span class="time-label" id="timeTotal">0:00</span>
                 <span class="source-badge" id="sourceBadge" style="display:none;"></span>
                 <div class="ctrl-spacer"></div>
+                <!-- Quality selector -->
+                <div class="quality-wrap" id="qualityWrap" style="display:none">
+                  <button class="quality-btn" id="qualityBtn">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+                    <span id="qualityLabel">Auto</span>
+                  </button>
+                  <div class="quality-menu" id="qualityMenu"></div>
+                </div>
                 <div class="speed-pills" id="speedPills">
                   <button class="pill-opt speed-opt" data-speed="0.5">0.5×</button>
                   <button class="pill-opt speed-opt active" data-speed="1">1×</button>
@@ -520,10 +638,7 @@
               </div>
             </div>
 
-            <div class="selector-section" id="qualitySection" style="display:none;">
-              <span class="selector-label">Quality:</span>
-              <div class="pills-group" id="qualityPills" style="padding: 0.15rem;"></div>
-            </div>
+
           </div>
 
           <!-- Anime Metadata Details -->
@@ -687,7 +802,7 @@
     const fsBtn = document.getElementById('fsBtn');
     const speedPills = document.getElementById('speedPills');
     const qualityPills = document.getElementById('qualityPills');
-    const qualitySection = document.getElementById('qualitySection');
+
     const sourceBadge = document.getElementById('sourceBadge');
     const bigPlayOverlay = document.getElementById('bigPlayOverlay');
     
@@ -890,6 +1005,10 @@
     function renderMetadata() {
       const titleRomaji = activeAnime.title.romaji || activeAnime.title.userPreferred;
       const titleEng = activeAnime.title.english || titleRomaji;
+
+      // Update player card title
+      const playerAnimeTitle = document.getElementById('playerAnimeTitle');
+      if (playerAnimeTitle) playerAnimeTitle.textContent = titleEng;
       
       document.title = `Watch ${titleEng} - babyanime`;
       
@@ -1015,7 +1134,7 @@
       // Server select
       serverSelect.addEventListener('change', () => {
         activeServer = serverSelect.value;
-        qualitySection.style.display = 'none';
+
         updatePlayer();
       });
 
@@ -1110,12 +1229,89 @@
     // Track which source index is currently playing for auto-fallback
     let activeSourceIndex = 0;
 
+    // ── Quality Menu ──
+    const qualityWrap  = document.getElementById('qualityWrap');
+    const qualityBtn   = document.getElementById('qualityBtn');
+    const qualityMenu  = document.getElementById('qualityMenu');
+    const qualityLabel = document.getElementById('qualityLabel');
+
+    function buildQualityMenu(hls) {
+      const levels = hls.levels;
+      if (!levels || levels.length <= 1) { clearQualityMenu(); return; }
+
+      qualityMenu.innerHTML = '';
+
+      // Find highest quality level
+      let highestIdx = 0;
+      let maxH = 0;
+      levels.forEach((l, i) => {
+        const h = l.height || 0;
+        if (h >= maxH) {
+          maxH = h;
+          highestIdx = i;
+        }
+      });
+
+      // Set hls to highest quality by default
+      hls.currentLevel = highestIdx;
+      const highestLabel = maxH ? `${maxH}p` : 'Highest';
+      qualityLabel.textContent = highestLabel;
+
+      // Auto option
+      const autoOpt = document.createElement('div');
+      autoOpt.className = 'quality-opt';
+      autoOpt.innerHTML = '<span class="q-dot"></span>Auto';
+      autoOpt.addEventListener('click', () => {
+        hls.currentLevel = -1;
+        qualityLabel.textContent = 'Auto';
+        qualityMenu.querySelectorAll('.quality-opt').forEach(o => o.classList.remove('active'));
+        autoOpt.classList.add('active');
+        qualityMenu.classList.remove('open');
+      });
+      qualityMenu.appendChild(autoOpt);
+
+      // Level options (highest first)
+      [...levels]
+        .map((l, i) => ({ idx: i, h: l.height || 0, bw: l.bitrate || 0 }))
+        .sort((a, b) => b.h - a.h)
+        .forEach(({ idx, h, bw }) => {
+          const label = h ? `${h}p` : `${Math.round(bw / 1000)}kbps`;
+          const opt = document.createElement('div');
+          opt.className = `quality-opt${idx === highestIdx ? ' active' : ''}`;
+          opt.innerHTML = `<span class="q-dot"></span>${label}`;
+          opt.addEventListener('click', () => {
+            hls.currentLevel = idx;
+            qualityLabel.textContent = label;
+            qualityMenu.querySelectorAll('.quality-opt').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            qualityMenu.classList.remove('open');
+          });
+          qualityMenu.appendChild(opt);
+        });
+
+      qualityWrap.style.display = '';
+    }
+
+    function clearQualityMenu() {
+      qualityMenu.innerHTML = '';
+      qualityWrap.style.display = 'none';
+      qualityLabel.textContent = 'Auto';
+    }
+
+    qualityBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      qualityMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', () => qualityMenu.classList.remove('open'));
+
+    // Clear quality menu when switching sources
     function playStreamUrl(url, headers, providerName, sourceIdx) {
       // Destroy any existing HLS instance
       if (window.hlsInstance) {
         try { window.hlsInstance.destroy(); } catch (_) {}
         window.hlsInstance = null;
       }
+      clearQualityMenu();
       playerVideo.src = '';
       playerVideo.load();
 
@@ -1161,11 +1357,11 @@
         hls.loadSource(proxiedUrl);
         hls.attachMedia(playerVideo);
 
-        hls.once(Hls.Events.MANIFEST_PARSED, () => {
+        hls.once(Hls.Events.MANIFEST_PARSED, (event, data) => {
           playerVideo.playbackRate = playbackSpeed;
-          playerVideo.play().catch(() => {
-            // Autoplay blocked — user must click play, that's fine
-          });
+          playerVideo.play().catch(() => {});
+          // Populate quality selector
+          buildQualityMenu(hls);
         });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
@@ -1173,6 +1369,7 @@
             console.warn('[HLS] Fatal error:', data.type, data.details);
             hls.destroy();
             window.hlsInstance = null;
+            clearQualityMenu();
             tryNextSource();
           }
         });
@@ -1194,16 +1391,11 @@
     }
 
     function renderScraperQualityPills(sources) {
-      if (!sources || sources.length === 0) {
-        qualitySection.style.display = 'none';
-        return;
-      }
-
+      if (!qualityPills || !sources || sources.length === 0) return;
       qualityPills.innerHTML = sources.map((s, i) => {
         const label = `${s.provider} · ${s.quality || 'Auto'}`;
         return `<button type="button" class="pill-opt${i === 0 ? ' active' : ''}" data-idx="${i}" style="padding: 0.25rem 0.6rem; font-size: 0.8em;">${label}</button>`;
       }).join('');
-      qualitySection.style.display = 'flex';
 
       qualityPills.querySelectorAll('.pill-opt').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1288,7 +1480,7 @@
     }
 
     function updatePlayer() {
-      qualitySection.style.display = 'none';
+
       loadScraperStreams();
       addToHistory(activeAnime, activeEpisode);
     }
@@ -1308,11 +1500,34 @@
         updateSeekBar();
       });
 
+      seekBar.addEventListener('mousedown', (e) => {
+        if (playerVideo.duration) {
+          const rect = seekBar.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          playerVideo.currentTime = pct * playerVideo.duration;
+          seekBar.value = playerVideo.currentTime;
+          const p = pct * 100;
+          seekBar.style.background = `linear-gradient(to right, var(--accent,#e25c5c) ${p}%, rgba(255,255,255,0.2) ${p}%)`;
+        }
+      });
+
       seekBar.addEventListener('input', () => {
         if (playerVideo.duration) {
           playerVideo.currentTime = (seekBar.value / seekBar.max) * playerVideo.duration;
+          const pct = (seekBar.value / seekBar.max) * 100;
+          seekBar.style.background = `linear-gradient(to right, var(--accent,#e25c5c) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
         }
       });
+
+      // Buffering / loading spinner
+      const bufSpinner = document.getElementById('bufSpinner');
+      function showSpinner() { bufSpinner.classList.add('visible'); }
+      function hideSpinner() { bufSpinner.classList.remove('visible'); }
+      playerVideo.addEventListener('waiting',  showSpinner);
+      playerVideo.addEventListener('seeking',  showSpinner);
+      playerVideo.addEventListener('seeked',   hideSpinner);
+      playerVideo.addEventListener('playing',  hideSpinner);
+      playerVideo.addEventListener('canplay',  hideSpinner);
 
       volBar.addEventListener('input', () => {
         playerVideo.volume = parseFloat(volBar.value);
@@ -1415,6 +1630,8 @@
         seekBar.value = playerVideo.currentTime;
         timeCurrent.textContent = formatTime(playerVideo.currentTime);
         timeTotal.textContent = formatTime(playerVideo.duration);
+        const pct = (playerVideo.currentTime / playerVideo.duration) * 100;
+        seekBar.style.background = `linear-gradient(to right, var(--accent, #e25c5c) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
       }
     }
 
