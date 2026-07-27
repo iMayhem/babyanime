@@ -33,7 +33,17 @@ async function handleRequest(request) {
     }
     const targetUrl = decodeURIComponent(targetParam);
 
+    // Merge per-request headers from query params (scraper-provided)
     const headers = { ...DEFAULT_HEADERS };
+    for (const [key, val] of url.searchParams) {
+      if (key === 'url' || key === 'h') continue;
+      // Map short codes to real header names
+      const headerName = key === 'r' ? 'Referer'
+        : key === 'o' ? 'Origin'
+        : key === 'ua' ? 'User-Agent'
+        : key;
+      if (val) headers[headerName] = val;
+    }
     const range = request.headers.get('Range');
     if (range) headers['Range'] = range;
 
@@ -46,6 +56,14 @@ async function handleRequest(request) {
 
       if (isM3U8 && resp.ok) {
         const text = await resp.text();
+
+        // Pass through header params from original request
+        const extraParams = [];
+        if (url.searchParams.has('r')) extraParams.push(`r=${encodeURIComponent(url.searchParams.get('r'))}`);
+        if (url.searchParams.has('o')) extraParams.push(`o=${encodeURIComponent(url.searchParams.get('o'))}`);
+        if (url.searchParams.has('ua')) extraParams.push(`ua=${encodeURIComponent(url.searchParams.get('ua'))}`);
+        const extraStr = extraParams.length ? '&' + extraParams.join('&') : '';
+
         const proxyBase = `${url.origin}${STREAM_PROXY_PATH}?url=`;
         const lines = text.split('\n').map(line => {
           const trimmed = line.trim();
@@ -53,7 +71,7 @@ async function handleRequest(request) {
           const resolved = trimmed.startsWith('http://') || trimmed.startsWith('https://')
             ? trimmed
             : new URL(trimmed, targetUrl).href;
-          return `${proxyBase}${encodeURIComponent(resolved)}`;
+          return `${proxyBase}${encodeURIComponent(resolved)}${extraStr}`;
         });
         body = lines.join('\n');
       }

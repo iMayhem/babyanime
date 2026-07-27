@@ -1064,9 +1064,18 @@
       return server === 'scraper_all' ? 'all' : server.replace('scraper_', '');
     }
 
-    function proxyStreamUrl(url) {
+    function proxyStreamUrl(url, headers) {
       if (STREAM_PROXY && !url.startsWith(location.origin) && !url.startsWith('http://localhost')) {
-        return `${STREAM_PROXY}${encodeURIComponent(url)}`;
+        let proxyUrl = `${STREAM_PROXY}${encodeURIComponent(url)}`;
+        if (headers) {
+          const ref = headers['Referer'] || headers['referer'];
+          const orig = headers['Origin'] || headers['origin'];
+          const ua = headers['User-Agent'] || headers['user-agent'];
+          if (ref) proxyUrl += `&r=${encodeURIComponent(ref)}`;
+          if (orig) proxyUrl += `&o=${encodeURIComponent(orig)}`;
+          if (ua) proxyUrl += `&ua=${encodeURIComponent(ua)}`;
+        }
+        return proxyUrl;
       }
       return url;
     }
@@ -1079,7 +1088,7 @@
       playerVideo.src = '';
       playerVideo.pause();
 
-      const proxiedUrl = proxyStreamUrl(url);
+      const proxiedUrl = proxyStreamUrl(url, headers);
 
       if (providerName) {
         sourceBadge.textContent = providerName;
@@ -1090,14 +1099,6 @@
 
       if (proxiedUrl.includes('.m3u8') && Hls.isSupported()) {
         const hls = new Hls();
-        if (headers && headers['User-Agent']) {
-          hls.config.xhrSetup = (xhr) => {
-            for (const [k, v] of Object.entries(headers)) {
-              if (k.toLowerCase() !== 'user-agent') continue;
-              xhr.setRequestHeader(k, v);
-            }
-          };
-        }
         hls.loadSource(proxiedUrl);
         hls.attachMedia(playerVideo);
         window.hlsInstance = hls;
