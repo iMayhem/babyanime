@@ -512,9 +512,6 @@
       <a href="https://myanimelist.net" target="_blank" rel="noopener">MyAnimeList</a>
       <a href="https://github.com/manami-project/anime-offline-database" target="_blank" rel="noopener">Database</a>
     </nav>
-    <div class="footer-stats">
-      <span class="onion-tag">onion</span>: <span class="onion-addr">babyanimewatchv74b92p90r210e7y2u7.onion</span>
-    </div>
     <div class="sig">babyanime © 2026. Made with ❤️ for the community.</div>
   </footer>
 
@@ -2073,8 +2070,11 @@
 
       // Workspace leave
       $('workspaceLeaveBtn').addEventListener('click', async () => {
+        // Stop video fully before cleanup
+        video.pause();
         if (hls) { hls.destroy(); hls = null; }
-        video.src = '';
+        video.removeAttribute('src');
+        video.load();
         if (channel) await channel.unsubscribe();
         clearInterval(heartbeatInterval); heartbeatInterval = null;
         channel = null; roomId = null; isHost = false;
