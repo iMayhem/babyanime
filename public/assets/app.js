@@ -367,13 +367,15 @@ function onAuth(cb) { _authCallbacks.push(cb); if (_authReady) cb(_currentUser, 
 
 function getCurrentUser() { return _currentUser; }
 
-async function signUp(email, password) {
+async function signUp(username, password) {
   const sb = sbClient(); if (!sb) return { error: 'Supabase not ready' };
-  return await sb.auth.signUp({ email, password });
+  const email = username + '@ba';
+  return await sb.auth.signUp({ email, password, options: { data: { username } } });
 }
 
-async function signIn(email, password) {
+async function signIn(username, password) {
   const sb = sbClient(); if (!sb) return { error: 'Supabase not ready' };
+  const email = username + '@ba';
   return await sb.auth.signInWithPassword({ email, password });
 }
 

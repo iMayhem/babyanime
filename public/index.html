@@ -67,8 +67,8 @@
           <h2 id="authModalTitle">Login</h2>
           <form id="authForm">
             <div class="form-group">
-              <label class="form-label">Email</label>
-              <input type="email" id="authEmail" class="form-input" placeholder="your@email.com" required>
+              <label class="form-label">Username</label>
+              <input type="text" id="authUsername" class="form-input" placeholder="Choose a username" minlength="3" required>
             </div>
             <div class="form-group">
               <label class="form-label">Password</label>
@@ -537,7 +537,7 @@
     const authModal = document.getElementById('authModal');
     const authCloseBtn = document.getElementById('authCloseBtn');
     const authForm = document.getElementById('authForm');
-    const authEmail = document.getElementById('authEmail');
+    const authUsername = document.getElementById('authUsername');
     const authPassword = document.getElementById('authPassword');
     const authError = document.getElementById('authError');
     const authSubmitBtn = document.getElementById('authSubmitBtn');
@@ -554,11 +554,12 @@
 
     function updateAuthUI(user) {
       if (user) {
-        authBtn.textContent = user.email?.charAt(0).toUpperCase() || 'U';
+        const displayName = user.user_metadata?.username || user.email?.replace(/@ba$/,'') || user.email?.charAt(0).toUpperCase() || 'U';
+        authBtn.textContent = displayName.charAt(0).toUpperCase();
         authBtn.style.background = 'var(--accent)';
         authBtn.style.color = '#fff';
-        authBtn.title = user.email || '';
-        authUserEmail.textContent = user.email || '';
+        authBtn.title = displayName;
+        authUserEmail.textContent = displayName;
         authUserBadge.style.display = '';
       } else {
         authBtn.textContent = 'Login';
@@ -601,17 +602,27 @@
 
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = authEmail.value.trim();
+      const username = authUsername.value.trim();
       const password = authPassword.value.trim();
-      if (!email || !password) { showAuthError('Fill in all fields'); return; }
+      if (!username || !password) { showAuthError('Fill in all fields'); return; }
+      if (username.length < 3) { showAuthError('Username must be at least 3 characters'); return; }
       if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
       hideAuthError();
       authSubmitBtn.disabled = true;
       authSubmitBtn.textContent = authMode === 'login' ? 'Logging in...' : 'Signing up...';
       try {
-        const result = authMode === 'login' ? await signIn(email, password) : await signUp(email, password);
+        const result = authMode === 'login' ? await signIn(username, password) : await signUp(username, password);
         if (result.error) { showAuthError(result.error.message); authSubmitBtn.disabled = false; authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up'; return; }
-        if (authMode === 'signup') { showAuthError('Check your email for confirmation link!'); authSubmitBtn.disabled = false; authSubmitBtn.textContent = 'Sign Up'; return; }
+        if (authMode === 'signup') {
+          if (result.data?.user?.identities?.length === 0) {
+            showAuthError('Username already taken');
+            authSubmitBtn.disabled = false; authSubmitBtn.textContent = 'Sign Up'; return;
+          }
+          if (!result.data?.session) {
+            showAuthError('Check your email for confirmation link!');
+            authSubmitBtn.disabled = false; authSubmitBtn.textContent = 'Sign Up'; return;
+          }
+        }
         authModal.style.display = 'none';
         hideAuthError();
       } catch (err) { showAuthError('Something went wrong'); }
