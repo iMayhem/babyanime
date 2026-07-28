@@ -331,6 +331,188 @@ function createAnimeCardHTML(anime) {
   `;
 }
 
+// ============================================
+// Supabase Auth & Data Layer
+// ============================================
+const SUPABASE_URL = 'https://mdrnjwljpbmfhttadwxj.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcm5qd2xqcGJtZmh0dGFkd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNDk5NzcsImV4cCI6MjEwMDgyNTk3N30.jHFqFNI288mw5v-l2r8HSXOMXkfSj362HJxXedK7DE4';
+
+let _sb = null;
+let _currentUser = null;
+let _authReady = false;
+const _authCallbacks = [];
+
+function sbClient() {
+  if (!_sb && typeof supabase !== 'undefined') _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  return _sb;
+}
+
+function sbReady() { return !!_sb; }
+
+async function initAuth() {
+  const sb = sbClient();
+  if (!sb) { setTimeout(initAuth, 300); return; }
+  const { data } = await sb.auth.getSession();
+  _currentUser = data?.session?.user || null;
+  _authReady = true;
+  sb.auth.onAuthStateChange((event, session) => {
+    _currentUser = session?.user || null;
+    if (_currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) syncLocalToRemote();
+    _authCallbacks.forEach(cb => cb(_currentUser, event));
+  });
+  _authCallbacks.forEach(cb => cb(_currentUser, 'INIT'));
+}
+
+function onAuth(cb) { _authCallbacks.push(cb); if (_authReady) cb(_currentUser, 'INIT'); }
+
+function getCurrentUser() { return _currentUser; }
+
+async function signUp(email, password) {
+  const sb = sbClient(); if (!sb) return { error: 'Supabase not ready' };
+  return await sb.auth.signUp({ email, password });
+}
+
+async function signIn(email, password) {
+  const sb = sbClient(); if (!sb) return { error: 'Supabase not ready' };
+  return await sb.auth.signInWithPassword({ email, password });
+}
+
+async function signOut() {
+  const sb = sbClient(); if (!sb) return;
+  await sb.auth.signOut();
+}
+
+async function syncLocalToRemote() {
+  if (!_currentUser) return;
+  const sb = sbClient(); if (!sb) return;
+  const uid = _currentUser.id;
+  try {
+    const bm = JSON.parse(localStorage.getItem('babyanime_bookmarks') || '[]');
+    for (const b of bm) {
+      await sb.from('bookmarks').upsert({ user_id: uid, anime_id: String(b.id), title: b.title, cover_image: b.coverImage, type: b.type || 'anilist' }, { onConflict: 'user_id,anime_id' }).then(() => {}).catch(() => {});
+    }
+  } catch(e) {}
+  try {
+    const hx = JSON.parse(localStorage.getItem('babyanime_history') || '[]');
+    for (const h of hx) {
+      await sb.from('watch_history').upsert({ user_id: uid, anime_id: String(h.id), episode: h.episode, title: h.title, cover_image: h.coverImage, type: h.type || 'anilist' }, { onConflict: 'user_id,anime_id,episode' }).then(() => {}).catch(() => {});
+    }
+  } catch(e) {}
+}
+
+async function fetchRemoteBookmarks() {
+  if (!_currentUser) return null;
+  const sb = sbClient(); if (!sb) return null;
+  try {
+    const { data } = await sb.from('bookmarks').select('*').eq('user_id', _currentUser.id);
+    if (data) return data.map(b => ({
+      id: b.anime_id, type: b.type || 'anilist', title: b.title, coverImage: b.cover_image, episodes: null, addedAt: new Date(b.created_at).getTime()
+    }));
+  } catch(e) {}
+  return null;
+}
+
+async function fetchRemoteHistory() {
+  if (!_currentUser) return null;
+  const sb = sbClient(); if (!sb) return null;
+  try {
+    const { data } = await sb.from('watch_history').select('*').eq('user_id', _currentUser.id).order('updated_at', { ascending: false }).limit(15);
+    if (data) return data.map(h => ({
+      id: h.anime_id, type: h.type || 'anilist', title: h.title, coverImage: h.cover_image, episode: h.episode, percent: 0, updatedAt: new Date(h.updated_at).getTime()
+    }));
+  } catch(e) {}
+  return null;
+}
+
+// Override bookmark/history functions to sync with Supabase
+(function() {
+  const _origToggle = window.toggleBookmark;
+  const _origAddHistory = window.addToHistory;
+  const _origGetBookmarks = window.getBookmarks;
+  const _origGetHistory = window.getWatchHistory;
+
+  window.getBookmarks = function() {
+    return _origGetBookmarks ? _origGetBookmarks() : (() => { try { return JSON.parse(localStorage.getItem('babyanime_bookmarks')) || []; } catch { return []; } })();
+  };
+
+  window.getWatchHistory = function() {
+    return _origGetHistory ? _origGetHistory() : (() => { try { return JSON.parse(localStorage.getItem('babyanime_history')) || []; } catch { return []; } })();
+  };
+
+  window.toggleBookmark = function(animeData) {
+    const result = _origToggle ? _origToggle(animeData) : (() => { /* fallback */ return false; })();
+    if (_currentUser) {
+      const idStr = String(animeData.id);
+      const type = animeData.type || 'anilist';
+      const sb = sbClient();
+      if (sb) {
+        if (result) {
+          const title = typeof animeData.title === 'object' ? (animeData.title.english || animeData.title.romaji || '') : animeData.title;
+          const cover = typeof animeData.coverImage === 'object' ? (animeData.coverImage.large || '') : animeData.coverImage;
+          sb.from('bookmarks').upsert({ user_id: _currentUser.id, anime_id: idStr, title, cover_image: cover, type }, { onConflict: 'user_id,anime_id' }).then(() => {}).catch(() => {});
+        } else {
+          sb.from('bookmarks').delete().eq('user_id', _currentUser.id).eq('anime_id', idStr).then(() => {}).catch(() => {});
+        }
+      }
+    }
+    return result;
+  };
+
+  window.addToHistory = function(animeData, episode, percent) {
+    if (_origAddHistory) _origAddHistory(animeData, episode, percent);
+    if (_currentUser) {
+      const idStr = String(animeData.id);
+      const sb = sbClient();
+      if (sb) {
+        const title = typeof animeData.title === 'object' ? (animeData.title.english || animeData.title.romaji || '') : animeData.title;
+        const cover = typeof animeData.coverImage === 'object' ? (animeData.coverImage.large || '') : animeData.coverImage;
+        sb.from('watch_history').upsert({ user_id: _currentUser.id, anime_id: idStr, episode, title, cover_image: cover, type: animeData.type || 'anilist' }, { onConflict: 'user_id,anime_id,episode' }).then(() => {}).catch(() => {});
+      }
+    }
+  };
+})();
+
+// ============================================
+// Anime character names for watch-together
+// ============================================
+const ANIME_CHARACTERS = [
+  'Naruto Uzumaki', 'Sasuke Uchiha', 'Sakura Haruno', 'Kakashi Hatake', 'Hinata Hyuga',
+  'Monkey D. Luffy', 'Roronoa Zoro', 'Nami', 'Sanji', 'Tony Tony Chopper', 'Jimbei',
+  'Ichigo Kurosaki', 'Rukia Kuchiki', 'Orihime Inoue', 'Uryu Ishida',
+  'Son Goku', 'Vegeta', 'Piccolo', 'Gohan', 'Bulma',
+  'Eren Yeager', 'Mikasa Ackerman', 'Levi Ackerman', 'Armin Arlert',
+  'Tanjiro Kamado', 'Nezuko Kamado', 'Zenitsu Agatsuma', 'Inosuke Hashibira', 'Giyu Tomioka',
+  'Edward Elric', 'Alphonse Elric', 'Roy Mustang', 'Winry Rockbell',
+  'Light Yagami', 'L Lawliet', 'Misa Misa', 'Near',
+  'Gon Freecss', 'Killua Zoldyck', 'Kurapika', 'Leorio Paradinight', 'Hisoka',
+  'Yuji Itadori', 'Megumi Fushiguro', 'Nobara Kugisaki', 'Satoru Gojo',
+  'Izuku Midoriya', 'Katsuki Bakugo', 'Shoto Todoroki', 'All Might', 'Ochaco Uraraka',
+  'Lelouch Lamperouge', 'C.C.', 'Suzaku Kururugi', 'Kallen Stadtfeld',
+  'Spike Spiegel', 'Faye Valentine', 'Jet Black', 'Ein',
+  'Saitama', 'Genos', 'Fubuki', 'King',
+  'Jotaro Kujo', 'Dio Brando', 'Joseph Joestar', 'Kakyoin',
+  'Simon', 'Kamina', 'Yoko Littner', 'Viral',
+  'Kirito', 'Asuna Yuuki', 'Leafa', 'Sinon',
+  'Senku Ishigami', 'Kohaku', 'Gen Asagiri', 'Chrome',
+  'Koro-sensei', 'Nagisa Shiota', 'Karma Akabane',
+  'Touma Kamijou', 'Index', 'Accelerator',
+  'Shinji Ikari', 'Rei Ayanami', 'Asuka Langley', 'Misato Katsuragi',
+  'Guts', 'Griffith', 'Casca',
+  'Alucard', 'Seras Victoria', 'Integra Hellsing',
+  'Vash the Stampede', 'Nicholas D. Wolfwood', 'Meryl Stryfe',
+  'Kenshin Himura', 'Kaoru Kamiya', 'Sanosuke Sagara',
+  'Holo', 'Lawrence Craft',
+  'Mob', 'Reigen Arataka',
+];
+
+function getRandomAnimeName() {
+  const stored = sessionStorage.getItem('babyanime_party_name');
+  if (stored) return stored;
+  const name = ANIME_CHARACTERS[Math.floor(Math.random() * ANIME_CHARACTERS.length)];
+  sessionStorage.setItem('babyanime_party_name', name);
+  return name;
+}
+
 // --- TAP-TO-SELECT & TAP-TO-SWAP LAYOUT ENGINE ---
 function setupHoldToSwap() {
   const oldControls = document.getElementById('layoutControlWrap');

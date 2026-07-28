@@ -360,6 +360,7 @@
 
     // Page Load
     window.addEventListener('DOMContentLoaded', async () => {
+      initAuth();
       if (!anilistId && !malId) {
         showError('No anime ID specified. Please go back to the homepage.');
         return;

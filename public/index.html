@@ -54,10 +54,39 @@
             <path d="M8 1.6a6.4 6.4 0 000 12.8z" fill="currentColor"/>
           </svg>
         </button>
+        <button type="button" class="tt" id="authBtn" style="font-weight:800;font-size:0.8rem;padding:0.4rem 0.7rem;">Login</button>
       </div>
     </header>
 
     <main>
+
+      <!-- Auth Modal -->
+      <div id="authModal" class="auth-overlay" style="display:none;">
+        <div class="auth-card">
+          <button type="button" class="auth-close" id="authCloseBtn">&times;</button>
+          <h2 id="authModalTitle">Login</h2>
+          <form id="authForm">
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="authEmail" class="form-input" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="authPassword" class="form-input" placeholder="At least 6 characters" required>
+            </div>
+            <div id="authError" style="color:var(--accent);font-size:0.85rem;font-weight:700;margin-bottom:0.5rem;display:none;"></div>
+            <button type="submit" class="btn-primary" id="authSubmitBtn" style="width:100%;">Login</button>
+          </form>
+          <p style="margin-top:1rem;font-size:0.85rem;font-weight:700;text-align:center;">
+            <span id="authToggleText">Don't have an account?</span>
+            <button type="button" class="tt" id="authToggleBtn" style="font-size:0.85rem;padding:0.2rem 0.4rem;color:var(--accent);">Sign Up</button>
+          </p>
+        </div>
+      </div>
+      <div id="authUserBadge" style="display:none;position:fixed;top:0.5rem;right:0.5rem;z-index:9999;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:0.3rem 0.7rem;font-size:0.8rem;font-weight:700;box-shadow:3px 3px 0 var(--shadow);">
+        <span id="authUserEmail"></span>
+        <button type="button" class="tt" id="authLogoutBtn" style="font-size:0.75rem;padding:0.15rem 0.4rem;margin-left:0.4rem;">Logout</button>
+      </div>
 
       <!-- HOME VIEW -->
       <div id="homeView">
@@ -305,6 +334,14 @@
                 <label class="form-label" for="partyEpisodeInput">Episode</label>
                 <input type="number" id="partyEpisodeInput" class="form-input" min="1" value="1" required>
               </div>
+              <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="checkbox" id="partyPrivateCheck" style="width:18px;height:18px;cursor:pointer;">
+                <label for="partyPrivateCheck" style="font-weight:700;font-size:0.85rem;cursor:pointer;">Private room (require password)</label>
+              </div>
+              <div id="partyPasswordWrap" class="form-group" style="display:none;">
+                <label class="form-label" for="partyPasswordInput">Room Password</label>
+                <input type="text" id="partyPasswordInput" class="form-input" placeholder="Set a room password">
+              </div>
               <input type="hidden" id="partyAnimeIdInput">
               <input type="hidden" id="partyAnimeEpisodesInput">
               <div class="form-actions">
@@ -493,8 +530,118 @@
       partyView.style.display = 'block';
     });
 
+    // === Auth UI ===
+    const authBtn = document.getElementById('authBtn');
+    const authModal = document.getElementById('authModal');
+    const authCloseBtn = document.getElementById('authCloseBtn');
+    const authForm = document.getElementById('authForm');
+    const authEmail = document.getElementById('authEmail');
+    const authPassword = document.getElementById('authPassword');
+    const authError = document.getElementById('authError');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const authModalTitle = document.getElementById('authModalTitle');
+    const authToggleBtn = document.getElementById('authToggleBtn');
+    const authToggleText = document.getElementById('authToggleText');
+    const authUserBadge = document.getElementById('authUserBadge');
+    const authUserEmail = document.getElementById('authUserEmail');
+    const authLogoutBtn = document.getElementById('authLogoutBtn');
+    let authMode = 'login';
+
+    function showAuthError(msg) { authError.textContent = msg; authError.style.display = ''; }
+    function hideAuthError() { authError.style.display = 'none'; }
+
+    function updateAuthUI(user) {
+      if (user) {
+        authBtn.textContent = user.email?.charAt(0).toUpperCase() || 'U';
+        authBtn.style.background = 'var(--accent)';
+        authBtn.style.color = '#fff';
+        authBtn.title = user.email || '';
+        authUserEmail.textContent = user.email || '';
+        authUserBadge.style.display = '';
+      } else {
+        authBtn.textContent = 'Login';
+        authBtn.style.background = '';
+        authBtn.style.color = '';
+        authBtn.title = '';
+        authUserBadge.style.display = 'none';
+      }
+    }
+
+    onAuth((user) => updateAuthUI(user));
+
+    authBtn.addEventListener('click', () => {
+      if (getCurrentUser()) { signOut(); return; }
+      authMode = 'login';
+      authModalTitle.textContent = 'Login';
+      authSubmitBtn.textContent = 'Login';
+      authToggleBtn.textContent = 'Sign Up';
+      authToggleText.textContent = "Don't have an account?";
+      hideAuthError();
+      authModal.style.display = '';
+    });
+
+    authCloseBtn.addEventListener('click', () => { authModal.style.display = 'none'; hideAuthError(); });
+    authModal.addEventListener('click', (e) => { if (e.target === authModal) { authModal.style.display = 'none'; hideAuthError(); } });
+
+    authToggleBtn.addEventListener('click', () => {
+      authMode = authMode === 'login' ? 'signup' : 'login';
+      authModalTitle.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
+      authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
+      authToggleBtn.textContent = authMode === 'login' ? 'Sign Up' : 'Login';
+      authToggleText.textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+      hideAuthError();
+    });
+
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = authEmail.value.trim();
+      const password = authPassword.value.trim();
+      if (!email || !password) { showAuthError('Fill in all fields'); return; }
+      if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+      hideAuthError();
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.textContent = authMode === 'login' ? 'Logging in...' : 'Signing up...';
+      try {
+        const result = authMode === 'login' ? await signIn(email, password) : await signUp(email, password);
+        if (result.error) { showAuthError(result.error.message); authSubmitBtn.disabled = false; authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up'; return; }
+        if (authMode === 'signup') { showAuthError('Check your email for confirmation link!'); authSubmitBtn.disabled = false; authSubmitBtn.textContent = 'Sign Up'; return; }
+        authModal.style.display = 'none';
+        hideAuthError();
+      } catch (err) { showAuthError('Something went wrong'); }
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
+    });
+
+    authLogoutBtn.addEventListener('click', async () => {
+      await signOut();
+      renderHistory();
+      renderWatchlist();
+    });
+
+    // Re-render bookmarks/history on auth change
+    onAuth(async (user) => {
+      if (user) {
+        // Try fetching remote data to merge
+        try {
+          const remoteBm = await fetchRemoteBookmarks();
+          if (remoteBm) {
+            localStorage.setItem('babyanime_bookmarks', JSON.stringify(remoteBm));
+            renderWatchlist();
+          }
+        } catch(e) {}
+        try {
+          const remoteHx = await fetchRemoteHistory();
+          if (remoteHx) {
+            localStorage.setItem('babyanime_history', JSON.stringify(remoteHx));
+            renderHistory();
+          }
+        } catch(e) {}
+      }
+    });
+
     // Load Watch History & Bookmarks on home load
     window.addEventListener('DOMContentLoaded', () => {
+      initAuth();
       renderHistory();
       renderWatchlist();
       loadHomeShelves();
@@ -1277,7 +1424,7 @@
 
       let roomId = null;
       let userId = crypto.randomUUID().slice(0,8);
-      let username = 'User-' + userId.slice(0,4);
+      let username = getRandomAnimeName();
       let channel = null;
       let hls = null;
       let isHost = false;
@@ -1429,7 +1576,17 @@
         if (match) enterRoom(match[1]); else alert('Invalid room link or ID');
       });
 
-      window.enterRoom = async function(rid) {
+      window.enterRoom = async function(rid, skipPasswordCheck) {
+        // Check if private room
+        if (!skipPasswordCheck && sb) {
+          try {
+            const { data: party } = await sb.from('parties').select('is_private,password').eq('id', rid).single();
+            if (party && party.is_private) {
+              const pwd = prompt('This room is private. Enter password:');
+              if (!pwd || pwd !== party.password) { alert('Incorrect password'); return; }
+            }
+          } catch(e) { /* table might not exist, proceed anyway */ }
+        }
         isHost = false; epLimit = 100; curId = null; curEp = 1; curTotal = 12; curTitle = '';
         await joinChannel(rid);
         enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
@@ -1438,9 +1595,11 @@
         chatMsgs.innerHTML = '<div class="chat-message"><span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">Connected! Waiting for host state...</span></div>';
       };
 
-      window.createRoom = async function(anilistId, episode, seriesTitle, totalEps) {
+      window.createRoom = async function(anilistId, episode, seriesTitle, totalEps, isPrivate, password) {
         isHost = true; epLimit = 100; curId = anilistId; curEp = episode; curTotal = totalEps || 12; curTitle = seriesTitle;
         const rid = genId();
+        // Store in Supabase
+        if (sb) sb.from('parties').insert({id:rid,anime_id:String(anilistId),episode,series_title:seriesTitle,is_private:!!isPrivate,password:password||null}).then(()=>{}).catch(()=>{});
         await joinChannel(rid);
         enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
         $('workspaceTitle').textContent = seriesTitle + ' - Ep ' + episode;
@@ -1485,6 +1644,11 @@
         }, 300);
       });
 
+      // Private room checkbox toggle
+      $('partyPrivateCheck').addEventListener('change', () => {
+        $('partyPasswordWrap').style.display = $('partyPrivateCheck').checked ? '' : 'none';
+      });
+
       $('partyCreateForm').addEventListener('submit', e => {
         e.preventDefault();
         const id = $('partyAnimeIdInput').value;
@@ -1492,7 +1656,10 @@
         if (!id) { alert('Please select an anime from search results'); return; }
         const title = $('partyAnimeSearchInput').value.trim() || 'Anime';
         const total = parseInt($('partyAnimeEpisodesInput').value) || 12;
-        window.createRoom(id, ep, title, total);
+        const isPrivate = $('partyPrivateCheck').checked;
+        const password = isPrivate ? $('partyPasswordInput').value.trim() : null;
+        if (isPrivate && !password) { alert('Please set a room password'); return; }
+        window.createRoom(id, ep, title, total, isPrivate, password);
       });
 
       // Workspace leave
@@ -1518,6 +1685,8 @@
         if (!t || !channel) return;
         appendMsg(username, t, false);
         channel.send({type:'broadcast',event:'chat',payload:{u:userId,username,t}});
+        // Store in Supabase
+        if (sb) sb.from('chat_messages').insert({party_id:roomId,user_id:userId,username,text:t}).then(()=>{}).catch(()=>{});
         chatInp.value = '';
       });
 

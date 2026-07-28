@@ -2328,3 +2328,21 @@ textarea {
   -ms-user-select: text !important;
   user-select: text !important;
 }
+
+/* Auth Modal */
+.auth-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  background: var(--card); border: 2px solid var(--ink);
+  border-radius: 16px; padding: 2rem; width: 90%; max-width: 380px;
+  box-shadow: 8px 8px 0 var(--shadow); position: relative;
+}
+.auth-close {
+  position: absolute; top: 0.5rem; right: 0.8rem;
+  background: none; border: none; font-size: 1.5rem;
+  color: var(--muted); cursor: pointer; font-weight: 800;
+}
+.auth-close:hover { color: var(--ink); }
