@@ -2178,6 +2178,7 @@ footer {
 
 .party-chat-messages {
   flex-grow: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 0.5rem;
   display: flex;
