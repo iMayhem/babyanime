@@ -200,9 +200,8 @@ app.get("/api/stream-proxy", async (req, res) => {
     if (resp.ok && isM3u8Candidate) {
       const text = await resp.text();
       if (text.trim().startsWith("#EXTM3U")) {
-        const host = req.get("host") || "proxy.babyanime.top";
-        const proto = req.get("x-forwarded-proto") || "https";
-        const streamProxyBase = `${proto}://${host}/api/stream-proxy?url=`;
+        // Rewrite segment URLs to go through Cloudflare Worker (no VPS bandwidth)
+        const workerBase = "https://proxy.babyanime.top/stream-proxy?url=";
 
         const extraParams = [];
         if (req.query.r) extraParams.push(`r=${encodeURIComponent(req.query.r)}`);
@@ -211,10 +210,11 @@ app.get("/api/stream-proxy", async (req, res) => {
         const extraStr = extraParams.length ? "&" + extraParams.join("&") : "";
 
         const proxyUrl = (rawUrl) => {
+          if (!rawUrl) return rawUrl;
           const resolved = rawUrl.startsWith("http://") || rawUrl.startsWith("https://")
             ? rawUrl
             : new URL(rawUrl, targetUrl).href;
-          return `${streamProxyBase}${encodeURIComponent(resolved)}${extraStr}`;
+          return `${workerBase}${encodeURIComponent(resolved)}${extraStr}`;
         };
 
         const lines = text.split("\n").map(line => {
@@ -228,6 +228,7 @@ app.get("/api/stream-proxy", async (req, res) => {
 
         res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
         res.setHeader("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges");
+        res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Accept-Ranges", "bytes");
         res.setHeader("Cache-Control", "public, max-age=3600");
         return res.send(lines.join("\n"));

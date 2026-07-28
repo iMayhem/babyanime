@@ -37,7 +37,6 @@ async function handleRequest(request) {
     const headers = { ...DEFAULT_HEADERS };
     for (const [key, val] of url.searchParams) {
       if (key === 'url' || key === 'h') continue;
-      // Map short codes to real header names
       const headerName = key === 'r' ? 'Referer'
         : key === 'o' ? 'Origin'
         : key === 'ua' ? 'User-Agent'
@@ -47,7 +46,29 @@ async function handleRequest(request) {
     const range = request.headers.get('Range');
     if (range) headers['Range'] = range;
 
+    // Check if this is a direct video file (not HLS)
+    const isVideoFile = /\.(mp4|mkv|webm|avi|mov|flv)(\?|$)/i.test(targetUrl);
+
     try {
+      // For video files: follow redirects and return 302 to final URL
+      // No video data proxied through the Worker
+      if (isVideoFile && !range) {
+        let currentUrl = targetUrl;
+        let fetchHeaders = { ...headers };
+        let hops = 0;
+        while (hops++ < 10) {
+          const resp = await fetch(currentUrl, { headers: fetchHeaders, redirect: "manual" });
+          const location = resp.headers.get("location");
+          if ((resp.status === 301 || resp.status === 302 || resp.status === 307 || resp.status === 308) && location) {
+            currentUrl = location.startsWith("//") ? "https:" + location : location;
+            fetchHeaders["Referer"] = new URL(currentUrl).origin + "/";
+          } else {
+            return Response.redirect(currentUrl, 302);
+          }
+        }
+        return new Response("Too many redirects", { status: 502 });
+      }
+
       const resp = await fetch(targetUrl, { headers });
 
       const isM3U8 = targetUrl.includes('.m3u8') || resp.headers.get('Content-Type')?.includes('m3u8');
@@ -57,7 +78,6 @@ async function handleRequest(request) {
       if (isM3U8 && resp.ok) {
         const text = await resp.text();
 
-        // Pass through header params from original request
         const extraParams = [];
         if (url.searchParams.has('r')) extraParams.push(`r=${encodeURIComponent(url.searchParams.get('r'))}`);
         if (url.searchParams.has('o')) extraParams.push(`o=${encodeURIComponent(url.searchParams.get('o'))}`);
