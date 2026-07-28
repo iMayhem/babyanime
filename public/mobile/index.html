@@ -1570,10 +1570,10 @@
       list.querySelectorAll('.room-card').forEach(el => {
         el.addEventListener('click', () => enterRoom(el.dataset.id));
       });
-    }
     window._refreshPartyRooms = refreshActiveRooms;
 
     async function enterRoom(roomId, password, localRoomInfo) {
+      window.enterRoom = enterRoom;
       const enterScreen = document.getElementById('partyEnterScreen');
       const createScreen = document.getElementById('partyCreateScreen');
       const workspaceScreen = document.getElementById('partyWorkspaceScreen');

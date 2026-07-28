@@ -2051,14 +2051,22 @@ textarea {
 
 .party-workspace { display: flex; flex-direction: column; gap: 1.5rem; }
 .party-workspace-body { display: flex; gap: 1.5rem; align-items: flex-start; }
-@media (max-width: 860px) { .party-workspace-body { flex-direction: column; } }
 .party-workspace-header { display: flex; justify-content: space-between; align-items: center; border-bottom: none; padding-bottom: 1rem; margin-bottom: 0.5rem; }
 .party-workspace-title h3 { margin: 0; font-size: 1.4rem; font-weight: 900; color: var(--ink); }
 .party-workspace-title p { margin: 0.2rem 0 0; font-size: 0.9rem; font-weight: 700; color: var(--muted); }
 .party-workspace-actions { display: flex; gap: 0.6rem; }
 .party-player-col { display: flex; flex-direction: column; gap: 1.2rem; min-width: 0; flex: 1; }
 .party-sidebar-col { display: flex; flex-direction: column; gap: 1.5rem; min-height: 0; width: 340px; flex-shrink: 0; overflow: hidden; }
-@media (max-width: 860px) { .party-sidebar-col { width: 100%; } }
+
+@media (max-width: 860px) {
+  .party-workspace-body { flex-direction: column; }
+  .party-sidebar-col { width: 100%; }
+  .party-player-col { position: sticky; top: 0; z-index: 100; background: var(--bg); padding-bottom: 0.5rem; }
+  .party-sidebar-col > .card { max-height: 48vh; min-height: 260px; }
+  .party-chat-messages { max-height: 220px; min-height: 140px; }
+  .party-eps-panel.visible { max-height: 220px; overflow-y: auto; }
+}
+
 .party-sidebar-col > .card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 #partyChatPanel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
