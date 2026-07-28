@@ -2108,7 +2108,6 @@ footer {
     display: grid;
     grid-template-columns: 1fr 340px;
     gap: 1.8rem;
-    align-items: start;
   }
 }
 
@@ -2152,13 +2151,29 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.party-sidebar-col > .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Chat Panel */
-.party-chat-panel {
+#partyChatPanel {
   display: flex;
   flex-direction: column;
-  height: 400px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#partyEpisodesPanel {
+  flex: 1;
+  min-height: 0;
 }
 
 .party-chat-messages {
