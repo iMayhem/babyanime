@@ -15,10 +15,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Watch Anime - babyanime</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon.png" onerror="this.href='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>'">
-  <link rel="stylesheet" href="/assets/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <link rel="preconnect" href="https://graphql.anilist.co">
+  <link rel="dns-prefetch" href="https://graphql.anilist.co">
+  <link rel="preconnect" href="https://proxy.babyanime.top">
+  <link rel="dns-prefetch" href="https://proxy.babyanime.top">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://babyanime-stream-proxy.sujeetunbeatable.workers.dev">
+  <link rel="dns-prefetch" href="https://babyanime-stream-proxy.sujeetunbeatable.workers.dev">
+  <link rel="stylesheet" href="/assets/app.css">
   <style>    /* Watch page specific additions */
     .btn-row {
       display: flex;
@@ -776,6 +781,7 @@
 
   <!-- Core Scripts -->
   <script src="/assets/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
       <script>
     const SCRAPER_API = 'https://proxy.babyanime.top/api';
     const STREAM_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
@@ -1582,9 +1588,26 @@
       else if (mal_id) params.set('mal_id', mal_id);
       if (provider !== 'all') params.set('provider', provider);
 
-      try {
-        const resp = await fetch(`${SCRAPER_API}/stream?${params}`);
-        const data = await resp.json();
+      const cacheKey = `scraper_${params.toString()}`;
+      let data = null;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try { const parsed = JSON.parse(cached); if (Date.now() - parsed.ts < 300000) data = parsed.data; } catch {}
+      }
+      if (!data) {
+        try {
+          const resp = await fetch(`${SCRAPER_API}/stream?${params}`);
+          data = await resp.json();
+          if (data && data.success) {
+            try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })); } catch {}
+          }
+        } catch (err) {
+          console.warn('[Scraper] Fetch error:', err);
+          sourceBadge.textContent = '⚠ Scraper error';
+          sourceBadge.style.display = '';
+          return;
+        }
+      }
 
         if (!data.success || !data.sources || data.sources.length === 0) {
           console.warn('[Scraper] No sources found:', data);
@@ -1612,6 +1635,20 @@
         // Start with the first source
         const firstIdx = scraperSources.indexOf(toPlay[0]);
         playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
+
+        // Preload next episode in background
+        const nextEp = activeEpisode + 1;
+        if (nextEp <= latestEp) {
+          const nextParams = new URLSearchParams({ ep: nextEp, audio: activeAudio });
+          if (anilistId) nextParams.set('anilist_id', anilistId);
+          else if (malId) nextParams.set('mal_id', malId);
+          const nk = `scraper_${nextParams.toString()}`;
+          if (!sessionStorage.getItem(nk)) {
+            fetch(`${SCRAPER_API}/stream?${nextParams}`).then(r => r.json()).then(d => {
+              if (d && d.success) try { sessionStorage.setItem(nk, JSON.stringify({ data: d, ts: Date.now() })); } catch {}
+            }).catch(() => {});
+          }
+        }
 
       } catch (err) {
         console.error('Failed to load scraper stream:', err);

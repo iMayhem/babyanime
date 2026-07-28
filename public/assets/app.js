@@ -174,7 +174,12 @@ function setupMascot() {
 }
 
 // GraphQL Query Helper for AniList
+const aniListCache = new Map();
+
 async function queryAniList(query, variables) {
+  const cacheKey = JSON.stringify(variables);
+  const cached = aniListCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < 600000) return cached.data;
   try {
     const response = await fetch('https://graphql.anilist.co', {
       method: 'POST',
@@ -191,6 +196,7 @@ async function queryAniList(query, variables) {
     if (result.errors) {
       throw new Error(result.errors[0].message);
     }
+    aniListCache.set(cacheKey, { data: result.data, ts: Date.now() });
     return result.data;
   } catch (err) {
     console.error('AniList API Error:', err);
