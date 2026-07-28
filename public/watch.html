@@ -1634,17 +1634,30 @@
       const val = serverSelect.value;
       // Embed mode
       if (val === 'embed_animecfd') {
+        // Clean up any running video
+        if (window.hlsInstance) { try { window.hlsInstance.destroy(); } catch (_) {} window.hlsInstance = null; }
+        if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
+        clearSubtitles();
+        playerVideo.src = '';
+        playerVideo.load();
+        playerVideo.style.display = 'none';
         ctrlBar.style.display = 'none';
         sourceBadge.style.display = 'none';
         bigPlayOverlay.style.display = 'none';
-        bufSpinner.style.display = 'none';
+        bufSpinner.classList.add('visible');
+        embedIframe.style.display = 'none';
+        embedIframe.src = '';
         ensureEmbedMapped().then(mapped => {
           const ep = activeEpisode;
           const audio = activeAudio || 'sub';
           const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
           const embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}` : null;
-          embedIframe.style.display = 'block';
           embedIframe.src = embedUrl || '';
+          embedIframe.style.display = 'block';
+          // Hide spinner on load or after 3s
+          const hideSpinner = () => bufSpinner.classList.remove('visible');
+          embedIframe.addEventListener('load', hideSpinner, { once: true });
+          setTimeout(hideSpinner, 3000);
         });
         return;
       }
