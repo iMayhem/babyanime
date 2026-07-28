@@ -439,11 +439,6 @@ header {
 }
 
 /* Anime Card Item */
-.anime-card-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-}
 .anime-card {
   display: flex;
   flex-direction: column;
