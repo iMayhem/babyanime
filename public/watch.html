@@ -601,6 +601,14 @@
                   </button>
                   <div class="quality-menu" id="qualityMenu"></div>
                 </div>
+                <!-- Subtitle selector -->
+                <div class="quality-wrap" id="subtitleWrap" style="display:none">
+                  <button class="quality-btn" id="subtitleBtn" title="Subtitles">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="10" x2="15" y2="10"/><line x1="7" y1="14" x2="13" y2="14"/></svg>
+                    <span id="subtitleLabel">Off</span>
+                  </button>
+                  <div class="quality-menu" id="subtitleMenu"></div>
+                </div>
                 <div class="speed-pills" id="speedPills">
                   <button class="pill-opt speed-opt" data-speed="0.5">0.5×</button>
                   <button class="pill-opt speed-opt active" data-speed="1">1×</button>
@@ -760,7 +768,7 @@
   <script src="/assets/app.js"></script>
       <script>
     const SCRAPER_API = 'https://proxy.babyanime.top/api';
-    const STREAM_PROXY = 'https://proxy.babyanime.top/stream-proxy?url=';
+    const STREAM_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
 
     let activeAnime = null;
     let activeEpisode = 1;
@@ -1304,6 +1312,76 @@
     });
     document.addEventListener('click', () => qualityMenu.classList.remove('open'));
 
+    // ── Subtitle Menu ──
+    const subtitleWrap  = document.getElementById('subtitleWrap');
+    const subtitleBtn   = document.getElementById('subtitleBtn');
+    const subtitleMenu  = document.getElementById('subtitleMenu');
+    const subtitleLabel = document.getElementById('subtitleLabel');
+
+    function setupSubtitles(source) {
+      clearSubtitles();
+      if (!source || !source.subtitles || !Array.isArray(source.subtitles) || source.subtitles.length === 0) {
+        subtitleWrap.style.display = 'none';
+        return;
+      }
+      subtitleWrap.style.display = '';
+      subtitleLabel.textContent = 'Off';
+
+      subtitleMenu.innerHTML = '';
+      // Off option
+      const offOpt = document.createElement('div');
+      offOpt.className = 'quality-opt active';
+      offOpt.innerHTML = '<span class="q-dot"></span>Off';
+      offOpt.addEventListener('click', (e) => { e.stopPropagation(); setActiveSubtitle(-1); subtitleMenu.classList.remove('open'); });
+      subtitleMenu.appendChild(offOpt);
+
+      source.subtitles.forEach((sub, idx) => {
+        const opt = document.createElement('div');
+        opt.className = 'quality-opt';
+        opt.innerHTML = `<span class="q-dot"></span>${sub.label || 'Track ' + (idx + 1)}`;
+        opt.addEventListener('click', (e) => { e.stopPropagation(); setActiveSubtitle(idx); subtitleMenu.classList.remove('open'); });
+        subtitleMenu.appendChild(opt);
+      });
+    }
+
+    function clearSubtitles() {
+      const existingTracks = playerVideo.querySelectorAll('track');
+      existingTracks.forEach(t => t.remove());
+      subtitleWrap.style.display = 'none';
+      subtitleLabel.textContent = 'Off';
+    }
+
+    function setActiveSubtitle(idx) {
+      const existingTracks = playerVideo.querySelectorAll('track');
+      existingTracks.forEach(t => t.remove());
+      if (idx < 0) {
+        subtitleLabel.textContent = 'Off';
+        subtitleMenu.querySelectorAll('.quality-opt').forEach((o, i) => { o.classList.toggle('active', i === 0); });
+        return;
+      }
+      const source = scraperSources[activeSourceIndex];
+      if (!source || !source.subtitles || !source.subtitles[idx]) return;
+      const sub = source.subtitles[idx];
+      const proxiedUrl = proxyStreamUrl(sub.url, source.headers);
+      const track = document.createElement('track');
+      track.kind = 'subtitles';
+      track.label = sub.label || 'Subtitles';
+      track.srclang = 'en';
+      track.src = proxiedUrl;
+      playerVideo.appendChild(track);
+      const enableTrack = () => {
+        for (let i = 0; i < playerVideo.textTracks.length; i++) {
+          playerVideo.textTracks[i].mode = (i === playerVideo.textTracks.length - 1) ? 'showing' : 'disabled';
+        }
+      };
+      setTimeout(enableTrack, 100);
+      track.addEventListener('load', enableTrack);
+      subtitleLabel.textContent = sub.label || 'Track';
+      subtitleMenu.querySelectorAll('.quality-opt').forEach((o, i) => { o.classList.toggle('active', i === idx + 1); });
+    }
+
+    subtitleBtn.addEventListener('click', (e) => { e.stopPropagation(); subtitleMenu.classList.toggle('open'); });
+
     // Clear quality menu when switching sources
     function playStreamUrl(url, headers, providerName, sourceIdx, format) {
       // Destroy any existing HLS instance
@@ -1312,10 +1390,15 @@
         window.hlsInstance = null;
       }
       clearQualityMenu();
+      clearSubtitles();
       playerVideo.src = '';
       playerVideo.load();
 
       if (sourceIdx !== undefined) activeSourceIndex = sourceIdx;
+      // Set up subtitles from the source being played
+      if (scraperSources && scraperSources[activeSourceIndex]) {
+        setupSubtitles(scraperSources[activeSourceIndex]);
+      }
 
       const proxiedUrl = proxyStreamUrl(url, headers);
       console.log('[Player] Loading source', activeSourceIndex, providerName, proxiedUrl.substring(0, 80));
@@ -1481,7 +1564,8 @@
         }
 
         // Start with the first source
-        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, 0, toPlay[0].format);
+        const firstIdx = scraperSources.indexOf(toPlay[0]);
+        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
 
       } catch (err) {
         console.error('Failed to load scraper stream:', err);
