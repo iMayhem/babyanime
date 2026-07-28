@@ -624,8 +624,8 @@
 
     function updateAuthUI(user) {
       if (user) {
-        const displayName = user.username || user.user_metadata?.username || user.email?.split('@')[0] || user.email?.charAt(0).toUpperCase() || 'U';
-        authBtn.textContent = displayName.charAt(0).toUpperCase();
+        const displayName = user.username || user.user_metadata?.username || user.email?.split('@')[0] || user.email?.split('@')[0]?.charAt(0).toUpperCase() || '(?)';
+        authBtn.textContent = displayName.length > 8 ? displayName.substring(0, 8) + '…' : displayName;
         authBtn.style.background = 'var(--accent)';
         authBtn.style.color = '#fff';
         authBtn.title = displayName;
