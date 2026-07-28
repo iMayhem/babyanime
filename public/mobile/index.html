@@ -560,34 +560,56 @@
     const tabBrowse = document.getElementById('tabBrowse');
     const tabParty = document.getElementById('tabParty');
 
-    tabHome.addEventListener('click', () => {
-      tabHome.classList.add('active');
-      tabBrowse.classList.remove('active');
-      tabParty.classList.remove('active');
-      homeView.style.display = 'block';
-      browseView.style.display = 'none';
-      partyView.style.display = 'none';
-    });
+    function switchMobileTab(tab) {
+      const homeView = document.getElementById('homeView');
+      const browseView = document.getElementById('browseView');
+      const partyView = document.getElementById('partyView');
+      const tabHome = document.getElementById('tabHome');
+      const tabBrowse = document.getElementById('tabBrowse');
+      const tabParty = document.getElementById('tabParty');
+      const btnNavHome = document.getElementById('btnNavHome');
+      const btnNavBrowse = document.getElementById('btnNavBrowse');
+      const btnNavSearch = document.getElementById('btnNavSearch');
 
-    tabBrowse.addEventListener('click', () => {
-      tabBrowse.classList.add('active');
-      tabHome.classList.remove('active');
-      tabParty.classList.remove('active');
-      homeView.style.display = 'none';
-      browseView.style.display = 'block';
-      partyView.style.display = 'none';
-      loadBrowseResults(false);
-    });
+      if (tab === 'home') {
+        if (homeView) homeView.style.display = 'block';
+        if (browseView) browseView.style.display = 'none';
+        if (partyView) partyView.style.display = 'none';
+        if (tabHome) tabHome.classList.add('active');
+        if (tabBrowse) tabBrowse.classList.remove('active');
+        if (tabParty) tabParty.classList.remove('active');
+        if (btnNavHome) btnNavHome.classList.add('active');
+        if (btnNavBrowse) btnNavBrowse.classList.remove('active');
+        if (btnNavSearch) btnNavSearch.classList.remove('active');
+      } else if (tab === 'browse') {
+        if (homeView) homeView.style.display = 'none';
+        if (browseView) browseView.style.display = 'block';
+        if (partyView) partyView.style.display = 'none';
+        if (tabHome) tabHome.classList.remove('active');
+        if (tabBrowse) tabBrowse.classList.add('active');
+        if (tabParty) tabParty.classList.remove('active');
+        if (btnNavHome) btnNavHome.classList.remove('active');
+        if (btnNavBrowse) btnNavBrowse.classList.add('active');
+        if (btnNavSearch) btnNavSearch.classList.remove('active');
+        if (typeof loadBrowseResults === 'function') loadBrowseResults(false);
+      } else if (tab === 'party') {
+        if (homeView) homeView.style.display = 'none';
+        if (browseView) browseView.style.display = 'none';
+        if (partyView) partyView.style.display = 'block';
+        if (tabHome) tabHome.classList.remove('active');
+        if (tabBrowse) tabBrowse.classList.remove('active');
+        if (tabParty) tabParty.classList.add('active');
+        if (btnNavHome) btnNavHome.classList.remove('active');
+        if (btnNavBrowse) btnNavBrowse.classList.remove('active');
+        if (btnNavSearch) btnNavSearch.classList.remove('active');
+        setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
+      }
+    }
+    window.switchMobileTab = switchMobileTab;
 
-    tabParty.addEventListener('click', () => {
-      tabParty.classList.add('active');
-      tabHome.classList.remove('active');
-      tabBrowse.classList.remove('active');
-      homeView.style.display = 'none';
-      browseView.style.display = 'none';
-      partyView.style.display = 'block';
-      setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
-    });
+    if (tabHome) tabHome.addEventListener('click', () => switchMobileTab('home'));
+    if (tabBrowse) tabBrowse.addEventListener('click', () => switchMobileTab('browse'));
+    if (tabParty) tabParty.addEventListener('click', () => switchMobileTab('party'));
 
     // === Auth UI ===
     const authBtn = document.getElementById('authBtn');
@@ -2002,27 +2024,18 @@
 
     // Bottom nav and URL param routing (merged into root listener above)
     (function setupBottomNav() {
-      const tabHome = document.getElementById('tabHome');
-      const tabBrowse = document.getElementById('tabBrowse');
-      const tabParty = document.getElementById('tabParty');
       const btnNavHome = document.getElementById('btnNavHome');
       const btnNavBrowse = document.getElementById('btnNavBrowse');
       const btnNavSearch = document.getElementById('btnNavSearch');
       if (!btnNavHome || !btnNavBrowse || !btnNavSearch) return;
 
       btnNavHome.addEventListener('click', () => {
-        btnNavHome.classList.add('active');
-        btnNavBrowse.classList.remove('active');
-        btnNavSearch.classList.remove('active');
-        if (tabHome) tabHome.click();
+        if (typeof switchMobileTab === 'function') switchMobileTab('home');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
       btnNavBrowse.addEventListener('click', () => {
-        btnNavHome.classList.remove('active');
-        btnNavBrowse.classList.add('active');
-        btnNavSearch.classList.remove('active');
-        if (tabBrowse) tabBrowse.click();
+        if (typeof switchMobileTab === 'function') switchMobileTab('browse');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
@@ -2030,17 +2043,13 @@
         btnNavHome.classList.remove('active');
         btnNavBrowse.classList.remove('active');
         btnNavSearch.classList.add('active');
-        const input = document.getElementById('searchInput');
+        const input = document.getElementById('searchInput') || document.getElementById('searchInputHeader');
         if (input) {
+          input.style.display = 'block';
           input.focus();
           input.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       });
-
-      // Sync header tab clicks with bottom nav
-      if (tabHome) tabHome.addEventListener('click', () => { btnNavHome.classList.add('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
-      if (tabBrowse) tabBrowse.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.add('active'); btnNavSearch.classList.remove('active'); });
-      if (tabParty) tabParty.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
     })();
   </script>
 
