@@ -730,7 +730,7 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 <span id="bookmarkText">Watchlist</span>
               </button>
-              <button type="button" class="bookmark-btn" id="partyBtn" style="flex: 1; background: var(--teal); color: #fff; border-color: var(--ink);">
+              <button type="button" class="bookmark-btn" id="partyBtn" style="flex: 1; background: var(--accent); color: #fff; border-color: var(--ink);">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 <span>Party</span>
               </button>
@@ -1365,8 +1365,9 @@
         });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
+          console.log('[HLS] Error event:', data.type, data.details, data.response ? data.response.code + ' ' + data.response.text : '');
           if (data.fatal) {
-            console.warn('[HLS] Fatal error:', data.type, data.details);
+            console.warn('[HLS] Fatal error:', data.type, data.details, data.response ? data.response.url : '');
             hls.destroy();
             window.hlsInstance = null;
             clearQualityMenu();
@@ -1376,18 +1377,25 @@
 
       } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
         // Safari native HLS
+        console.log('[Player] Native HLS, src:', proxiedUrl.substring(0, 80));
         playerVideo.src = proxiedUrl;
         playerVideo.load();
         playerVideo.playbackRate = playbackSpeed;
-        playerVideo.play().catch(() => {});
-        playerVideo.onerror = tryNextSource;
+        playerVideo.play().catch(e => console.warn('[Player] play() failed:', e));
+        playerVideo.onerror = () => { console.warn('[Player] Video error:', playerVideo.error); tryNextSource(); };
       } else {
+        console.log('[Player] Direct video, src:', proxiedUrl.substring(0, 80));
         playerVideo.src = proxiedUrl;
         playerVideo.load();
         playerVideo.playbackRate = playbackSpeed;
-        playerVideo.play().catch(() => {});
-        playerVideo.onerror = tryNextSource;
+        playerVideo.play().catch(e => console.warn('[Player] play() failed:', e));
+        playerVideo.onerror = () => { console.warn('[Player] Video error:', playerVideo.error); tryNextSource(); };
       }
+
+      // Debug: listen for all video events
+      ['loadstart', 'progress', 'suspend', 'abort', 'error', 'emptied', 'stalled', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'seeking', 'seeked', 'ended', 'durationchange', 'timeupdate', 'play', 'pause', 'ratechange'].forEach(evt => {
+        playerVideo.addEventListener(evt, () => {}, { once: true });
+      });
     }
 
     function renderScraperQualityPills(sources) {
@@ -1450,12 +1458,15 @@
         const data = await resp.json();
 
         if (!data.success || !data.sources || data.sources.length === 0) {
+          console.warn('[Scraper] No sources found:', data);
           sourceBadge.textContent = '⚠ No sources found';
           sourceBadge.style.display = '';
           return;
         }
 
         scraperSources = data.sources;
+        console.log('[Scraper] Got sources:', data.sourceCount, 'first URL:', data.sources[0]?.url?.substring(0, 60), 'provider:', data.sources[0]?.provider);
+        console.log('[Scraper] Proxied first URL:', proxyStreamUrl(data.sources[0]?.url, data.sources[0]?.headers)?.substring(0, 80));
         activeSourceIndex = 0;
 
         // Show only providers that actually returned sources in the dropdown

@@ -171,9 +171,10 @@ app.get("/api/stream-proxy", async (req, res) => {
   const isVideoFile = /\.(mp4|mkv|webm|avi|mov|flv)(\?|$)/i.test(targetUrl);
 
   try {
-    // For direct video files: follow all redirects and send browser to the final URL
-    // This avoids streaming large video files through the VPS (causes 504 timeouts)
-    if (isVideoFile && !range) {
+    // For direct video files: follow redirect chain and send browser to the final signed URL
+    // This avoids streaming any video data through the VPS (causes 504 / bw issues)
+    // Works with or without Range header — 302 preserves the original request method+headers
+    if (isVideoFile) {
       let currentUrl = targetUrl;
       let hops = 0;
       while (hops++ < 10) {
@@ -181,10 +182,8 @@ app.get("/api/stream-proxy", async (req, res) => {
         const location = resp.headers.get("location");
         if ((resp.status === 301 || resp.status === 302 || resp.status === 307 || resp.status === 308) && location) {
           currentUrl = location.startsWith("//") ? "https:" + location : location;
-          // Update referer for next hop
           fetchHeaders["Referer"] = new URL(currentUrl).origin + "/";
         } else {
-          // Final URL — redirect browser here so it fetches directly
           res.setHeader("Access-Control-Allow-Origin", "*");
           return res.redirect(302, currentUrl);
         }
@@ -346,8 +345,8 @@ async function _serveFreshM3U8(req, res, ep_url, videoUrl, referer, UA) {
   const text = await m3u8Resp.text();
   const contentType = m3u8Resp.headers.get("Content-Type") || "application/vnd.apple.mpegurl";
 
-  // Rewrite all URLs through our stream-proxy so HLS.js can fetch them cross-origin
-  const proxyBase = `https://proxy.babyanime.top/api/stream-proxy?url=`;
+  // Rewrite all URLs through the Cloudflare Worker
+  const proxyBase = `https://proxy.babyanime.top/stream-proxy?url=`;
   const extraParams = `&r=${encodeURIComponent(referer)}&o=${encodeURIComponent(referer.replace(/\/$/, ""))}&ua=${encodeURIComponent(UA)}`;
 
   const proxyUrl = (rawUrl) => {
