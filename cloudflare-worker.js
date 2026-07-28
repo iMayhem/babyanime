@@ -46,20 +46,21 @@ async function handleRequest(request) {
     const range = request.headers.get('Range');
     if (range) headers['Range'] = range;
 
-    // Check if this is a direct video file (not HLS)
-    const isVideoFile = /\.(mp4|mkv|webm|avi|mov|flv)(\?|$)/i.test(targetUrl);
-
     try {
-      // For video files: follow redirects and return 302 to final URL
-      // No video data proxied through the Worker
-      if (isVideoFile && !range) {
+      const resp = await fetch(targetUrl, { headers });
+
+      const isM3U8 = targetUrl.includes('.m3u8') || resp.headers.get('Content-Type')?.includes('m3u8');
+
+      // Only proxy M3U8 manifests (to rewrite segment URLs). Everything else gets a 302 redirect.
+      if (!isM3U8) {
+        // Follow redirect chain for video files to resolve final URL
         let currentUrl = targetUrl;
         let fetchHeaders = { ...headers };
         let hops = 0;
         while (hops++ < 10) {
-          const resp = await fetch(currentUrl, { headers: fetchHeaders, redirect: "manual" });
-          const location = resp.headers.get("location");
-          if ((resp.status === 301 || resp.status === 302 || resp.status === 307 || resp.status === 308) && location) {
+          const check = await fetch(currentUrl, { headers: fetchHeaders, redirect: "manual" });
+          const location = check.headers.get("location");
+          if ((check.status === 301 || check.status === 302 || check.status === 307 || check.status === 308) && location) {
             currentUrl = location.startsWith("//") ? "https:" + location : location;
             fetchHeaders["Referer"] = new URL(currentUrl).origin + "/";
           } else {
@@ -69,41 +70,32 @@ async function handleRequest(request) {
         return new Response("Too many redirects", { status: 502 });
       }
 
-      const resp = await fetch(targetUrl, { headers });
+      let contentType = resp.headers.get('Content-Type') || 'application/vnd.apple.mpegurl';
+      const text = await resp.text();
 
-      const isM3U8 = targetUrl.includes('.m3u8') || resp.headers.get('Content-Type')?.includes('m3u8');
-      let body = resp.body;
-      let contentType = resp.headers.get('Content-Type') || 'application/octet-stream';
+      const extraParams = [];
+      if (url.searchParams.has('r')) extraParams.push(`r=${encodeURIComponent(url.searchParams.get('r'))}`);
+      if (url.searchParams.has('o')) extraParams.push(`o=${encodeURIComponent(url.searchParams.get('o'))}`);
+      if (url.searchParams.has('ua')) extraParams.push(`ua=${encodeURIComponent(url.searchParams.get('ua'))}`);
+      const extraStr = extraParams.length ? '&' + extraParams.join('&') : '';
 
-      if (isM3U8 && resp.ok) {
-        const text = await resp.text();
+      const proxyBase = `${url.origin}${STREAM_PROXY_PATH}?url=`;
+      const lines = text.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return line;
+        const resolved = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+          ? trimmed
+          : new URL(trimmed, targetUrl).href;
+        return `${proxyBase}${encodeURIComponent(resolved)}${extraStr}`;
+      });
 
-        const extraParams = [];
-        if (url.searchParams.has('r')) extraParams.push(`r=${encodeURIComponent(url.searchParams.get('r'))}`);
-        if (url.searchParams.has('o')) extraParams.push(`o=${encodeURIComponent(url.searchParams.get('o'))}`);
-        if (url.searchParams.has('ua')) extraParams.push(`ua=${encodeURIComponent(url.searchParams.get('ua'))}`);
-        const extraStr = extraParams.length ? '&' + extraParams.join('&') : '';
-
-        const proxyBase = `${url.origin}${STREAM_PROXY_PATH}?url=`;
-        const lines = text.split('\n').map(line => {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('#')) return line;
-          const resolved = trimmed.startsWith('http://') || trimmed.startsWith('https://')
-            ? trimmed
-            : new URL(trimmed, targetUrl).href;
-          return `${proxyBase}${encodeURIComponent(resolved)}${extraStr}`;
-        });
-        body = lines.join('\n');
-      }
-
-      return new Response(body, {
+      return new Response(lines.join('\n'), {
         status: resp.status,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=3600',
-          ...(range ? { 'Content-Range': resp.headers.get('Content-Range') || '' } : {}),
         },
       });
     } catch (err) {

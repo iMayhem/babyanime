@@ -2,7 +2,10 @@ const path = require("path");
 const admin = require("./admin");
 
 const PROVIDERS = [
-  { name: "Eren", file: "anisnatch.js" },
+  { name: "Eren", file: "eren.js" },
+  { name: "Luffy", file: "animesdigital.js" },
+  { name: "Naruto", file: "allwish.js" },
+  { name: "Goku", file: "animekai.js" },
 ];
 
 let loadedProviders = [];
@@ -43,9 +46,6 @@ async function runAll(resolved, audio = "sub", onEvent = null) {
   const tasks = loadedProviders.map(async (provider) => {
     try {
       let id = tmdbId;
-      if (provider.name === "Eren" && anilistId) {
-        id = `anilist:${anilistId}`;
-      }
       if (!id) {
         if (onEvent) onEvent({ type: "provider_skip", provider: provider.name, reason: "no id", timestamp: Date.now() });
         return;
@@ -110,9 +110,6 @@ async function runProvider(providerName, resolved, audio = "sub") {
 
   const { tmdbId, anilistId, type, season, episode } = resolved;
   let id = tmdbId;
-  if (provider.name === "Eren" && anilistId) {
-    id = `anilist:${anilistId}`;
-  }
   if (!id) return [];
 
   const streams = await provider.getStreams(id, type, season, episode);

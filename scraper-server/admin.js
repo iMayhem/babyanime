@@ -4,7 +4,10 @@ const path = require('path');
 const CONFIG_PATH = path.join(__dirname, 'scraper-config.json');
 
 const DEFAULT_PROVIDERS = [
-  'Eren'
+  'Eren',
+  'Luffy',
+  'Naruto',
+  'Goku',
 ];
 
 function loadConfig() {
