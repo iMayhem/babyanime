@@ -644,7 +644,6 @@
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
                 <option value="scraper_all" selected>🔍 All Scrapers (Auto)</option>
-                <option value="embed_vidsrc" style="font-weight:700;">🎬 VidSrc</option>
                 <option value="embed_animecfd" style="font-weight:700;">🎬 AnimeCFD</option>
               </select>
             </div>
@@ -1555,7 +1554,6 @@
 
       // Rebuild options: always keep "All" + embeds at top, then one per provider
       serverSelect.innerHTML = `<option value="scraper_all">🔍 All (${sources.length} sources)</option>`
-        + `<option value="embed_vidsrc" style="font-weight:700;">🎬 VidSrc</option>`
         + `<option value="embed_animecfd" style="font-weight:700;">🎬 AnimeCFD</option>`
         + providers.map(p => `<option value="scraper_${p}">${p}</option>`).join('');
 
@@ -1637,7 +1635,7 @@
     function updatePlayer() {
       const val = serverSelect.value;
       // Embed mode
-      if (val === 'embed_vidsrc' || val === 'embed_animecfd') {
+      if (val === 'embed_animecfd') {
         ctrlBar.style.display = 'none';
         sourceBadge.style.display = 'none';
         bigPlayOverlay.style.display = 'none';
@@ -1645,15 +1643,8 @@
         ensureEmbedMapped().then(mapped => {
           const ep = activeEpisode;
           const audio = activeAudio || 'sub';
-          let embedUrl = null;
-          if (val === 'embed_vidsrc' && mapped && mapped.tmdbId) {
-            embedUrl = mapped.type === 'movie'
-              ? `https://vidsrc.to/embed/movie/${mapped.tmdbId}`
-              : `https://vidsrc.to/embed/tv/${mapped.tmdbId}/${mapped.season || 1}/${ep}`;
-          } else if (val === 'embed_animecfd') {
-            const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
-            if (aid) embedUrl = `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}`;
-          }
+          const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
+          const embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}` : null;
           embedIframe.style.display = 'block';
           embedIframe.src = embedUrl || '';
         });
