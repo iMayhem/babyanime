@@ -1926,22 +1926,36 @@
       });
 
       window.enterRoom = async function(rid, skipPasswordCheck) {
-        // Check if private room
-        if (!skipPasswordCheck && sb) {
+        let partyData = null;
+        if (sb) {
           try {
-            const { data: party } = await sb.from('parties').select('is_private,password').eq('id', rid).single();
-            if (party && party.is_private) {
-              const pwd = prompt('This room is private. Enter password:');
-              if (!pwd || pwd !== party.password) { alert('Incorrect password'); return; }
-            }
-          } catch(e) { /* table might not exist, proceed anyway */ }
+            const { data } = await sb.from('parties').select('*').eq('id', rid).single();
+            if (data) partyData = data;
+          } catch(e) {}
         }
-        isHost = false; epLimit = 3000; curId = null; curEp = 1; curTotal = 12; curTitle = '';
+        if (partyData && partyData.is_private && !skipPasswordCheck) {
+          const pwd = prompt('This room is private. Enter password:');
+          if (!pwd || pwd !== partyData.password) { alert('Incorrect password'); return; }
+        }
+        isHost = false; epLimit = 3000;
         await joinChannel(rid);
         enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
-        $('workspaceTitle').textContent = 'Joining room...'; $('workspaceSubtitle').textContent = '';
         window.history.pushState({}, '', '/?room=' + rid);
-        chatMsgs.innerHTML = '<div class="chat-message"><span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">Connected! Waiting for host state...</span></div>';
+        
+        if (partyData) {
+          curId = parseInt(partyData.anime_id) || partyData.anime_id;
+          curEp = partyData.episode || 1;
+          curTitle = partyData.series_title || 'Watch Party';
+          curTotal = 12;
+          $('workspaceTitle').textContent = curTitle + ' - Ep ' + curEp;
+          $('workspaceSubtitle').textContent = '';
+          loadEpisode(curId, curEp);
+          renderEpisodes();
+        } else {
+          $('workspaceTitle').textContent = 'Joining room...';
+          $('workspaceSubtitle').textContent = '';
+        }
+        chatMsgs.innerHTML = '<div class="chat-message"><span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">Connected!</span></div>';
       };
 
       window.createRoom = async function(anilistId, episode, seriesTitle, totalEps, isPrivate, password, coverImage) {
