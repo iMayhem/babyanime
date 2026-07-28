@@ -2067,6 +2067,16 @@ textarea {
   .party-eps-panel.visible { max-height: 220px; overflow-y: auto; }
 }
 
+@media (max-width: 600px) {
+  .party-workspace-header { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+  .party-workspace-actions { width: 100%; justify-content: flex-start; }
+}
+
+@media (max-width: 480px) {
+  #partyCtrlBar .vol-bar { width: 45px; }
+  #partyCtrlBar .speed-pills { display: none; }
+}
+
 .party-sidebar-col > .card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 #partyChatPanel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
