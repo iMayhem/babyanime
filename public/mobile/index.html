@@ -487,7 +487,7 @@
                     <button type="submit" class="party-chat-send-btn">Send</button>
                   </form>
                 </div>
-                <div id="partyEpisodesPanel" style="display:none;overflow-y:auto;padding:0.5rem 0;">
+                <div id="partyEpisodesPanel" class="party-eps-panel">
                   <div style="display:flex;gap:0.4rem;margin-bottom:0.8rem;align-items:center;">
                     <input type="number" id="partyEpJumpInput" class="form-input" placeholder="Jump to Ep" style="height:34px;padding:0.3rem 0.6rem;font-size:0.85rem;flex-grow:1;" min="1">
                     <button type="button" class="party-chat-send-btn" id="partyEpJumpBtn" style="padding:0.3rem 0.6rem;height:34px;line-height:20px;">Go</button>
@@ -1522,14 +1522,28 @@
         document.getElementById('partyTabChat').classList.add('active');
         document.getElementById('partyTabEpisodes').classList.remove('active');
         document.getElementById('partyChatPanel').style.display = '';
-        document.getElementById('partyEpisodesPanel').style.display = 'none';
+        document.getElementById('partyEpisodesPanel').classList.remove('visible');
       });
       document.getElementById('partyTabEpisodes').addEventListener('click', () => {
         document.getElementById('partyTabEpisodes').classList.add('active');
         document.getElementById('partyTabChat').classList.remove('active');
         document.getElementById('partyChatPanel').style.display = 'none';
-        document.getElementById('partyEpisodesPanel').style.display = '';
+        document.getElementById('partyEpisodesPanel').classList.add('visible');
       });
+
+      // Sync sidebar height to player wrapper
+      function syncPartySidebarHeight() {
+        const pw = document.getElementById('partyPlayerWrapper');
+        const sc = document.querySelector('.party-sidebar-col > .card');
+        if (pw && sc) {
+          const h = pw.offsetHeight;
+          if (h > 0) sc.style.maxHeight = h + 'px';
+        }
+      }
+      const partySyncObserver = new ResizeObserver(syncPartySidebarHeight);
+      const partyPw = document.getElementById('partyPlayerWrapper');
+      if (partyPw) partySyncObserver.observe(partyPw);
+      setTimeout(syncPartySidebarHeight, 500);
 
       // Load active rooms
       refreshActiveRooms();
