@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS parties (
   password TEXT,
   created_by UUID REFERENCES auth.users,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_active TIMESTAMPTZ NOT NULL DEFAULT now()
+  last_active TIMESTAMPTZ NOT NULL DEFAULT now(),
+  cover_image TEXT
 );
 ALTER TABLE parties ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can read parties" ON parties FOR SELECT USING (true);

@@ -389,7 +389,7 @@
           </div>
           <div id="partyActiveRoomsWrap" style="margin-top:1.5rem;display:none;">
             <h3 style="font-size:1rem;font-weight:800;margin:0 0 0.8rem;">Active Rooms</h3>
-            <div id="partyActiveRoomsList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+            <div id="partyActiveRoomsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.8rem;"></div>
           </div>
         </div>
 
@@ -423,6 +423,7 @@
               </div>
               <input type="hidden" id="partyAnimeIdInput">
               <input type="hidden" id="partyAnimeEpisodesInput">
+              <input type="hidden" id="partyAnimeImageInput">
               <div class="form-actions">
                 <button type="button" class="tt" id="partyCreateBackBtn" style="padding: 0.6rem 1.2rem;">Back</button>
                 <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem;">Launch Room</button>
@@ -1763,21 +1764,29 @@
           const sixHrsAgo = new Date(Date.now() - 6*3600000).toISOString();
           sb.from('parties').delete().lt('last_active', sixHrsAgo).then(()=>{}).catch(()=>{});
 
-          const { data: rooms } = await sb.from('parties').select('id,anime_id,episode,series_title,is_private,last_active').gte('last_active', new Date(Date.now() - 30*60000).toISOString()).order('last_active', {ascending:false}).limit(20);
+          const { data: rooms } = await sb.from('parties').select('id,anime_id,episode,series_title,is_private,last_active,cover_image').gte('last_active', new Date(Date.now() - 60*60000).toISOString()).order('last_active', {ascending:false}).limit(20);
           if (!rooms || rooms.length === 0) { wrap.style.display = 'none'; return; }
           wrap.style.display = '';
           list.innerHTML = rooms.map(r => {
             const ago = Math.round((Date.now() - new Date(r.last_active).getTime()) / 60000);
-            return '<div class="card" style="padding:0.6rem 0.8rem;display:flex;align-items:center;gap:0.6rem;cursor:pointer;">' +
-              '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:800;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.series_title||'Anime') + ' &middot; Ep ' + r.episode + (r.is_private ? ' &#128274;' : '') + '</div>' +
-              '<div style="font-size:0.7rem;color:var(--muted);font-weight:700;">' + ago + 'm ago &middot; ' + r.anime_id + '</div>' +
+            return '<div class="card room-card" data-rid="'+r.id+'">' +
+              '<div class="room-card-head">' +
+                '<img class="room-card-thumb" src="' + (r.cover_image||'https://placehold.co/120x160?text=Anime') + '" alt="' + (r.series_title||'') + '" loading="lazy">' +
+                '<div class="room-card-details">' +
+                  '<h4 class="room-card-name" title="' + (r.series_title||'Anime') + '">' + (r.series_title||'Anime') + (r.is_private ? ' 🔒' : '') + '</h4>' +
+                  '<p class="room-card-anime">Episode ' + r.episode + '</p>' +
+                  '<div class="room-card-meta">' +
+                    '<span class="room-card-watching">' + ago + 'm ago</span>' +
+                  '</div>' +
+                '</div>' +
               '</div>' +
-              '<button type="button" class="tt" style="padding:0.3rem 0.7rem;font-size:0.75rem;font-weight:800;">Join</button>' +
-              '</div>';
+              '<button type="button" class="btn-primary join-room-btn" style="font-size:0.85rem;padding:0.45rem 0.8rem;margin-top:0.4rem;">Join Room</button>' +
+            '</div>';
           }).join('');
-          list.querySelectorAll('.card').forEach((el, i) => {
-            el.addEventListener('click', () => { if (rooms[i]) enterRoom(rooms[i].id); });
+          list.querySelectorAll('.room-card').forEach(el => {
+            const rid = el.dataset.rid;
+            el.querySelector('.join-room-btn').addEventListener('click', (e) => { e.stopPropagation(); if (rid) enterRoom(rid); });
+            el.addEventListener('click', () => { if (rid) enterRoom(rid); });
           });
         } catch(e) { wrap.style.display = 'none'; }
       }
@@ -1943,11 +1952,11 @@
         chatMsgs.innerHTML = '<div class="chat-message"><span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">Connected! Waiting for host state...</span></div>';
       };
 
-      window.createRoom = async function(anilistId, episode, seriesTitle, totalEps, isPrivate, password) {
+      window.createRoom = async function(anilistId, episode, seriesTitle, totalEps, isPrivate, password, coverImage) {
         isHost = true; epLimit = 3000; curId = anilistId; curEp = episode; curTotal = totalEps || 12; curTitle = seriesTitle;
         const rid = genId();
         // Store in Supabase
-        if (sb) sb.from('parties').insert({id:rid,anime_id:String(anilistId),episode,series_title:seriesTitle,is_private:!!isPrivate,password:password||null}).then(()=>{}).catch(()=>{});
+        if (sb) sb.from('parties').insert({id:rid,anime_id:String(anilistId),episode,series_title:seriesTitle,is_private:!!isPrivate,password:password||null,cover_image:coverImage||null}).then(()=>{}).catch(()=>{});
         await joinChannel(rid);
         enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
         $('workspaceTitle').textContent = seriesTitle + ' - Ep ' + episode;
@@ -1973,7 +1982,7 @@
             $('partyAnimeSearchResults').innerHTML = items.map(m => {
               const t = m.title.english || m.title.romaji || 'Unknown';
               const ep = m.episodes || (m.nextAiringEpisode ? m.nextAiringEpisode.episode - 1 : '?');
-              return '<div class="party-sr" data-id="' + m.id + '" data-ep="' + ep + '" data-title="' + t.replace(/"/g,'&quot;') + '" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;cursor:pointer;border-bottom:1px dashed var(--line);font-size:0.85rem;font-weight:600;">' +
+              return '<div class="party-sr" data-id="' + m.id + '" data-ep="' + ep + '" data-title="' + t.replace(/"/g,'&quot;') + '" data-img="' + (m.coverImage?.large||'') + '" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;cursor:pointer;border-bottom:1px dashed var(--line);font-size:0.85rem;font-weight:600;">' +
                 '<img src="' + (m.coverImage?.large||'') + '" style="width:28px;height:40px;object-fit:cover;border-radius:4px;" loading="lazy">' +
                 '<span>' + t + ' (' + ep + ' eps)</span></div>';
             }).join('');
@@ -1982,6 +1991,7 @@
               el.addEventListener('click', () => {
                 $('partyAnimeIdInput').value = el.dataset.id;
                 $('partyAnimeEpisodesInput').value = el.dataset.ep;
+                $('partyAnimeImageInput').value = el.dataset.img;
                 $('partySelectedAnime').innerHTML = '<span style="color:var(--teal);font-weight:800;">✓</span> ' + el.dataset.title + ' (' + el.dataset.ep + ' eps)';
                 $('partySelectedAnime').style.display = 'block';
                 $('partyAnimeSearchResults').style.display = 'none';
@@ -2007,7 +2017,8 @@
         const isPrivate = $('partyPrivateCheck').checked;
         const password = isPrivate ? $('partyPasswordInput').value.trim() : null;
         if (isPrivate && !password) { alert('Please set a room password'); return; }
-        window.createRoom(id, ep, title, total, isPrivate, password);
+        const coverImage = $('partyAnimeImageInput').value || '';
+        window.createRoom(id, ep, title, total, isPrivate, password, coverImage);
       });
 
       // Workspace leave
