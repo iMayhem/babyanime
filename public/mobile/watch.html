@@ -250,10 +250,6 @@
                 <div class="pills-group" style="padding: 0.15rem;">
                   <button type="button" class="pill-opt active" id="audioSub" data-audio="sub" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">Sub</button>
                   <button type="button" class="pill-opt" id="audioDub" data-audio="dub" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">Dub</button>
-                </div>
-              </div>
-              <div class="selector-section" style="flex:1;">
-                <div class="pills-group" id="qualityPills" style="padding: 0.15rem;"></div>
               </div>
             </div>
 
@@ -755,7 +751,7 @@
         const next = activeSourceIndex + 1;
         if (next < scraperSources.length) {
           const s = scraperSources[next];
-          qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.toggle('active', parseInt(b.dataset.idx) === next));
+          if (qualityPills) qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.toggle('active', parseInt(b.dataset.idx) === next));
           playStreamUrl(s.url, s.headers, s.provider, next, s.format);
         } else { sourceBadge.textContent = '⚠ No working source'; sourceBadge.style.display = ''; }
       };
@@ -778,15 +774,6 @@
 
     function renderScraperQualityPills(sources) {
       if (!qualityPills || !sources || sources.length === 0) return;
-      qualityPills.innerHTML = sources.map((s, i) => `<button type="button" class="pill-opt${i === 0 ? ' active' : ''}" data-idx="${i}" style="padding:0.25rem 0.6rem;font-size:0.8em;">${s.provider} · ${s.quality || 'Auto'}</button>`).join('');
-      qualityPills.querySelectorAll('.pill-opt').forEach(btn => {
-        btn.addEventListener('click', () => {
-          qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const idx = parseInt(btn.dataset.idx);
-          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx, scraperSources[idx].format);
-        });
-      });
     }
 
     function populateServerDropdown(sources) {
