@@ -347,6 +347,10 @@
               </div>
             </div>
           </div>
+          <div id="partyActiveRoomsWrap" style="margin-top:1.5rem;display:none;">
+            <h3 style="font-size:1rem;font-weight:800;margin:0 0 0.8rem;">Active Rooms</h3>
+            <div id="partyActiveRoomsList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+          </div>
         </div>
 
         <!-- CREATE ROOM SCREEN -->
@@ -601,6 +605,7 @@
       homeView.style.display = 'none';
       browseView.style.display = 'none';
       partyView.style.display = 'block';
+      setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
     });
 
     // === Auth UI ===
@@ -1526,6 +1531,7 @@
       let userMap = {};
       let partySources = [];
       let partySourceIdx = 0;
+      let heartbeatInterval = null;
 
       const $ = id => document.getElementById(id);
       const enterScr = $('partyEnterScreen'), createScr = $('partyCreateScreen'), workScr = $('partyWorkspaceScreen');
@@ -1587,6 +1593,13 @@
             channel.send({type:'broadcast',event:'request_state',payload:{u:userId}});
           }, 500);
         }
+
+        // Heartbeat: update last_active every 60s
+        if (sb) sb.from('parties').update({last_active:new Date().toISOString()}).eq('id',roomId).then(()=>{}).catch(()=>{});
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = setInterval(() => {
+          if (sb && roomId) sb.from('parties').update({last_active:new Date().toISOString()}).eq('id',roomId).then(()=>{}).catch(()=>{});
+        }, 60000);
       }
 
       function updateUsers() {
@@ -1696,6 +1709,38 @@
         renderEpisodes();
         channel.send({type:'broadcast',event:'video_change',payload:{u:userId,anilist_id:anilistId,episode:ep,series_title:title,total_eps:curTotal}});
       }
+
+      // ── Active Rooms & Cleanup ──
+      async function renderActiveRooms() {
+        const wrap = $('partyActiveRoomsWrap'), list = $('partyActiveRoomsList');
+        if (!sb) { wrap.style.display = 'none'; return; }
+        try {
+          // Cleanup: delete rooms inactive for 6+ hours
+          const sixHrsAgo = new Date(Date.now() - 6*3600000).toISOString();
+          sb.from('parties').delete().lt('last_active', sixHrsAgo).then(()=>{}).catch(()=>{});
+
+          const { data: rooms } = await sb.from('parties').select('id,anime_id,episode,series_title,is_private,last_active').gte('last_active', new Date(Date.now() - 30*60000).toISOString()).order('last_active', {ascending:false}).limit(20);
+          if (!rooms || rooms.length === 0) { wrap.style.display = 'none'; return; }
+          wrap.style.display = '';
+          list.innerHTML = rooms.map(r => {
+            const ago = Math.round((Date.now() - new Date(r.last_active).getTime()) / 60000);
+            return '<div class="card" style="padding:0.6rem 0.8rem;display:flex;align-items:center;gap:0.6rem;cursor:pointer;">' +
+              '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:800;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.series_title||'Anime') + ' &middot; Ep ' + r.episode + (r.is_private ? ' &#128274;' : '') + '</div>' +
+              '<div style="font-size:0.7rem;color:var(--muted);font-weight:700;">' + ago + 'm ago &middot; ' + r.anime_id + '</div>' +
+              '</div>' +
+              '<button type="button" class="tt" style="padding:0.3rem 0.7rem;font-size:0.75rem;font-weight:800;">Join</button>' +
+              '</div>';
+          }).join('');
+          list.querySelectorAll('.card').forEach((el, i) => {
+            el.addEventListener('click', () => { if (rooms[i]) enterRoom(rooms[i].id); });
+          });
+        } catch(e) { wrap.style.display = 'none'; }
+      }
+
+      // Call on init; also refresh from tab click below
+      window._refreshPartyRooms = renderActiveRooms;
+      renderActiveRooms();
 
       // ── Custom Player Controls ──
       function partyTogglePlay() {
@@ -1926,9 +1971,11 @@
         if (hls) { hls.destroy(); hls = null; }
         video.src = '';
         if (channel) await channel.unsubscribe();
+        clearInterval(heartbeatInterval); heartbeatInterval = null;
         channel = null; roomId = null; isHost = false;
         workScr.style.display = 'none'; enterScr.style.display = 'block';
         window.history.pushState({}, '', '/?tab=party');
+        renderActiveRooms();
       });
 
       // Copy invite

@@ -8,11 +8,13 @@ CREATE TABLE IF NOT EXISTS parties (
   is_private BOOLEAN NOT NULL DEFAULT false,
   password TEXT,
   created_by UUID REFERENCES auth.users,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_active TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE parties ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can read parties" ON parties FOR SELECT USING (true);
 CREATE POLICY "Anyone can create parties" ON parties FOR INSERT WITH CHECK (true);
+CREATE POLICY "Anyone can delete old parties" ON parties FOR DELETE USING (true);
 
 CREATE TABLE IF NOT EXISTS chat_messages (
   id BIGSERIAL PRIMARY KEY,
