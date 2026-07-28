@@ -1736,10 +1736,9 @@
       }
 
       function renderEpisodes() {
-        const maxEp = curTotal || 220;
-        const limit = Math.min(maxEp, epLimit);
+        const maxEp = 3000;
         epGrid.innerHTML = '';
-        for (let i = 1; i <= limit; i++) {
+        for (let i = 1; i <= maxEp; i++) {
           const b = document.createElement('button'); b.type = 'button'; b.className = 'ep-btn' + (i === curEp ? ' active' : ''); b.textContent = i;
           b.addEventListener('click', () => { if (i === curEp || !channel) return; broadcastChange(curId, i, curTitle); });
           epGrid.appendChild(b);
