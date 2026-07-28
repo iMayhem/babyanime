@@ -2,17 +2,7 @@ const path = require("path");
 const admin = require("./admin");
 
 const PROVIDERS = [
-  { name: "AllAnime", file: "allanime.js" },
-  { name: "AniDB", file: "anidb.js" },
-  { name: "AnikoTV", file: "anikototv.js" },
-  { name: "AnimeKai", file: "animekai.js" },
-  { name: "AnimePahe", file: "animepahe.js" },
-  { name: "AnimeSalt", file: "animesalt.js" },
-  { name: "Animetsu", file: "animetsu.js" },
-  { name: "AnimeWorld", file: "animeworld.js" },
   { name: "Eren", file: "anisnatch.js" },
-  { name: "AnimeSama", file: "anime-sama.js" },
-  { name: "KissKH", file: "kisskh.js" },
 ];
 
 let loadedProviders = [];

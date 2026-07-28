@@ -4,8 +4,7 @@ const path = require('path');
 const CONFIG_PATH = path.join(__dirname, 'scraper-config.json');
 
 const DEFAULT_PROVIDERS = [
-  'AllAnime', 'AniDB', 'AnikoTV', 'AnimeKai', 'AnimePahe', 'AnimeSalt',
-  'Animetsu', 'AnimeWorld', 'Eren', 'AnimeSama', 'KissKH',
+  'Eren'
 ];
 
 function loadConfig() {
