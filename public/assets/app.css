@@ -2159,10 +2159,12 @@ footer {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  max-height: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Chat Panel */
+/* Chat & Episodes Panels */
 #partyChatPanel {
   display: flex;
   flex-direction: column;
@@ -2173,9 +2175,12 @@ footer {
 }
 
 #partyEpisodesPanel {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
   max-height: 100%;
+  overflow: hidden;
 }
 
 .party-chat-messages {
@@ -2189,14 +2194,27 @@ footer {
   border-bottom: 2px dashed var(--line);
 }
 
-/* Chat Scrollbar */
-.party-chat-messages::-webkit-scrollbar {
+#partyEpisodesGrid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 0.4rem;
+  padding: 0.2rem 0.2rem 0.5rem 0;
+}
+
+/* Scrollbars for Chat & Episodes */
+.party-chat-messages::-webkit-scrollbar,
+#partyEpisodesGrid::-webkit-scrollbar {
   width: 6px;
 }
-.party-chat-messages::-webkit-scrollbar-track {
+.party-chat-messages::-webkit-scrollbar-track,
+#partyEpisodesGrid::-webkit-scrollbar-track {
   background: var(--bg);
 }
-.party-chat-messages::-webkit-scrollbar-thumb {
+.party-chat-messages::-webkit-scrollbar-thumb,
+#partyEpisodesGrid::-webkit-scrollbar-thumb {
   background: var(--line);
   border-radius: 3px;
 }

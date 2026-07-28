@@ -518,7 +518,7 @@
                     <button type="submit" class="party-chat-send-btn">Send</button>
                   </form>
                 </div>
-                <div id="partyEpisodesPanel" style="display:none;overflow-y:auto;padding:0.5rem 0;">
+                <div id="partyEpisodesPanel" style="display:none;flex-direction:column;">
                   <div style="display:flex;gap:0.4rem;margin-bottom:0.8rem;align-items:center;">
                     <input type="number" id="partyEpJumpInput" class="form-input" placeholder="Jump to Ep" style="height:34px;padding:0.3rem 0.6rem;font-size:0.85rem;flex-grow:1;" min="1">
                     <button type="button" class="party-chat-send-btn" id="partyEpJumpBtn" style="padding:0.3rem 0.6rem;height:34px;line-height:20px;">Go</button>
@@ -2065,7 +2065,7 @@
 
       // Tabs
       $('partyTabChat').addEventListener('click', () => { $('partyTabChat').classList.add('active'); $('partyTabEpisodes').classList.remove('active'); $('partyChatPanel').style.display = ''; $('partyEpisodesPanel').style.display = 'none'; });
-      $('partyTabEpisodes').addEventListener('click', () => { $('partyTabEpisodes').classList.add('active'); $('partyTabChat').classList.remove('active'); $('partyChatPanel').style.display = 'none'; $('partyEpisodesPanel').style.display = ''; });
+      $('partyTabEpisodes').addEventListener('click', () => { $('partyTabEpisodes').classList.add('active'); $('partyTabChat').classList.remove('active'); $('partyChatPanel').style.display = 'none'; $('partyEpisodesPanel').style.display = 'flex'; });
 
       // Episode jump
       epJumpBtn.addEventListener('click', () => {
@@ -2074,6 +2074,23 @@
         if (t === curEp) return;
         broadcastChange(curId, t, curTitle);
       });
+
+      // Sync sidebar card height to video player height
+      function syncPartySidebarHeight() {
+        const pw = document.getElementById('partyPlayerWrapper');
+        const sc = document.querySelector('.party-sidebar-col > .card');
+        if (pw && sc) {
+          const h = pw.offsetHeight;
+          if (h > 50) sc.style.height = h + 'px';
+        }
+      }
+      const _pwEl = document.getElementById('partyPlayerWrapper');
+      if (_pwEl) {
+        const _ro = new ResizeObserver(syncPartySidebarHeight);
+        _ro.observe(_pwEl);
+      }
+      syncPartySidebarHeight();
+      setTimeout(syncPartySidebarHeight, 800);
     }
   </script>
 </body>
