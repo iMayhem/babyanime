@@ -70,7 +70,6 @@
     </div>
     <div id="authUserBadge" style="display:none;position:fixed;top:0.5rem;right:0.5rem;z-index:9999;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:0.3rem 0.7rem;font-size:0.8rem;font-weight:700;box-shadow:3px 3px 0 var(--shadow);">
       <span id="authUserEmail"></span>
-      <button type="button" class="tt" id="authLogoutBtn" style="font-size:0.75rem;padding:0.15rem 0.4rem;margin-left:0.4rem;">Logout</button>
     </div>
 
     <main>
@@ -616,7 +615,6 @@
     const authToggleText = document.getElementById('authToggleText');
     const authUserBadge = document.getElementById('authUserBadge');
     const authUserEmail = document.getElementById('authUserEmail');
-    const authLogoutBtn = document.getElementById('authLogoutBtn');
     let authMode = 'login';
 
     function showAuthError(msg) { authError.textContent = msg; authError.style.display = ''; }
@@ -697,12 +695,6 @@
       } catch (err) { showAuthError('Something went wrong'); }
       authSubmitBtn.disabled = false;
       authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
-    });
-
-    authLogoutBtn.addEventListener('click', async () => {
-      await signOut();
-      renderHistory();
-      renderWatchlist();
     });
 
     function setupAuthSync() {
