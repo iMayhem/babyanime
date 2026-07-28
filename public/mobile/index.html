@@ -1986,8 +1986,10 @@
     }
 
     // Bottom nav and URL param routing (merged into root listener above)
-    // Setup bottom nav
     (function setupBottomNav() {
+      const tabHome = document.getElementById('tabHome');
+      const tabBrowse = document.getElementById('tabBrowse');
+      const tabParty = document.getElementById('tabParty');
       const btnNavHome = document.getElementById('btnNavHome');
       const btnNavBrowse = document.getElementById('btnNavBrowse');
       const btnNavSearch = document.getElementById('btnNavSearch');
@@ -1997,7 +1999,7 @@
         btnNavHome.classList.add('active');
         btnNavBrowse.classList.remove('active');
         btnNavSearch.classList.remove('active');
-        tabHome.click();
+        if (tabHome) tabHome.click();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
@@ -2005,7 +2007,7 @@
         btnNavHome.classList.remove('active');
         btnNavBrowse.classList.add('active');
         btnNavSearch.classList.remove('active');
-        tabBrowse.click();
+        if (tabBrowse) tabBrowse.click();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
@@ -2014,13 +2016,16 @@
         btnNavBrowse.classList.remove('active');
         btnNavSearch.classList.add('active');
         const input = document.getElementById('searchInput');
-        if (input) { input.focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        if (input) {
+          input.focus();
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       });
 
-      // Sync tab clicks with bottom nav
-      tabHome.addEventListener('click', () => { btnNavHome.classList.add('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
-      tabBrowse.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.add('active'); btnNavSearch.classList.remove('active'); });
-      tabParty.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
+      // Sync header tab clicks with bottom nav
+      if (tabHome) tabHome.addEventListener('click', () => { btnNavHome.classList.add('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
+      if (tabBrowse) tabBrowse.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.add('active'); btnNavSearch.classList.remove('active'); });
+      if (tabParty) tabParty.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
     })();
   </script>
 
