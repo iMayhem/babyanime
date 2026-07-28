@@ -1221,6 +1221,7 @@
 
     function proxyStreamUrl(url, headers) {
       if (!url) return url;
+      if (url.startsWith('blob:') || url.startsWith('data:')) return url;
       if (url.startsWith(SCRAPER_API) || url.includes('/api/fresh-stream') || url.includes('/stream-proxy') || url.includes('/api/m3u8-cache/')) {
         return url;
       }
@@ -1402,12 +1403,16 @@
     subtitleBtn.addEventListener('click', (e) => { e.stopPropagation(); subtitleMenu.classList.toggle('open'); });
 
     // Clear quality menu when switching sources
+    let activeM3u8BlobUrl = null;
+
     function playStreamUrl(url, headers, providerName, sourceIdx, format) {
       // Destroy any existing HLS instance
       if (window.hlsInstance) {
         try { window.hlsInstance.destroy(); } catch (_) {}
         window.hlsInstance = null;
       }
+      // Revoke previous M3U8 blob URL
+      if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
       clearQualityMenu();
       clearSubtitles();
       playerVideo.src = '';
@@ -1415,12 +1420,22 @@
 
       if (sourceIdx !== undefined) activeSourceIndex = sourceIdx;
       // Set up subtitles from the source being played
+      let source = null;
       if (scraperSources && scraperSources[activeSourceIndex]) {
-        setupSubtitles(scraperSources[activeSourceIndex]);
+        source = scraperSources[activeSourceIndex];
+        setupSubtitles(source);
+      }
+
+      // Use inline M3U8 content if available (avoids cache expiry issues)
+      if (source && source.m3u8Content) {
+        const blob = new Blob([source.m3u8Content], { type: 'application/vnd.apple.mpegurl' });
+        activeM3u8BlobUrl = URL.createObjectURL(blob);
+        url = activeM3u8BlobUrl;
+        headers = null;
       }
 
       const proxiedUrl = proxyStreamUrl(url, headers);
-      console.log('[Player] Loading source', activeSourceIndex, providerName, proxiedUrl.substring(0, 80));
+      console.log('[Player] Loading source', activeSourceIndex, providerName, proxiedUrl ? proxiedUrl.substring(0, 80) : '(inline M3U8)');
 
       if (providerName) {
         sourceBadge.textContent = providerName;

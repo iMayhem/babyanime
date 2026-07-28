@@ -19,21 +19,26 @@ async function handleRequest(request) {
     return new Response(null, {
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
         'Access-Control-Allow-Headers': '*',
         'Access-Control-Max-Age': '86400',
       },
     });
   }
 
+  // Determine target URL: /stream-proxy?url=... or /https://... or /http://...
+  let targetUrl = null;
   if (path.startsWith(STREAM_PROXY_PATH)) {
     const targetParam = url.searchParams.get('url');
     if (!targetParam) {
       return new Response('Missing url parameter', { status: 400 });
     }
-    const targetUrl = decodeURIComponent(targetParam);
+    targetUrl = decodeURIComponent(targetParam);
+  } else if (path.startsWith('/https://') || path.startsWith('/http://')) {
+    targetUrl = path.slice(1);
+  }
+  if (targetUrl) {
 
-    // Merge per-request headers from query params (scraper-provided)
     const headers = { ...DEFAULT_HEADERS };
     for (const [key, val] of url.searchParams) {
       if (key === 'url' || key === 'h') continue;
@@ -51,57 +56,48 @@ async function handleRequest(request) {
       const isM3U8 = targetUrl.includes('.m3u8') || resp.headers.get('Content-Type')?.includes('m3u8');
 
       if (isM3U8) {
-        // M3U8: rewrite segment URLs to direct CDN URLs (not through Worker)
-        // The M3U8 itself is fetched via Worker with proper Referer/Origin,
-        // but segments load directly from the CDN — zero Worker bandwidth for video data.
         const contentType = resp.headers.get('Content-Type') || 'application/vnd.apple.mpegurl';
         const text = await resp.text();
 
+        const extraParams = [];
+        if (url.searchParams.has('r')) extraParams.push(`r=${encodeURIComponent(url.searchParams.get('r'))}`);
+        if (url.searchParams.has('o')) extraParams.push(`o=${encodeURIComponent(url.searchParams.get('o'))}`);
+        if (url.searchParams.has('ua')) extraParams.push(`ua=${encodeURIComponent(url.searchParams.get('ua'))}`);
+        const extraStr = extraParams.length ? '&' + extraParams.join('&') : '';
+
+        const proxyBase = `${url.origin}${STREAM_PROXY_PATH}?url=`;
         const lines = text.split('\n').map(line => {
           const trimmed = line.trim();
           if (!trimmed || trimmed.startsWith('#')) return line;
-          // Resolve relative URLs, but keep them pointing directly at the CDN
-          return trimmed.startsWith('http://') || trimmed.startsWith('https://')
+          const resolved = trimmed.startsWith('http://') || trimmed.startsWith('https://')
             ? trimmed
             : new URL(trimmed, targetUrl).href;
+          return `${proxyBase}${encodeURIComponent(resolved)}${extraStr}`;
         });
 
         return new Response(lines.join('\n'), {
           status: resp.status,
           headers: {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
             'Content-Type': contentType,
             'Cache-Control': 'public, max-age=3600',
           },
         });
       }
 
-      // Non-M3U8 (segments, video files): 302 redirect straight to the CDN.
-      // The CDN already returns Access-Control-Allow-Origin: *, so direct fetches work.
-      // We follow any redirect chains and return the final URL with CORS headers.
-      let currentUrl = targetUrl;
-      let fetchHeaders = { ...headers };
-      let hops = 0;
-      while (hops++ < 10) {
-        const check = await fetch(currentUrl, { headers: fetchHeaders, redirect: "manual" });
-        const location = check.headers.get("location");
-        if ((check.status === 301 || check.status === 302 || check.status === 307 || check.status === 308) && location) {
-          currentUrl = location.startsWith("//") ? "https:" + location : location;
-          fetchHeaders["Referer"] = new URL(currentUrl).origin + "/";
-        } else {
-          return new Response(null, {
-            status: 302,
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, OPTIONS',
-              'Access-Control-Allow-Headers': '*',
-              'Location': currentUrl,
-            },
-          });
-        }
-      }
-      return new Response("Too many redirects", { status: 502 });
+      // Stream segments and video files through Worker with proper Referer/Origin headers
+      // The CDN requires these headers, so we must proxy instead of redirect.
+      const responseHeaders = new Headers(resp.headers);
+      responseHeaders.set('Access-Control-Allow-Origin', '*');
+      responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+      responseHeaders.delete('Access-Control-Allow-Credentials');
+
+      return new Response(resp.body, {
+        status: resp.status,
+        statusText: resp.statusText,
+        headers: responseHeaders,
+      });
     } catch (err) {
       return new Response(`Proxy error: ${err.message}`, { status: 502 });
     }

@@ -3,9 +3,6 @@ const admin = require("./admin");
 
 const PROVIDERS = [
   { name: "Naruto",  file: "allwish.js" },
-  { name: "Eren",    file: "eren.js" },
-  { name: "Luffy",   file: "animesdigital.js" },
-  { name: "Goku",    file: "animekai.js" },
 ];
 
 let loadedProviders = [];

@@ -21,6 +21,22 @@ const m3u8Cache = new Map();
 const CACHE_TTL = 120_000; // 2 minutes
 const WORKER_BASE = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
 
+function rewriteM3u8Urls(m3u8Text, baseUrl, referer, origin, ua) {
+  const params = [];
+  if (referer) params.push(`r=${encodeURIComponent(referer)}`);
+  if (origin) params.push(`o=${encodeURIComponent(origin)}`);
+  if (ua) params.push(`ua=${encodeURIComponent(ua)}`);
+  const extraStr = params.length ? '&' + params.join('&') : '';
+  return m3u8Text.split('\n').map(line => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) {
+      return t.startsWith('#') ? line.replace(/URI="([^"]+)"/g, (_, u) => `URI="${WORKER_BASE}${encodeURIComponent(u)}${extraStr}"`) : line;
+    }
+    const abs = t.startsWith('http') ? t : new URL(t, baseUrl).href;
+    return `${WORKER_BASE}${encodeURIComponent(abs)}${extraStr}`;
+  }).join('\n');
+}
+
 function workerProxyUrl(url, referer, origin, ua) {
   let proxyUrl = `${WORKER_BASE}${encodeURIComponent(url)}`;
   if (referer) proxyUrl += `&r=${encodeURIComponent(referer)}`;
@@ -117,21 +133,19 @@ app.get("/api/stream", async (req, res) => {
       sources = await providers.runAll(resolved, audio || "sub", broadcastScraperUsage);
     }
 
-    // Cache M3U8: use scraper-pre-fetched content or pre-fetch now
+    // Fetch M3U8 content inline: use scraper-pre-fetched or fetch now
     await Promise.allSettled(sources.map(async (s) => {
-      if (s.format === 'hls' && s.url && !s.url.startsWith('/api/')) {
-        // If scraper already fetched and rewrote the M3U8, use it directly
-        if (s.m3u8Content) {
-          const key = Buffer.from(String(Math.random())).toString('base64').slice(0, 16);
-          m3u8Cache.set(key, { content: s.m3u8Content, contentType: 'application/vnd.apple.mpegurl', ts: Date.now() });
-          setTimeout(() => m3u8Cache.delete(key), CACHE_TTL);
-          s.url = `https://${req.get('host')}/api/m3u8-cache/${key}`;
-          return;
+      if (s.format === 'hls' && s.url && !s.url.startsWith('/api/') && !s.m3u8Content) {
+        const m3u8Resp = await fetch(s.url, { headers: s.headers || {}, redirect: 'follow' });
+        if (m3u8Resp.ok) {
+          let m3u8Text = await m3u8Resp.text();
+          if (m3u8Text.trim().startsWith('#EXTM3U')) {
+            const wh = s.headers || {};
+            s.m3u8Content = rewriteM3u8Urls(m3u8Text, s.url, wh['Referer'] || wh['referer'] || '', wh['Origin'] || wh['origin'] || '', wh['User-Agent'] || wh['user-agent'] || '');
+          }
         }
-        // Otherwise try pre-fetch (less likely to work without scraper cookies)
-        const key = await prefetchM3u8(s.url, s.headers || {});
-        if (key) s.url = `https://${req.get('host')}/api/m3u8-cache/${key}`;
       }
+      if (s.m3u8Content) s.url = '';
     }));
 
     // Rewrite subtitle URLs through the Worker proxy
