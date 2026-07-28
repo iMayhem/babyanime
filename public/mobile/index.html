@@ -6,7 +6,17 @@
   <title>babyanime - watch anime with AniList and MAL IDs</title>
   <meta name="description" content="A sleek, ad-free anime watching site powered by AniList and MAL IDs. Keep track of your history and bookmarks easily.">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png" onerror="this.href='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>'">
+  <link rel="preconnect" href="https://graphql.anilist.co">
+  <link rel="dns-prefetch" href="https://graphql.anilist.co">
+  <link rel="preconnect" href="https://proxy.babyanime.top">
+  <link rel="dns-prefetch" href="https://proxy.babyanime.top">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://babyanime-stream-proxy.sujeetunbeatable.workers.dev">
+  <link rel="dns-prefetch" href="https://babyanime-stream-proxy.sujeetunbeatable.workers.dev">
   <link rel="stylesheet" href="assets/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -14,17 +24,54 @@
       <div class="brand-container">
         <a href="index.html" class="logo-text">baby<span>anime</span></a>
       </div>
+      <div class="search-bar-container header-search-wrap" style="display:none;">
+        <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInputHeader" class="search-input" placeholder="Search anime titles..." style="display:none;">
+      </div>
       <div class="toggles">
         <button type="button" class="tt tab-btn active" id="tabHome" style="font-weight:800;">Home</button>
         <button type="button" class="tt tab-btn" id="tabBrowse" style="font-weight:800;">Browse</button>
+        <button type="button" class="tt tab-btn" id="tabParty" style="font-weight:800;">Party</button>
         <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
             <path d="M8 1.6a6.4 6.4 0 000 12.8z" fill="currentColor"/>
           </svg>
         </button>
+        <button type="button" class="tt" id="authBtn" style="font-weight:800;font-size:0.8rem;padding:0.4rem 0.7rem;">Login</button>
       </div>
     </header>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="auth-overlay" style="display:none;">
+      <div class="auth-card">
+        <button type="button" class="auth-close" id="authCloseBtn">&times;</button>
+        <h2 id="authModalTitle">Login</h2>
+        <form id="authForm">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="authUsername" class="form-input" placeholder="Choose a username" minlength="3" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="authPassword" class="form-input" placeholder="At least 6 characters" required>
+          </div>
+          <div id="authError" style="color:var(--accent);font-size:0.85rem;font-weight:700;margin-bottom:0.5rem;display:none;"></div>
+          <button type="submit" class="btn-primary" id="authSubmitBtn" style="width:100%;">Login</button>
+        </form>
+        <p style="margin-top:1rem;font-size:0.85rem;font-weight:700;text-align:center;">
+          <span id="authToggleText">Don't have an account?</span>
+          <button type="button" class="tt" id="authToggleBtn" style="font-size:0.85rem;padding:0.2rem 0.4rem;color:var(--accent);">Sign Up</button>
+        </p>
+      </div>
+    </div>
+    <div id="authUserBadge" style="display:none;position:fixed;top:0.5rem;right:0.5rem;z-index:9999;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:0.3rem 0.7rem;font-size:0.8rem;font-weight:700;box-shadow:3px 3px 0 var(--shadow);">
+      <span id="authUserEmail"></span>
+      <button type="button" class="tt" id="authLogoutBtn" style="font-size:0.75rem;padding:0.15rem 0.4rem;margin-left:0.4rem;">Logout</button>
+    </div>
 
     <main>
 
@@ -117,6 +164,123 @@
             <div class="loading-container"><div class="spinner"></div></div>
           </div>
         </section>
+
+        <!-- 5. Popular Airing -->
+        <section id="popularAiringSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Popular Airing</h2>
+          </div>
+          <div class="shelf-container" id="popularAiringShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- 6. Top Rated Completed -->
+        <section id="topRatedCompletedSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Top Rated Completed</h2>
+          </div>
+          <div class="shelf-container" id="topRatedCompletedShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- 7. Recently Finished -->
+        <section id="newlyReleasedSection" class="shelf-section">
+          <div class="section-title">
+            <h2>Recently Finished</h2>
+          </div>
+          <div class="shelf-container" id="newlyReleasedShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- 8. TV Series -->
+        <section id="tvSeriesSection" class="shelf-section">
+          <div class="section-title">
+            <h2>TV Series</h2>
+          </div>
+          <div class="shelf-container" id="tvSeriesShelf">
+            <div class="loading-container"><div class="spinner"></div></div>
+          </div>
+        </section>
+
+        <!-- Airing Schedule -->
+        <section class="shelf-section">
+          <div class="section-title">
+            <h2>Airing Schedule</h2>
+          </div>
+          <div class="card schedule-card" style="margin-bottom: 1.5rem;">
+            <div class="schedule-header">
+              <div class="schedule-title-row">
+                <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <h2 class="schedule-title">Airing Schedule</h2>
+              </div>
+              <div class="schedule-date" id="scheduleDateLabel">Loading...</div>
+            </div>
+            <div class="schedule-tabs" id="scheduleTabs">
+              <button type="button" class="schedule-tab-btn" data-day-idx="0">Mon</button>
+              <button type="button" class="schedule-tab-btn" data-day-idx="1">Tue</button>
+              <button type="button" class="schedule-tab-btn" data-day-idx="2">Wed</button>
+              <button type="button" class="schedule-tab-btn" data-day-idx="3">Thu</button>
+              <button type="button" class="schedule-tab-btn" data-day-idx="4">Fri</button>
+              <button type="button" class="schedule-tab-btn" data-day-idx="5">Sat</button>
+              <button type="button" class="schedule-tab-btn" data-day-idx="6">Sun</button>
+            </div>
+            <div class="schedule-list" id="scheduleList">
+              <div class="loading-container"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Top Airing -->
+        <section class="shelf-section">
+          <div class="section-title">
+            <h2>Top Airing</h2>
+          </div>
+          <div class="card schedule-card" style="margin-bottom: 1.5rem;">
+            <div class="schedule-header">
+              <div class="schedule-title-row">
+                <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <h2 class="schedule-title">Top Airing</h2>
+              </div>
+              <div class="schedule-date">Popular Releasing Shows</div>
+            </div>
+            <div class="schedule-list" id="topAiringSidebarList">
+              <div class="loading-container"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Upcoming Shows -->
+        <section class="shelf-section">
+          <div class="section-title">
+            <h2>Upcoming Shows</h2>
+          </div>
+          <div class="card schedule-card">
+            <div class="schedule-header">
+              <div class="schedule-title-row">
+                <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <h2 class="schedule-title">Upcoming Shows</h2>
+              </div>
+              <div class="schedule-date">Next Season & Beyond</div>
+            </div>
+            <div class="schedule-list" id="upcomingSidebarList">
+              <div class="loading-container"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <!-- BROWSE CATALOG VIEW -->
@@ -165,6 +329,179 @@
             <button type="button" class="btn-primary" id="loadMoreBtn" style="max-width: 220px; margin: 0 auto; font-size: 0.95rem; padding: 0.6rem 1.2rem;">Load More</button>
           </div>
         </section>
+      </div>
+
+      <!-- WATCH TOGETHER - SUPABASE REALTIME -->
+      <div id="partyView" style="display: none; margin-bottom: 3rem;">
+
+        <!-- ENTER SCREEN -->
+        <div id="partyEnterScreen">
+          <div class="party-lobby-header">
+            <div class="party-lobby-title">
+              <h2>Watch Together</h2>
+              <p>Host a watch party with friends using real-time sync.</p>
+            </div>
+          </div>
+          <div class="card party-form-card" style="margin-top:1rem;">
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+              <button type="button" class="btn-primary" id="partyCreateBtn">+ Create New Room</button>
+              <div style="border-bottom:2px dashed var(--line);"></div>
+              <div style="display:flex;gap:0.5rem;">
+                <input type="text" id="partyJoinInput" class="form-input" placeholder="Paste room link or ID" style="flex-grow:1;">
+                <button type="button" class="tt" id="partyJoinBtn" style="padding:0.6rem 1rem;font-weight:800;">Join</button>
+              </div>
+            </div>
+          </div>
+          <div id="partyActiveRoomsWrap" style="margin-top:1.5rem;display:none;">
+            <h3 style="font-size:1rem;font-weight:800;margin:0 0 0.8rem;">Active Rooms</h3>
+            <div id="partyActiveRoomsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.8rem;"></div>
+          </div>
+        </div>
+
+        <!-- CREATE ROOM SCREEN -->
+        <div id="partyCreateScreen" style="display: none;">
+          <div class="card party-form-card">
+            <div class="party-lobby-header" style="margin-bottom: 1.5rem;">
+              <div class="party-lobby-title">
+                <h2>Create Watch Room</h2>
+                <p>Pick an anime and episode to watch together.</p>
+              </div>
+            </div>
+            <form id="partyCreateForm">
+              <div class="form-group">
+                <label class="form-label" for="partyCreateRoomName">Room Name (optional)</label>
+                <input type="text" id="partyCreateRoomName" class="form-input" placeholder="My Watch Party" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Anime</label>
+                <input type="text" id="partyAnimeSearchInput" class="form-input" placeholder="Search anime on AniList..." autocomplete="off">
+                <div id="partyAnimeSearchResults" style="display:none;margin-top:0.3rem;max-height:200px;overflow-y:auto;border:2px solid var(--ink);border-radius:8px;background:var(--card);"></div>
+                <div id="partySelectedAnime" style="display:none;margin-top:0.5rem;padding:0.5rem;border:2px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.85rem;"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="partyEpisodeInput">Episode</label>
+                <input type="number" id="partyEpisodeInput" class="form-input" min="1" value="1" required>
+              </div>
+              <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="checkbox" id="partyPrivateCheck" style="width:18px;height:18px;cursor:pointer;">
+                <label for="partyPrivateCheck" style="font-weight:700;font-size:0.85rem;cursor:pointer;">Private room (require password)</label>
+              </div>
+              <div id="partyPasswordWrap" class="form-group" style="display:none;">
+                <label class="form-label" for="partyPasswordInput">Room Password</label>
+                <input type="text" id="partyPasswordInput" class="form-input" placeholder="Set a room password">
+              </div>
+              <input type="hidden" id="partyAnimeIdInput">
+              <input type="hidden" id="partyAnimeEpisodesInput">
+              <input type="hidden" id="partyAnimeImageInput">
+              <div class="form-actions">
+                <button type="button" class="tt" id="partyCreateBackBtn" style="padding: 0.6rem 1.2rem;">Back</button>
+                <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem;">Launch Room</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- WORKSPACE SCREEN -->
+        <div id="partyWorkspaceScreen" style="display: none;">
+          <div class="party-workspace">
+            <div class="party-workspace-header">
+              <div class="party-workspace-title">
+                <h3 id="workspaceTitle">Watch Party</h3>
+                <p id="workspaceSubtitle">Loading...</p>
+              </div>
+              <div class="party-workspace-actions">
+                <button type="button" class="tt" id="workspaceInviteBtn" style="padding:0.5rem 0.9rem;font-size:0.85rem;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Copy Invite
+                </button>
+                <button type="button" class="tt" id="workspaceLeaveBtn" style="padding:0.5rem 0.9rem;font-size:0.85rem;background:var(--bg-hover);border-color:var(--ink);">Leave</button>
+              </div>
+            </div>
+
+            <div class="party-player-col">
+              <div class="player-wrapper" id="partyPlayerWrapper" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:5px 5px 0 var(--shadow);">
+                <video id="partyVideoPlayer" style="width:100%;height:100%;object-fit:contain;" playsinline></video>
+                <div class="buf-spinner" id="partyBufSpinner">
+                  <svg viewBox="0 0 50 50" fill="none"><circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.15)" stroke-width="5"/><path d="M25 5 A20 20 0 0 1 45 25" stroke="var(--accent,#e25c5c)" stroke-width="5" stroke-linecap="round"/></svg>
+                </div>
+                <div class="big-play-overlay" id="partyBigPlayOverlay" title="Play">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
+                </div>
+                <div class="ctrl-bar" id="partyCtrlBar">
+                  <div class="ctrl-row ctrl-seek-row">
+                    <input type="range" class="seek-bar" id="partySeekBar" value="0" min="0" step="0.1">
+                  </div>
+                  <div class="ctrl-row ctrl-main-row">
+                    <button class="ctrl-btn" id="partyPlayBtn" aria-label="Play/Pause">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                    </button>
+                    <span class="time-label" id="partyTimeCurrent">0:00</span>
+                    <span class="time-sep">/</span>
+                    <span class="time-label" id="partyTimeTotal">0:00</span>
+                    <span class="source-badge" id="partySourceBadge" style="display:none;"></span>
+                    <div class="ctrl-spacer"></div>
+                    <div id="partyQualityPills" style="display:flex;gap:2px;"></div>
+                    <div class="speed-pills" id="partySpeedPills">
+                      <button class="pill-opt speed-opt" data-speed="0.5">0.5×</button>
+                      <button class="pill-opt speed-opt active" data-speed="1">1×</button>
+                      <button class="pill-opt speed-opt" data-speed="1.5">1.5×</button>
+                      <button class="pill-opt speed-opt" data-speed="2">2×</button>
+                    </div>
+                    <button class="ctrl-btn vol-btn" id="partyVolBtn" aria-label="Volume">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+                    </button>
+                    <input type="range" class="vol-bar" id="partyVolBar" min="0" max="1" step="0.05" value="1">
+                    <button class="ctrl-btn" id="partyPipBtn" aria-label="Picture in Picture">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="partyFsBtn" aria-label="Fullscreen">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><polyline points="21 15 21 21 15 21"/><polyline points="3 9 3 3 9 3"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="partyLoadingOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:2;">
+                  <div class="spinner"></div>
+                </div>
+              </div>
+              <div id="partyStatusBar" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;font-size:0.8rem;font-weight:700;">
+                <span id="partyConnectionStatus" style="color:var(--teal);">● Connected</span>
+                <span id="partyUserCountDisplay">1 online</span>
+                <span id="partyRoleBadge" style="color:var(--accent);">👑 Host</span>
+              </div>
+            </div>
+
+            <div class="party-sidebar-col">
+              <div class="card" style="padding:1rem;">
+                <div style="margin-bottom:0.8rem;padding-bottom:0.6rem;border-bottom:2px dashed var(--line);">
+                  <div style="font-weight:800;font-size:0.8rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.4rem;">Online</div>
+                  <div id="partyUserList" style="display:flex;flex-wrap:wrap;gap:0.3rem;"></div>
+                </div>
+                <div style="display:flex;border-bottom:2px dashed var(--line);padding-bottom:0.6rem;margin-bottom:0.8rem;gap:0.5rem;">
+                  <button type="button" class="tab-btn active" id="partyTabChat" style="padding:0.4rem 0.8rem;font-size:0.85rem;border-radius:6px;">Chat</button>
+                  <button type="button" class="tab-btn" id="partyTabEpisodes" style="padding:0.4rem 0.8rem;font-size:0.85rem;border-radius:6px;">Episodes</button>
+                </div>
+                <div id="partyChatPanel">
+                  <div class="party-chat-messages" id="partyChatMessages"></div>
+                  <form id="partyChatForm" class="party-chat-input-area">
+                    <input type="text" id="partyChatInput" class="party-chat-input" placeholder="Type a message..." required>
+                    <button type="submit" class="party-chat-send-btn">Send</button>
+                  </form>
+                </div>
+                <div id="partyEpisodesPanel" style="display:none;overflow-y:auto;padding:0.5rem 0;">
+                  <div style="display:flex;gap:0.4rem;margin-bottom:0.8rem;align-items:center;">
+                    <input type="number" id="partyEpJumpInput" class="form-input" placeholder="Jump to Ep" style="height:34px;padding:0.3rem 0.6rem;font-size:0.85rem;flex-grow:1;" min="1">
+                    <button type="button" class="party-chat-send-btn" id="partyEpJumpBtn" style="padding:0.3rem 0.6rem;height:34px;line-height:20px;">Go</button>
+                  </div>
+                  <div class="episode-grid" id="partyEpisodesGrid"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="party-toast" id="partyToast">
+        <span>Invite link copied to clipboard!</span>
       </div>
 
     </main>
@@ -242,36 +579,229 @@
       { code: 'SPECIAL', label: 'Specials' }
     ];
 
+    const PARTY_SCRAPER_API = 'https://proxy.babyanime.top/api';
+
     // Views
     const homeView = document.getElementById('homeView');
     const browseView = document.getElementById('browseView');
+    const partyView = document.getElementById('partyView');
     
     // Tab buttons
     const tabHome = document.getElementById('tabHome');
     const tabBrowse = document.getElementById('tabBrowse');
+    const tabParty = document.getElementById('tabParty');
 
     tabHome.addEventListener('click', () => {
       tabHome.classList.add('active');
       tabBrowse.classList.remove('active');
+      tabParty.classList.remove('active');
       homeView.style.display = 'block';
       browseView.style.display = 'none';
+      partyView.style.display = 'none';
     });
 
     tabBrowse.addEventListener('click', () => {
       tabBrowse.classList.add('active');
       tabHome.classList.remove('active');
+      tabParty.classList.remove('active');
       homeView.style.display = 'none';
       browseView.style.display = 'block';
+      partyView.style.display = 'none';
       loadBrowseResults(false);
     });
 
+    tabParty.addEventListener('click', () => {
+      tabParty.classList.add('active');
+      tabHome.classList.remove('active');
+      tabBrowse.classList.remove('active');
+      homeView.style.display = 'none';
+      browseView.style.display = 'none';
+      partyView.style.display = 'block';
+      setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
+    });
+
+    // === Auth UI ===
+    const authBtn = document.getElementById('authBtn');
+    const authModal = document.getElementById('authModal');
+    const authCloseBtn = document.getElementById('authCloseBtn');
+    const authForm = document.getElementById('authForm');
+    const authUsername = document.getElementById('authUsername');
+    const authPassword = document.getElementById('authPassword');
+    const authError = document.getElementById('authError');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const authModalTitle = document.getElementById('authModalTitle');
+    const authToggleBtn = document.getElementById('authToggleBtn');
+    const authToggleText = document.getElementById('authToggleText');
+    const authUserBadge = document.getElementById('authUserBadge');
+    const authUserEmail = document.getElementById('authUserEmail');
+    const authLogoutBtn = document.getElementById('authLogoutBtn');
+    let authMode = 'login';
+
+    function showAuthError(msg) { authError.textContent = msg; authError.style.display = ''; }
+    function hideAuthError() { authError.style.display = 'none'; }
+
+    function updateAuthUI(user) {
+      if (user) {
+        const displayName = user.user_metadata?.username || user.email?.replace(/@ba$/,'') || user.email?.charAt(0).toUpperCase() || 'U';
+        authBtn.textContent = displayName.charAt(0).toUpperCase();
+        authBtn.style.background = 'var(--accent)';
+        authBtn.style.color = '#fff';
+        authBtn.title = displayName;
+        authUserEmail.textContent = displayName;
+        authUserBadge.style.display = '';
+      } else {
+        authBtn.textContent = 'Login';
+        authBtn.style.background = '';
+        authBtn.style.color = '';
+        authBtn.title = '';
+        authUserBadge.style.display = 'none';
+      }
+    }
+
+    function tryInitAuthUI() {
+      if (typeof onAuth !== 'undefined') onAuth((u) => updateAuthUI(u));
+      else setTimeout(tryInitAuthUI, 100);
+    }
+    tryInitAuthUI();
+
+    authBtn.addEventListener('click', () => {
+      if (typeof getCurrentUser !== 'undefined' && getCurrentUser()) { if (typeof signOut !== 'undefined') signOut(); return; }
+      authMode = 'login';
+      authModalTitle.textContent = 'Login';
+      authSubmitBtn.textContent = 'Login';
+      authToggleBtn.textContent = 'Sign Up';
+      authToggleText.textContent = "Don't have an account?";
+      hideAuthError();
+      authModal.style.display = '';
+    });
+
+    authCloseBtn.addEventListener('click', () => { authModal.style.display = 'none'; hideAuthError(); });
+    authModal.addEventListener('click', (e) => { if (e.target === authModal) { authModal.style.display = 'none'; hideAuthError(); } });
+
+    authToggleBtn.addEventListener('click', () => {
+      authMode = authMode === 'login' ? 'signup' : 'login';
+      authModalTitle.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
+      authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
+      authToggleBtn.textContent = authMode === 'login' ? 'Sign Up' : 'Login';
+      authToggleText.textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+      hideAuthError();
+    });
+
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = authUsername.value.trim();
+      const password = authPassword.value.trim();
+      if (!username || !password) { showAuthError('Fill in all fields'); return; }
+      if (username.length < 3) { showAuthError('Username must be at least 3 characters'); return; }
+      if (password.length < 6) { showAuthError('Password must be at least 6 characters'); return; }
+      hideAuthError();
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.textContent = authMode === 'login' ? 'Logging in...' : 'Signing up...';
+      try {
+        const result = authMode === 'login' ? await signIn(username, password) : await signUp(username, password);
+        if (result.error) { showAuthError(result.error.message); authSubmitBtn.disabled = false; authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up'; return; }
+        if (authMode === 'signup') {
+          if (result.data?.user?.identities?.length === 0) {
+            showAuthError('Username already taken');
+            authSubmitBtn.disabled = false; authSubmitBtn.textContent = 'Sign Up'; return;
+          }
+          if (!result.data?.session) {
+            showAuthError('Check your email for confirmation link!');
+            authSubmitBtn.disabled = false; authSubmitBtn.textContent = 'Sign Up'; return;
+          }
+        }
+        authModal.style.display = 'none';
+        hideAuthError();
+      } catch (err) { showAuthError('Something went wrong'); }
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.textContent = authMode === 'login' ? 'Login' : 'Sign Up';
+    });
+
+    authLogoutBtn.addEventListener('click', async () => {
+      await signOut();
+      renderHistory();
+      renderWatchlist();
+    });
+
+    function setupAuthSync() {
+      if (typeof onAuth === 'undefined') { setTimeout(setupAuthSync, 200); return; }
+      onAuth(async (user) => {
+      if (user) {
+        try {
+          const remoteBm = await fetchRemoteBookmarks();
+          if (remoteBm) {
+            localStorage.setItem('babyanime_bookmarks', JSON.stringify(remoteBm));
+            renderWatchlist();
+          }
+        } catch(e) {}
+        try {
+          const remoteHx = await fetchRemoteHistory();
+          if (remoteHx) {
+            localStorage.setItem('babyanime_history', JSON.stringify(remoteHx));
+            renderHistory();
+          }
+        } catch(e) {}
+      }
+      });
+    }
+
     // Load Watch History & Bookmarks on home load
     window.addEventListener('DOMContentLoaded', () => {
+      initAuth();
+      setupAuthSync();
       renderHistory();
       renderWatchlist();
       loadHomeShelves();
       setupBrowseFilters();
       setupColorPicker();
+      setupAiringSchedule();
+      loadTopAiringSidebar();
+      loadUpcomingSidebar();
+
+      // Check for search parameter in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('search');
+      if (searchQuery) {
+        searchInput.value = searchQuery;
+        performSearch(searchQuery);
+      }
+
+      // Initialize Watch Together logic
+      setupWatchTogether();
+
+      // Check if we should switch to the party tab on load
+      const tabParam = urlParams.get('tab');
+      const roomParam = urlParams.get('room');
+      if (tabParam === 'party' || roomParam) {
+        tabParty.click();
+        if (roomParam) {
+          setTimeout(() => {
+            if (window.enterRoom) window.enterRoom(roomParam);
+          }, 300);
+        } else {
+          const mediaParam = urlParams.get('media');
+          const titleParam = urlParams.get('title');
+          if (mediaParam && titleParam) {
+            setTimeout(() => {
+              document.getElementById('partyCreateBtn').click();
+              let rawId = mediaParam;
+              let activeEp = 1;
+              if (mediaParam.includes('_ep')) {
+                const parts = mediaParam.split('_ep');
+                rawId = parts[0];
+                activeEp = parseInt(parts[1]) || 1;
+              }
+              document.getElementById('partyAnimeIdInput').value = rawId;
+              document.getElementById('partyEpisodeInput').value = activeEp;
+              document.getElementById('partyAnimeSearchInput').value = titleParam;
+              const ep = document.getElementById('partyAnimeEpisodesInput');
+              if (!ep.value) ep.value = '12';
+              document.getElementById('partySelectedAnime').innerHTML = '<span style="color:var(--teal);font-weight:800;">✓</span> ' + titleParam;
+              document.getElementById('partySelectedAnime').style.display = 'block';
+            }, 300);
+          }
+        }
+      }
     });
 
     function setupColorPicker() {
@@ -359,6 +889,10 @@
       loadShelf('SCORE_DESC', null, null, 'topRatedShelf');
       loadShelf('POPULARITY_DESC', 'MOVIE', null, 'moviesShelf');
       loadShelf('POPULARITY_DESC', null, 'NOT_YET_RELEASED', 'upcomingShelf');
+      loadShelf('POPULARITY_DESC', null, 'RELEASING', 'popularAiringShelf');
+      loadShelf('SCORE_DESC', null, 'FINISHED', 'topRatedCompletedShelf');
+      loadShelf('ID_DESC', null, 'FINISHED', 'newlyReleasedShelf');
+      loadShelf('TRENDING_DESC', 'TV', null, 'tvSeriesShelf');
     }
 
     async function loadShelf(sortValue, formatValue, statusValue, containerId) {
@@ -679,71 +1213,777 @@
       searchResultsSection.style.display = 'none';
     });
 
-    // Wrap bottom nav setup in DOMContentLoaded to ensure elements exist in the DOM before query
-    document.addEventListener('DOMContentLoaded', () => {
-      // Simple URL parameter router for mobile navigation deep-linking
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get('tab');
+    // === Search Cache for Debounce ===
+    let searchCache = {};
+    const searchCacheTTL = 60000;
+
+    // === Airing Schedule ===
+    const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    let currentScheduleDay = new Date().getDay(); // 0=Sun...6=Sat
+    if (currentScheduleDay === 0) currentScheduleDay = 7; // Mon=1..Sun=7
+    currentScheduleDay = currentScheduleDay - 1; // Mon=0..Sun=6
+    if (currentScheduleDay < 0) currentScheduleDay = 0;
+
+    function setupAiringSchedule() {
+      const scheduleContainer = document.getElementById('airingScheduleList');
+      if (!scheduleContainer) return;
+      const dayTabs = document.querySelectorAll('.schedule-day-tab');
+      dayTabs.forEach((tab, idx) => {
+        tab.addEventListener('click', () => {
+          dayTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentScheduleDay = idx;
+          loadDaySchedule(idx);
+        });
+      });
+      // Activate current day tab
+      if (dayTabs[currentScheduleDay]) dayTabs[currentScheduleDay].classList.add('active');
+      loadDaySchedule(currentScheduleDay);
+    }
+
+    let scheduleAbortController = null;
+    async function loadDaySchedule(dayIndex) {
+      const container = document.getElementById('airingScheduleList');
+      if (!container) return;
+      if (scheduleAbortController) scheduleAbortController.abort();
+      scheduleAbortController = new AbortController();
+      container.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+      const dayNames = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+      const query = `
+        query ($day: StartOfDay, $week: StartOfWeek) {
+          Page(page:1, perPage:20) {
+            airingSchedules(notYetAired:true, sort:TIME_DESC, airingAt_greater: 0) {
+              media {
+                id title { romaji english } coverImage { large } format episodes nextAiringEpisode { episode airingAt }
+              }
+              episode airingAt
+            }
+          }
+        }`;
+      try {
+        // We'll fetch by date range instead
+        const now = Math.floor(Date.now() / 1000);
+        const daySeconds = 86400;
+        const dayOffset = dayIndex - new Date().getDay();
+        let startOfDay = now + (dayOffset * daySeconds);
+        // Adjust to start of that day
+        const d = new Date((startOfDay) * 1000);
+        d.setHours(0,0,0,0);
+        startOfDay = Math.floor(d.getTime() / 1000);
+        const endOfDay = startOfDay + daySeconds;
+        const q2 = `query($start:Int,$end:Int){Page(page:1,perPage:30){airingSchedules(airingAt_greater:$start,airingAt_lesser:$end,sort:TIME){media{id title{romaji english}coverImage{large}format episodes}episode airingAt}}}}`;
+        const data = await queryAniList(q2, { start: startOfDay, end: endOfDay }, scheduleAbortController.signal);
+        if (data && data.Page && data.Page.airingSchedules) {
+          const sorted = data.Page.airingSchedules.sort((a,b) => a.airingAt - b.airingAt);
+          if (sorted.length === 0) { container.innerHTML = '<div class="empty-state">No scheduled releases today</div>'; return; }
+          container.innerHTML = sorted.map(s => {
+            const m = s.media;
+            const t = m.title.english || m.title.romaji || 'Unknown';
+            const d = new Date(s.airingAt * 1000);
+            const timeStr = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+            const cover = m.coverImage?.large || '';
+            return `<a href="/watch.html?id=${m.id}&ep=${s.episode}" class="schedule-item" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem;border-radius:8px;text-decoration:none;color:var(--text);transition:background 0.15s;">
+              ${cover ? `<img src="${cover}" alt="" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:36px;height:50px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
+              <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.7rem;color:var(--muted);">Ep ${s.episode} · ${timeStr}</div></div>
+            </a>`;
+          }).join('');
+        } else {
+          container.innerHTML = '<div class="empty-state">No schedule data</div>';
+        }
+      } catch(err) {
+        if (err.name === 'AbortError') return;
+        container.innerHTML = '<div class="empty-state">Failed to load schedule</div>';
+      }
+    }
+
+    // === TOP AIRING SIDEBAR ===
+    async function loadTopAiringSidebar() {
+      const container = document.getElementById('topAiringList');
+      if (!container) return;
+      container.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+      const q = `query{Page(page:1,perPage:10){media(sort:POPULARITY_DESC,status:RELEASING,type:ANIME,isAdult:false){id title{romaji english}coverImage{large}episodes nextAiringEpisode{episode}averageScore popularity format}}}`;
+      try {
+        const data = await queryAniList(q);
+        if (data?.Page?.media) {
+          const items = data.Page.media;
+          container.innerHTML = items.map(m => {
+            const t = m.title.english || m.title.romaji || 'Unknown';
+            const cover = m.coverImage?.large || '';
+            return `<a href="/watch.html?id=${m.id}&ep=1" class="sched-sidebar-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line);">
+              ${cover ? `<img src="${cover}" alt="" style="width:28px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:28px;height:40px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
+              <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.65rem;color:var(--muted);">${m.averageScore ? `${m.averageScore}%` : 'N/A'} · ${m.episodes ? `${m.episodes} eps` : '?'}</div></div>
+            </a>`;
+          }).join('');
+        } else { container.innerHTML = '<div class="empty-state">No data</div>'; }
+      } catch(e) { container.innerHTML = '<div class="empty-state">Error</div>'; }
+    }
+
+    // === UPCOMING SIDEBAR ===
+    async function loadUpcomingSidebar() {
+      const container = document.getElementById('upcomingList');
+      if (!container) return;
+      container.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+      const q = `query($page:Int){Page(page:$page,perPage:10){media(sort:POPULARITY_DESC,status:NOT_YET_RELEASED,type:ANIME,isAdult:false){id title{romaji english}coverImage{large}format episodes averageScore popularity seasonYear season}}}`;
+      try {
+        const data = await queryAniList(q, { page: 1 });
+        if (data?.Page?.media) {
+          const items = data.Page.media;
+          container.innerHTML = items.map(m => {
+            const t = m.title.english || m.title.romaji || 'Unknown';
+            const cover = m.coverImage?.large || '';
+            const seasonStr = m.season && m.seasonYear ? `${m.season} ${m.seasonYear}` : 'TBA';
+            return `<a href="/watch.html?id=${m.id}&ep=1" class="sched-sidebar-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line);">
+              ${cover ? `<img src="${cover}" alt="" style="width:28px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:28px;height:40px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
+              <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.65rem;color:var(--muted);">${seasonStr}</div></div>
+            </a>`;
+          }).join('');
+        } else { container.innerHTML = '<div class="empty-state">No upcoming</div>'; }
+      } catch(e) { container.innerHTML = '<div class="empty-state">Error</div>'; }
+    }
+
+    // === WATCH TOGETHER ===
+    let _partyState = {
+      supabaseChannel: null,
+      currentRoom: null,
+      userRole: null,
+      userId: null,
+      mediaId: null,
+      episode: 1,
+      isHost: false,
+      player: null,
+      hls: null
+    };
+
+    let _partyUsers = {};
+
+    function setupWatchTogether() {
+      const enterScreen = document.getElementById('partyEnterScreen');
+      const createScreen = document.getElementById('partyCreateScreen');
+      const workspaceScreen = document.getElementById('partyWorkspaceScreen');
+
+      // Create button
+      document.getElementById('partyCreateBtn').addEventListener('click', () => {
+        enterScreen.style.display = 'none';
+        createScreen.style.display = '';
+      });
+      document.getElementById('partyCreateBackBtn').addEventListener('click', () => {
+        createScreen.style.display = 'none';
+        enterScreen.style.display = '';
+      });
+
+      // Anime search
+      const animeSearchInput = document.getElementById('partyAnimeSearchInput');
+      let searchTimeout2 = null;
+      animeSearchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout2);
+        const val = animeSearchInput.value.trim();
+        if (!val) { document.getElementById('partyAnimeSearchResults').style.display = 'none'; return; }
+        searchTimeout2 = setTimeout(async () => {
+          try {
+            const q = `query($s:String){Page(page:1,perPage:10){media(search:$s,type:ANIME,isAdult:false){id title{romaji english}coverImage{large}format episodes status seasonYear season nextAiringEpisode{episode}}}}`;
+            const data = await queryAniList(q, { s: val });
+            const resultsDiv = document.getElementById('partyAnimeSearchResults');
+            if (data?.Page?.media?.length) {
+              resultsDiv.innerHTML = data.Page.media.map(m => {
+                const t = m.title.english || m.title.romaji || 'Unknown';
+                const c = m.coverImage?.large || '';
+                return `<div class="search-result-item" data-id="${m.id}" data-ep="${m.episodes || 12}" data-img="${c}" data-title="${t.replace(/"/g,'&quot;')}" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;cursor:pointer;border-bottom:1px solid var(--line);transition:background 0.1s;">
+                  ${c ? `<img src="${c}" alt="" style="width:28px;height:40px;object-fit:cover;border-radius:4px;" loading="lazy">` : '<div style="width:28px;height:40px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
+                  <div style="font-weight:600;font-size:0.8rem;">${t}</div>
+                </div>`;
+              }).join('');
+              resultsDiv.style.display = '';
+              resultsDiv.querySelectorAll('.search-result-item').forEach(el => {
+                el.addEventListener('click', () => {
+                  document.getElementById('partyAnimeIdInput').value = el.dataset.id;
+                  document.getElementById('partyEpisodeInput').value = '1';
+                  document.getElementById('partyEpisodeInput').max = el.dataset.ep || 9999;
+                  document.getElementById('partyAnimeEpisodesInput').value = el.dataset.ep || 12;
+                  document.getElementById('partyAnimeImageInput').value = el.dataset.img;
+                  document.getElementById('partySelectedAnime').innerHTML = '<span style="color:var(--teal);font-weight:800;">✓</span> ' + el.dataset.title;
+                  document.getElementById('partySelectedAnime').style.display = '';
+                  resultsDiv.style.display = 'none';
+                  animeSearchInput.value = el.dataset.title;
+                });
+              });
+            } else {
+              resultsDiv.innerHTML = '<div style="padding:0.5rem;font-size:0.8rem;color:var(--muted);">No results</div>';
+              resultsDiv.style.display = '';
+            }
+          } catch(e) { console.error(e); }
+        }, 300);
+      });
+
+      // Create room form
+      document.getElementById('partyCreateForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const roomNameInput = document.getElementById('partyCreateRoomName');
+        const animeId = document.getElementById('partyAnimeIdInput').value;
+        const episode = parseInt(document.getElementById('partyEpisodeInput').value) || 1;
+        const password = document.getElementById('partyPrivateCheck').checked ? document.getElementById('partyPasswordInput').value : null;
+        const animeTitle = document.getElementById('partySelectedAnime').textContent.replace(/^[✓]\s*/,'').trim();
+        const totalEpisodes = parseInt(document.getElementById('partyAnimeEpisodesInput').value) || 12;
+        const coverImg = document.getElementById('partyAnimeImageInput').value || '';
+        const isPrivate = document.getElementById('partyPrivateCheck').checked;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (!animeId) { alert('Please select an anime'); return; }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+        try {
+          const roomName = roomNameInput ? roomNameInput.value.trim() : (animeTitle || 'New Room');
+          const user = getCurrentUser();
+          const body = { roomName, animeId: parseInt(animeId), episode, password, animeTitle, totalEpisodes, coverImg, isPrivate, userId: user?.id || 'anon' };
+          const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const room = await res.json();
+          if (room.error) { alert(room.error); submitBtn.disabled = false; submitBtn.textContent = 'Launch Room'; return; }
+          document.getElementById('partyAnimeIdInput').value = '';
+          document.getElementById('partyAnimeSearchInput').value = '';
+          document.getElementById('partySelectedAnime').style.display = 'none';
+          document.getElementById('partyEpisodeInput').value = '1';
+          document.getElementById('partyAnimeEpisodesInput').value = '';
+          document.getElementById('partyAnimeImageInput').value = '';
+          if (roomNameInput) roomNameInput.value = '';
+          document.getElementById('partyPrivateCheck').checked = false;
+          document.getElementById('partyPasswordInput').value = '';
+          document.getElementById('partyPasswordWrap').style.display = 'none';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Launch Room';
+          createScreen.style.display = 'none';
+          enterScreen.style.display = '';
+          enterRoom(room.id, password);
+        } catch(err) { alert('Failed to create room'); submitBtn.disabled = false; submitBtn.textContent = 'Launch Room'; }
+      });
+
+      // Join button
+      document.getElementById('partyJoinBtn').addEventListener('click', () => {
+        const input = document.getElementById('partyJoinInput').value.trim();
+        if (!input) { alert('Enter a room link or ID'); return; }
+        let roomId = input;
+        if (input.includes('room=')) {
+          const u = new URLSearchParams(input.split('?')[1] || '');
+          roomId = u.get('room') || input;
+        } else if (input.includes('/party/')) {
+          roomId = input.split('/party/')[1]?.split('?')[0] || input;
+        }
+        enterRoom(roomId);
+      });
+      document.getElementById('partyJoinInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('partyJoinBtn').click();
+      });
+
+      // Private checkbox toggle
+      document.getElementById('partyPrivateCheck').addEventListener('change', function() {
+        document.getElementById('partyPasswordWrap').style.display = this.checked ? '' : 'none';
+      });
+
+      // Workspace: Leave
+      document.getElementById('workspaceLeaveBtn').addEventListener('click', () => leaveRoom());
+
+      // Workspace: Copy Invite
+      document.getElementById('workspaceInviteBtn').addEventListener('click', () => {
+        if (!_partyState.currentRoom) return;
+        const link = `${window.location.origin}${window.location.pathname}?tab=party&room=${_partyState.currentRoom}`;
+        navigator.clipboard.writeText(link).then(() => {
+          const toast = document.getElementById('partyToast');
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 2500);
+        }).catch(() => alert(link));
+      });
+
+      // Workspace: Player controls
+      setupPartyPlayerControls();
+
+      // Workspace: Chat
+      document.getElementById('partyChatForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('partyChatInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+        sendPartyMessage(msg);
+        input.value = '';
+      });
+
+      // Workspace: Episodes
+      document.getElementById('partyEpJumpBtn').addEventListener('click', () => {
+        const ep = parseInt(document.getElementById('partyEpJumpInput').value);
+        if (ep && ep >= 1 && _partyState.mediaId) {
+          switchPartyEpisode(_partyState.mediaId, ep);
+        }
+      });
+      document.getElementById('partyEpJumpInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('partyEpJumpBtn').click();
+      });
+
+      // Tab switching in workspace
+      document.getElementById('partyTabChat').addEventListener('click', () => {
+        document.getElementById('partyTabChat').classList.add('active');
+        document.getElementById('partyTabEpisodes').classList.remove('active');
+        document.getElementById('partyChatPanel').style.display = '';
+        document.getElementById('partyEpisodesPanel').style.display = 'none';
+      });
+      document.getElementById('partyTabEpisodes').addEventListener('click', () => {
+        document.getElementById('partyTabEpisodes').classList.add('active');
+        document.getElementById('partyTabChat').classList.remove('active');
+        document.getElementById('partyChatPanel').style.display = 'none';
+        document.getElementById('partyEpisodesPanel').style.display = '';
+      });
+
+      // Load active rooms
+      refreshActiveRooms();
+    }
+
+    async function refreshActiveRooms() {
+      try {
+        const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms`);
+        const rooms = await res.json();
+        const wrap = document.getElementById('partyActiveRoomsWrap');
+        const list = document.getElementById('partyActiveRoomsList');
+        if (!rooms || !rooms.length || rooms.length === 0) { wrap.style.display = 'none'; return; }
+        wrap.style.display = '';
+        list.innerHTML = rooms.map(r => {
+          const title = r.anime_title || 'Unknown';
+          const ep = r.episode || 1;
+          const cover = r.cover_img || '';
+          const host = r.host_name || 'Anonymous';
+          const userCount = r.user_count || 0;
+          return `<div class="room-card" style="cursor:pointer;border:2px solid var(--ink);border-radius:12px;padding:0.8rem;background:var(--card);box-shadow:3px 3px 0 var(--shadow);transition:transform 0.1s;" data-id="${r.id}">
+            <div style="display:flex;gap:0.6rem;">
+              ${cover ? `<img src="${cover}" alt="" style="width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;" loading="lazy">` : ''}
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:800;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                <div style="font-size:0.75rem;color:var(--muted);margin:0.2rem 0;">Ep ${ep} · <span style="color:var(--teal);">${userCount} online</span></div>
+                <div style="font-size:0.7rem;color:var(--muted);">Host: ${host}</div>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+        list.querySelectorAll('.room-card').forEach(el => {
+          el.addEventListener('click', () => enterRoom(el.dataset.id));
+        });
+      } catch(e) {}
+    }
+    window._refreshPartyRooms = refreshActiveRooms;
+
+    async function enterRoom(roomId, password) {
+      const enterScreen = document.getElementById('partyEnterScreen');
+      const createScreen = document.getElementById('partyCreateScreen');
+      const workspaceScreen = document.getElementById('partyWorkspaceScreen');
+      enterScreen.style.display = 'none';
+      createScreen.style.display = 'none';
+      workspaceScreen.style.display = '';
       
+      document.getElementById('partyConnectionStatus').textContent = '● Connecting...';
+      document.getElementById('partyConnectionStatus').style.color = 'var(--muted)';
+      document.getElementById('partyUserCountDisplay').textContent = '0 online';
+      document.getElementById('workspaceSubtitle').textContent = 'Loading...';
+      document.getElementById('partyVideoPlayer').src = '';
+      document.getElementById('partyEpisodesGrid').innerHTML = '';
+      
+      try {
+        const user = getCurrentUser();
+        const body = { userId: user?.id || 'anon-'+Date.now(), userName: user?.user_metadata?.username || user?.email?.replace(/@ba$/,'') || 'Guest' };
+        const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms/${roomId}/join`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.error) { alert(data.error); document.getElementById('partyConnectionStatus').textContent = '✕ Error'; document.getElementById('partyConnectionStatus').style.color = 'var(--accent)'; return; }
+        
+        _partyState.currentRoom = roomId;
+        _partyState.mediaId = data.media_id;
+        _partyState.episode = data.episode;
+        _partyState.userId = user?.id || body.userId;
+        
+        const roleBadge = document.getElementById('partyRoleBadge');
+        if (data.is_host) {
+          _partyState.isHost = true;
+          _partyState.userRole = 'host';
+          roleBadge.textContent = '👑 Host';
+          roleBadge.style.display = '';
+        } else {
+          _partyState.isHost = false;
+          _partyState.userRole = 'member';
+          roleBadge.style.display = 'none';
+        }
+        
+        document.getElementById('workspaceTitle').textContent = data.room_name || 'Watch Party';
+        document.getElementById('workspaceSubtitle').textContent = data.anime_title || 'Unknown Anime';
+        
+        // Load episodes
+        if (data.media_id) {
+          loadPartyEpisodes(data.media_id, data.episode);
+          loadPartyStream(data.media_id, data.episode);
+        }
+        
+        // Setup Realtime
+        setupPartyRealtime(roomId, data.is_host);
+        
+        // Update user list
+        if (data.users) {
+          _partyUsers = {};
+          data.users.forEach(u => { _partyUsers[u.id] = u; });
+          updatePartyUserList();
+        }
+      } catch(err) {
+        document.getElementById('partyConnectionStatus').textContent = '✕ Connection failed';
+        document.getElementById('partyConnectionStatus').style.color = 'var(--accent)';
+      }
+    }
+    window.enterRoom = enterRoom;
+
+    function leaveRoom() {
+      if (_partyState.supabaseChannel) {
+        _partyState.supabaseChannel.unsubscribe();
+        _partyState.supabaseChannel = null;
+      }
+      if (_partyState.player) { _partyState.player.pause(); _partyState.player.src = ''; }
+      if (_partyState.hls) { _partyState.hls.destroy(); _partyState.hls = null; }
+      _partyState.currentRoom = null;
+      _partyState.isHost = false;
+      _partyState.mediaId = null;
+      _partyState.episode = 1;
+      _partyState.userRole = null;
+      _partyUsers = {};
+      document.getElementById('partyWorkspaceScreen').style.display = 'none';
+      document.getElementById('partyEnterScreen').style.display = '';
+    }
+
+    function setupPartyRealtime(roomId, isHost) {
+      const client = sbClient();
+      if (!client) { console.warn('Supabase not loaded'); return; }
+      if (_partyState.supabaseChannel) _partyState.supabaseChannel.unsubscribe();
+      
+      const channel = client.channel(`party:${roomId}`, {
+        config: { broadcast: { self: false }, presence: { key: _partyState.userId } }
+      });
+      
+      channel.on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        _partyUsers = {};
+        Object.keys(state).forEach(key => {
+          state[key].forEach(p => {
+            if (p.userId) _partyUsers[p.userId] = p;
+          });
+        });
+        updatePartyUserList();
+        document.getElementById('partyUserCountDisplay').textContent = Object.keys(_partyUsers).length + ' online';
+      });
+      
+      channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        const user = newPresences[0];
+        if (user?.userName) addPartyChatMessage('system', `${user.userName} joined`);
+      });
+      
+      channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        const user = leftPresences[0];
+        if (user?.userName) addPartyChatMessage('system', `${user.userName} left`);
+      });
+      
+      channel.on('broadcast', { event: 'chat' }, ({ payload }) => {
+        addPartyChatMessage('user', payload.message, payload.userName, payload.userId);
+      });
+      
+      channel.on('broadcast', { event: 'sync' }, ({ payload }) => {
+        if (isHost || payload.userId === _partyState.userId) return;
+        const video = document.getElementById('partyVideoPlayer');
+        if (payload.type === 'seek') {
+          video.currentTime = payload.time;
+        } else if (payload.type === 'play') {
+          video.play().catch(()=>{});
+        } else if (payload.type === 'pause') {
+          video.pause();
+        } else if (payload.type === 'switch') {
+          loadPartyStream(payload.mediaId, payload.episode);
+        }
+      });
+      
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          document.getElementById('partyConnectionStatus').textContent = '● Connected';
+          document.getElementById('partyConnectionStatus').style.color = 'var(--teal)';
+          await channel.track({
+            userId: _partyState.userId,
+            userName: (getCurrentUser()?.user_metadata?.username || getCurrentUser()?.email?.replace(/@ba$/,'') || 'Guest'),
+            onlineAt: new Date().toISOString()
+          });
+        } else if (status === 'CHANNEL_ERROR') {
+          document.getElementById('partyConnectionStatus').textContent = '✕ Disconnected';
+          document.getElementById('partyConnectionStatus').style.color = 'var(--accent)';
+        }
+      });
+      
+      _partyState.supabaseChannel = channel;
+    }
+
+    function sendPartyMessage(text) {
+      if (!_partyState.supabaseChannel) return;
+      const userName = getCurrentUser()?.user_metadata?.username || getCurrentUser()?.email?.replace(/@ba$/,'') || 'Guest';
+      _partyState.supabaseChannel.send({
+        type: 'broadcast', event: 'chat',
+        payload: { message: text, userName, userId: _partyState.userId }
+      });
+      addPartyChatMessage('user', text, userName, _partyState.userId);
+    }
+
+    function addPartyChatMessage(type, text, userName, userId) {
+      const container = document.getElementById('partyChatMessages');
+      const div = document.createElement('div');
+      div.className = 'chat-msg';
+      if (type === 'system') {
+        div.innerHTML = `<span style="color:var(--muted);font-size:0.75rem;font-style:italic;">${text}</span>`;
+      } else {
+        const isMine = userId === _partyState.userId;
+        div.style.textAlign = isMine ? 'right' : 'left';
+        div.innerHTML = `<div style="font-size:0.7rem;font-weight:800;color:var(--accent);">${userName}</div><div style="font-size:0.85rem;">${text}</div>`;
+      }
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updatePartyUserList() {
+      const container = document.getElementById('partyUserList');
+      container.innerHTML = Object.values(_partyUsers).map(u => {
+        const display = u.userName || 'Guest';
+        const initial = display.charAt(0).toUpperCase();
+        return `<div class="user-badge" title="${display}" style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.7rem;">${initial}</div>`;
+      }).join('');
+    }
+
+    function setupPartyPlayerControls() {
+      const video = document.getElementById('partyVideoPlayer');
+      const playBtn = document.getElementById('partyPlayBtn');
+      const seekBar = document.getElementById('partySeekBar');
+      const timeCurrent = document.getElementById('partyTimeCurrent');
+      const timeTotal = document.getElementById('partyTimeTotal');
+      const volBtn = document.getElementById('partyVolBtn');
+      const volBar = document.getElementById('partyVolBar');
+      const pipBtn = document.getElementById('partyPipBtn');
+      const fsBtn = document.getElementById('partyFsBtn');
+      const bigPlay = document.getElementById('partyBigPlayOverlay');
+      const spinner = document.getElementById('partyBufSpinner');
+      const ctrlBar = document.getElementById('partyCtrlBar');
+      const wrapper = document.getElementById('partyPlayerWrapper');
+      
+      let hideTimer = null;
+      function showControls() { ctrlBar.style.opacity = '1'; if (bigPlay) bigPlay.style.opacity = '1'; clearTimeout(hideTimer); }
+      function resetHideTimer() { showControls(); hideTimer = setTimeout(() => { if (!video.paused) { ctrlBar.style.opacity = '0'; if (bigPlay) bigPlay.style.opacity = '0'; } }, 3000); }
+      
+      if (wrapper) {
+        wrapper.addEventListener('mousemove', resetHideTimer);
+        wrapper.addEventListener('touchstart', () => { if (ctrlBar.style.opacity === '0') showControls(); else { showControls(); resetHideTimer(); } }, {passive:true});
+        wrapper.addEventListener('mouseenter', showControls);
+        wrapper.addEventListener('mouseleave', () => { if (!video.paused) { ctrlBar.style.opacity = '0'; if (bigPlay) bigPlay.style.opacity = '0'; } });
+      }
+      
+      video.addEventListener('play', () => {
+        if (playBtn) playBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+        if (bigPlay) bigPlay.style.display = 'none';
+        resetHideTimer();
+      });
+      video.addEventListener('pause', () => {
+        if (playBtn) playBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>';
+        if (bigPlay) bigPlay.style.display = '';
+        if (ctrlBar) ctrlBar.style.opacity = '1';
+        if (bigPlay) bigPlay.style.opacity = '1';
+        clearTimeout(hideTimer);
+      });
+      
+      video.addEventListener('timeupdate', () => {
+        if (seekBar && !seekBar.dragging) {
+          seekBar.value = video.currentTime;
+          seekBar.max = video.duration || 0;
+        }
+        timeCurrent.textContent = formatTime(video.currentTime);
+        timeTotal.textContent = formatTime(video.duration);
+      });
+      video.addEventListener('loadedmetadata', () => {
+        seekBar.max = video.duration;
+        timeTotal.textContent = formatTime(video.duration);
+      });
+      
+      if (seekBar) {
+        seekBar.addEventListener('input', function() { this.dragging = true; video.currentTime = parseFloat(this.value); });
+        seekBar.addEventListener('change', function() { this.dragging = false; });
+      }
+      
+      if (playBtn) playBtn.addEventListener('click', () => { video.paused ? video.play() : video.pause(); });
+      if (bigPlay) bigPlay.addEventListener('click', () => { video.play(); });
+      
+      if (volBar) {
+        volBar.addEventListener('input', function() { video.volume = parseFloat(this.value); video.muted = this.value === '0'; });
+        volBtn.addEventListener('click', () => { video.muted = !video.muted; volBar.value = video.muted ? 0 : (video.volume || 1); });
+        video.addEventListener('volumechange', () => { volBar.value = video.muted ? 0 : video.volume; });
+      }
+      
+      if (pipBtn) {
+        pipBtn.addEventListener('click', async () => {
+          try { if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } else { await video.requestPictureInPicture(); } } catch(e) {}
+        });
+      }
+      
+      if (fsBtn) {
+        fsBtn.addEventListener('click', () => {
+          if (!document.fullscreenElement) { wrapper?.requestFullscreen(); }
+          else { document.exitFullscreen(); }
+        });
+      }
+      
+      // Speed pills
+      document.querySelectorAll('#partySpeedPills .speed-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          video.playbackRate = parseFloat(btn.dataset.speed);
+          document.querySelectorAll('#partySpeedPills .speed-opt').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      
+      function formatTime(t) { if (isNaN(t) || !isFinite(t)) return '0:00'; const m = Math.floor(t/60); const s = Math.floor(t%60); return m+':'+(s<10?'0':'')+s; }
+    }
+
+    async function loadPartyStream(mediaId, episode) {
+      const video = document.getElementById('partyVideoPlayer');
+      const spinner = document.getElementById('partyBufSpinner');
+      const loadingOverlay = document.getElementById('partyLoadingOverlay');
+      const bigPlay = document.getElementById('partyBigPlayOverlay');
+      const sourceBadge = document.getElementById('partySourceBadge');
+      const qualityContainer = document.getElementById('partyQualityPills');
+      
+      if (loadingOverlay) loadingOverlay.style.display = '';
+      if (spinner) spinner.style.display = '';
+      if (bigPlay) bigPlay.style.display = 'none';
+      
+      if (_partyState.hls) { _partyState.hls.destroy(); _partyState.hls = null; }
+      
+      try {
+        const res = await fetch(`${PARTY_SCRAPER_API}/scrape?url=watch&id=${mediaId}&ep=${episode}&provider=gogoanime`);
+        const data = await res.json();
+        if (!data || !data.sources || !data.sources.length) { throw new Error('No sources'); }
+        
+        let selectedSrc = data.sources.find(s => s.quality === '1080p') || data.sources.find(s => s.quality === '720p') || data.sources[0];
+        let url = selectedSrc.url;
+        if (url.includes('m3u8') && typeof Hls !== 'undefined' && Hls.isSupported()) {
+          const hls = new Hls();
+          hls.loadSource(url);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(()=>{});
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            if (spinner) spinner.style.display = 'none';
+          });
+          hls.on(Hls.Events.ERROR, (e, data) => {
+            if (data.fatal) { hls.destroy(); video.src = url; video.play().catch(()=>{}); }
+          });
+          _partyState.hls = hls;
+        } else {
+          video.src = url;
+          video.addEventListener('loadedmetadata', () => { video.play().catch(()=>{}); if (loadingOverlay) loadingOverlay.style.display = 'none'; if (spinner) spinner.style.display = 'none'; }, {once:true});
+          video.addEventListener('error', () => { if (loadingOverlay) loadingOverlay.style.display = 'none'; if (spinner) spinner.style.display = 'none'; }, {once:true});
+          setTimeout(() => { if (loadingOverlay) loadingOverlay.style.display = 'none'; }, 8000);
+        }
+        
+        // Quality pills
+        if (qualityContainer) {
+          qualityContainer.innerHTML = data.sources.map(s => {
+            const q = s.quality || 'auto';
+            const active = (q === '1080p' || q === '720p') ? '' : '';
+            return `<button class="pill-opt quality-opt ${selectedSrc.quality === q ? 'active' : ''}" data-url="${s.url}" data-quality="${q}">${q}</button>`;
+          }).join('');
+          qualityContainer.querySelectorAll('.quality-opt').forEach(btn => {
+            btn.addEventListener('click', function() {
+              qualityContainer.querySelectorAll('.quality-opt').forEach(b => b.classList.remove('active'));
+              this.classList.add('active');
+              if (_partyState.hls) { _partyState.hls.destroy(); _partyState.hls = null; }
+              video.src = this.dataset.url;
+              video.play().catch(()=>{});
+            });
+          });
+        }
+        
+        // Source badge
+        if (sourceBadge && data.source) { sourceBadge.textContent = data.source; sourceBadge.style.display = ''; }
+        
+      } catch(err) {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        if (spinner) spinner.style.display = 'none';
+        if (bigPlay) bigPlay.style.display = '';
+        sourceBadge.style.display = 'none';
+      }
+    }
+
+    async function loadPartyEpisodes(mediaId, activeEp) {
+      const grid = document.getElementById('partyEpisodesGrid');
+      if (!grid) return;
+      grid.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+      try {
+        const q = `query($id:Int){Media(id:$id){id title{romaji english}episodes}}`;
+        const data = await queryAniList(q, { id: mediaId });
+        const total = data?.Media?.episodes || 12;
+        grid.innerHTML = '';
+        for (let i = 1; i <= total; i++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'episode-btn' + (i === activeEp ? ' active' : '');
+          btn.textContent = i;
+          btn.addEventListener('click', () => switchPartyEpisode(mediaId, i));
+          grid.appendChild(btn);
+        }
+      } catch(e) { grid.innerHTML = '<div class="empty-state">Failed to load episodes</div>'; }
+    }
+
+    function switchPartyEpisode(mediaId, episode) {
+      _partyState.episode = episode;
+      loadPartyStream(mediaId, episode);
+      loadPartyEpisodes(mediaId, episode);
+      document.getElementById('partyEpJumpInput').value = episode;
+      // Notify others
+      if (_partyState.supabaseChannel && _partyState.isHost) {
+        _partyState.supabaseChannel.send({
+          type: 'broadcast', event: 'sync',
+          payload: { type: 'switch', mediaId, episode, userId: _partyState.userId }
+        });
+      }
+    }
+
+    // Bottom nav and URL param routing (merged into root listener above)
+    // Setup bottom nav
+    (function setupBottomNav() {
       const btnNavHome = document.getElementById('btnNavHome');
       const btnNavBrowse = document.getElementById('btnNavBrowse');
       const btnNavSearch = document.getElementById('btnNavSearch');
+      if (!btnNavHome || !btnNavBrowse || !btnNavSearch) return;
 
-      if (tabParam === 'browse') {
+      btnNavHome.addEventListener('click', () => {
+        btnNavHome.classList.add('active');
+        btnNavBrowse.classList.remove('active');
+        btnNavSearch.classList.remove('active');
+        tabHome.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      btnNavBrowse.addEventListener('click', () => {
+        btnNavHome.classList.remove('active');
+        btnNavBrowse.classList.add('active');
+        btnNavSearch.classList.remove('active');
         tabBrowse.click();
-      } else if (tabParam === 'search') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      btnNavSearch.addEventListener('click', () => {
+        btnNavHome.classList.remove('active');
+        btnNavBrowse.classList.remove('active');
+        btnNavSearch.classList.add('active');
         const input = document.getElementById('searchInput');
-        if (input) {
-          if (btnNavHome) btnNavHome.classList.remove('active');
-          if (btnNavSearch) btnNavSearch.classList.add('active');
-          input.focus();
-        }
-      }
+        if (input) { input.focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      });
 
-      if (btnNavHome && btnNavBrowse && btnNavSearch) {
-        btnNavHome.addEventListener('click', () => {
-          btnNavHome.classList.add('active');
-          btnNavBrowse.classList.remove('active');
-          btnNavSearch.classList.remove('active');
-          
-          tabHome.click();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
-        btnNavBrowse.addEventListener('click', () => {
-          btnNavHome.classList.remove('active');
-          btnNavBrowse.classList.add('active');
-          btnNavSearch.classList.remove('active');
-          
-          tabBrowse.click();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
-        btnNavSearch.addEventListener('click', () => {
-          btnNavHome.classList.remove('active');
-          btnNavBrowse.classList.remove('active');
-          btnNavSearch.classList.add('active');
-          
-          const input = document.getElementById('searchInput');
-          if (input) {
-            input.focus();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        });
-
-        // Sync desktop tabs clicks with bottom nav
-        tabHome.addEventListener('click', () => {
-          btnNavHome.classList.add('active');
-          btnNavBrowse.classList.remove('active');
-          btnNavSearch.classList.remove('active');
-        });
-        tabBrowse.addEventListener('click', () => {
-          btnNavHome.classList.remove('active');
-          btnNavBrowse.classList.add('active');
-          btnNavSearch.classList.remove('active');
-        });
-      }
-    });
+      // Sync tab clicks with bottom nav
+      tabHome.addEventListener('click', () => { btnNavHome.classList.add('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
+      tabBrowse.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.add('active'); btnNavSearch.classList.remove('active'); });
+      tabParty.addEventListener('click', () => { btnNavHome.classList.remove('active'); btnNavBrowse.classList.remove('active'); btnNavSearch.classList.remove('active'); });
+    })();
   </script>
 
   <!-- Bottom Navigation Bar for Mobile -->
