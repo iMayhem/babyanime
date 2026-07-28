@@ -1764,6 +1764,7 @@
               '</div>' +
               '<button type="button" class="btn-primary join-room-btn" style="font-size:0.85rem;padding:0.45rem 0.8rem;margin-top:0.4rem;">Join Room</button>' +
             '</div>';
+          }).join('');
           list.querySelectorAll('.room-card').forEach(el => {
             const rid = el.dataset.rid;
             el.querySelector('.join-room-btn').addEventListener('click', (e) => { e.stopPropagation(); if (rid) enterRoom(rid); });
