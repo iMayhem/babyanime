@@ -1743,9 +1743,12 @@
           wrap.style.display = '';
           list.innerHTML = rooms.map(r => {
             const ago = Math.round((Date.now() - new Date(r.last_active).getTime()) / 60000);
+            const cover = r.cover_image || '';
             return '<div class="card room-card" data-rid="'+r.id+'">' +
               '<div class="room-card-head">' +
-                '<img class="room-card-thumb" src="' + (r.cover_image||'https://placehold.co/120x160?text=Anime') + '" alt="' + (r.series_title||'') + '" loading="lazy">' +
+                (cover
+                  ? '<img class="room-card-thumb" src="' + cover + '" alt="' + (r.series_title||'') + '" loading="lazy">'
+                  : '<div class="room-card-thumb room-card-thumb-placeholder"></div>') +
                 '<div class="room-card-details">' +
                   '<h4 class="room-card-name" title="' + (r.series_title||'Anime') + '">' + (r.series_title||'Anime') + (r.is_private ? ' 🔒' : '') + '</h4>' +
                   '<p class="room-card-anime">Episode ' + r.episode + '</p>' +

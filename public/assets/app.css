@@ -2032,6 +2032,9 @@ footer {
   border: 2px solid var(--ink);
   flex-shrink: 0;
 }
+.room-card-thumb-placeholder {
+  background: var(--line);
+}
 
 .room-card-details {
   flex-grow: 1;

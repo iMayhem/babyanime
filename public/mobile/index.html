@@ -1521,34 +1521,46 @@
     }
 
     async function refreshActiveRooms() {
+      let rooms = null;
+      const wrap = document.getElementById('partyActiveRoomsWrap');
+      const list = document.getElementById('partyActiveRoomsList');
       try {
-        const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms`);
-        const rooms = await res.json();
-        const wrap = document.getElementById('partyActiveRoomsWrap');
-        const list = document.getElementById('partyActiveRoomsList');
-        if (!rooms || !rooms.length || rooms.length === 0) { wrap.style.display = 'none'; return; }
-        wrap.style.display = '';
-        list.innerHTML = rooms.map(r => {
-          const title = r.anime_title || 'Unknown';
-          const ep = r.episode || 1;
-          const cover = r.cover_img || '';
-          const host = r.host_name || 'Anonymous';
-          const userCount = r.user_count || 0;
-          return `<div class="room-card" style="cursor:pointer;border:2px solid var(--ink);border-radius:12px;padding:0.8rem;background:var(--card);box-shadow:3px 3px 0 var(--shadow);transition:transform 0.1s;" data-id="${r.id}">
-            <div style="display:flex;gap:0.6rem;">
-              ${cover ? `<img src="${cover}" alt="" style="width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;" loading="lazy">` : ''}
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-                <div style="font-size:0.75rem;color:var(--muted);margin:0.2rem 0;">Ep ${ep} · <span style="color:var(--teal);">${userCount} online</span></div>
-                <div style="font-size:0.7rem;color:var(--muted);">Host: ${host}</div>
-              </div>
-            </div>
-          </div>`;
-        }).join('');
-        list.querySelectorAll('.room-card').forEach(el => {
-          el.addEventListener('click', () => enterRoom(el.dataset.id));
-        });
+        const sb = sbClient();
+        if (sb) {
+          const sixHrsAgo = new Date(Date.now() - 6*3600000).toISOString();
+          sb.from('parties').delete().lt('last_active', sixHrsAgo).then(()=>{}).catch(()=>{});
+          const { data } = await sb.from('parties').select('id,anime_id,episode,series_title,is_private,last_active,cover_image').gte('last_active', new Date(Date.now() - 60*60000).toISOString()).order('last_active', {ascending:false}).limit(20);
+          if (data) rooms = data;
+        }
       } catch(e) {}
+      try {
+        if (!rooms) {
+          const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms`);
+          rooms = await res.json();
+        }
+      } catch(e) {}
+      if (!rooms || !rooms.length || rooms.length === 0) { wrap.style.display = 'none'; return; }
+      wrap.style.display = '';
+      list.innerHTML = rooms.map(r => {
+        const title = r.series_title || r.anime_title || 'Unknown';
+        const ep = r.episode || 1;
+        const cover = r.cover_image || r.cover_img || '';
+        const host = r.host_name || 'Anonymous';
+        const userCount = r.user_count || 0;
+        return `<div class="room-card" style="cursor:pointer;border:2px solid var(--ink);border-radius:12px;padding:0.8rem;background:var(--card);box-shadow:3px 3px 0 var(--shadow);transition:transform 0.1s;" data-id="${r.id}">
+          <div style="display:flex;gap:0.6rem;">
+            ${cover ? `<img src="${cover}" alt="" style="width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;" loading="lazy">` : `<div style="width:40px;height:56px;border-radius:6px;background:var(--line);flex-shrink:0;"></div>`}
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:800;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+              <div style="font-size:0.75rem;color:var(--muted);margin:0.2rem 0;">Ep ${ep} · <span style="color:var(--teal);">${userCount} online</span></div>
+              <div style="font-size:0.7rem;color:var(--muted);">Host: ${host}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.room-card').forEach(el => {
+        el.addEventListener('click', () => enterRoom(el.dataset.id));
+      });
     }
     window._refreshPartyRooms = refreshActiveRooms;
 
