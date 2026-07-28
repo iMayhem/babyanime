@@ -760,7 +760,7 @@
   <script src="/assets/app.js"></script>
       <script>
     const SCRAPER_API = 'https://proxy.babyanime.top/api';
-    const STREAM_PROXY = 'https://proxy.babyanime.top/api/stream-proxy?url=';
+    const STREAM_PROXY = 'https://proxy.babyanime.top/stream-proxy?url=';
 
     let activeAnime = null;
     let activeEpisode = 1;
@@ -1208,7 +1208,7 @@
 
     function proxyStreamUrl(url, headers) {
       if (!url) return url;
-      if (url.startsWith(SCRAPER_API) || url.includes('/api/fresh-stream') || url.includes('/api/stream-proxy')) {
+      if (url.startsWith(SCRAPER_API) || url.includes('/api/fresh-stream') || url.includes('/stream-proxy')) {
         return url;
       }
       if (STREAM_PROXY && !url.startsWith(location.origin) && !url.startsWith('http://localhost')) {
