@@ -371,10 +371,12 @@
 
             <div class="party-player-col">
               <div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:5px 5px 0 var(--shadow);">
-                <video id="partyVideoPlayer" style="width:100%;height:100%;object-fit:contain;" playsinline></video>
+                <video id="partyVideoPlayer" style="width:100%;height:100%;object-fit:contain;" playsinline controls></video>
                 <div id="partyLoadingOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:2;">
                   <div class="spinner"></div>
                 </div>
+                <div id="partySourceBadge" style="position:absolute;top:0.5rem;left:0.5rem;background:rgba(0,0,0,0.8);color:#fff;padding:0.2rem 0.6rem;border-radius:8px;font-size:0.75rem;font-weight:700;display:none;z-index:3;"></div>
+                <div id="partyQualityPills" style="position:absolute;top:0.5rem;right:0.5rem;display:flex;gap:0.3rem;z-index:3;"></div>
               </div>
               <div id="partyStatusBar" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;font-size:0.8rem;font-weight:700;">
                 <span id="partyConnectionStatus" style="color:var(--teal);">● Connected</span>
@@ -1440,10 +1442,13 @@
       let epLimit = 100;
       let syncing = false;
       let userMap = {};
+      let partySources = [];
+      let partySourceIdx = 0;
 
       const $ = id => document.getElementById(id);
       const enterScr = $('partyEnterScreen'), createScr = $('partyCreateScreen'), workScr = $('partyWorkspaceScreen');
       const video = $('partyVideoPlayer'), loader = $('partyLoadingOverlay');
+      const partySourceBadge = $('partySourceBadge'), partyQualityPills = $('partyQualityPills');
       const connStatus = $('partyConnectionStatus'), userCount = $('partyUserCountDisplay'), roleBadge = $('partyRoleBadge'), userListEl = $('partyUserList');
       const chatMsgs = $('partyChatMessages'), chatForm = $('partyChatForm'), chatInp = $('partyChatInput');
       const epGrid = $('partyEpisodesGrid'), epJumpInp = $('partyEpJumpInput'), epJumpBtn = $('partyEpJumpBtn');
@@ -1503,23 +1508,56 @@
         userListEl.innerHTML = vals.map(p => '<span style="background:var(--bg-hover);border:1px solid var(--line);border-radius:12px;padding:0.15rem 0.5rem;font-size:0.75rem;font-weight:700;white-space:nowrap;">' + (p.is_host?'👑 ':'') + (p.username||'?') + '</span>').join('');
       }
 
+      function playPartySource(src, idx) {
+        if (hls) { hls.destroy(); hls = null; }
+        partySourceIdx = idx;
+        let url = src.url;
+        if (src.m3u8Content) url = URL.createObjectURL(new Blob([src.m3u8Content], {type:'application/vnd.apple.mpegurl'}));
+        if (src.format === 'hls' || url.includes('.m3u8')) {
+          if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+            hls = new Hls({enableWorker:true,lowLatencyMode:false,backBufferLength:90});
+            hls.loadSource(url); hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              loader.style.display = 'none';
+              video.play().catch(()=>{});
+            });
+            hls.on(Hls.Events.ERROR, (e,d) => {
+              if (d.fatal) { hls.destroy(); hls=null; }
+            });
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; video.load(); loader.style.display = 'none'; }
+        } else { video.src = url; video.load(); loader.style.display = 'none'; }
+        const label = (src.provider||'') + (src.quality ? ' \u00B7 ' + src.quality : '');
+        partySourceBadge.textContent = label;
+      }
+
+      function renderPartyQualityPills(sources) {
+        partyQualityPills.innerHTML = sources.map((s,i) => {
+          const label = (s.provider||'') + (s.quality ? ' \u00B7 ' + s.quality : '');
+          return '<button type="button" class="pill-opt'+(i===0?' active':'')+'" data-idx="'+i+'" style="padding:0.15rem 0.5rem;font-size:0.7rem;background:rgba(0,0,0,0.8);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;font-weight:700;">'+label+'</button>';
+        }).join('');
+        partyQualityPills.querySelectorAll('.pill-opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx);
+            if (idx === partySourceIdx) return;
+            partyQualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.toggle('active', parseInt(b.dataset.idx) === idx));
+            playPartySource(partySources[idx], idx);
+          });
+        });
+      }
+
       async function loadEpisode(anilistId, ep) {
         loader.style.display = 'flex';
         if (hls) { hls.destroy(); hls = null; }
+        partySources = [];
+        partySourceIdx = 0;
         try {
           const p = new URLSearchParams({ep:ep,anilist_id:anilistId,provider:'Naruto'});
           const resp = await fetch(PARTY_SCRAPER_API + '/stream?' + p);
           const d = await resp.json();
           if (!d.success || !d.sources || !d.sources.length) { loader.style.display = 'none'; return; }
-          const src = d.sources[0];
-          let url = src.url;
-          if (src.m3u8Content) url = URL.createObjectURL(new Blob([src.m3u8Content], {type:'application/vnd.apple.mpegurl'}));
-          if (src.format === 'hls' || url.includes('.m3u8')) {
-            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-              hls = new Hls(); hls.loadSource(url); hls.attachMedia(video);
-              hls.on(Hls.Events.MANIFEST_PARSED, () => loader.style.display = 'none');
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; loader.style.display = 'none'; }
-          } else { video.src = url; loader.style.display = 'none'; }
+          partySources = d.sources;
+          renderPartyQualityPills(partySources);
+          playPartySource(partySources[0], 0);
         } catch(e) { console.warn('Party load error:', e); loader.style.display = 'none'; }
       }
 
