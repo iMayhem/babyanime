@@ -1,6 +1,7 @@
-const ANILIST_URL = "https://graphql.anilist.co";
 const TMDB_API_KEY = process.env.TMDB_API_KEY || "1865f43a0549ca50d341dd9ab8b29f49";
+const offlineDb = require("./offline-db");
 
+const ANILIST_URL = "https://graphql.anilist.co";
 const ANILIST_MEDIA_QUERY = `
   query ($id: Int, $idMal: Int) {
     Media(id: $id, idMal: $idMal, type: ANIME) {
@@ -26,12 +27,6 @@ async function anilistGraphQL(query, variables) {
   const data = await resp.json();
   if (data.errors) throw new Error(data.errors[0].message);
   return data.data;
-}
-
-async function malToAnilist(malId) {
-  const data = await anilistGraphQL(ANILIST_MEDIA_QUERY, { idMal: parseInt(malId) });
-  if (!data || !data.Media) throw new Error("MAL ID not found on AniList");
-  return data.Media;
 }
 
 async function searchTmdbByTitle(title, type, year) {
@@ -63,12 +58,19 @@ async function resolve(input) {
     throw new Error("Provide either anilist_id or mal_id");
   }
 
-  let anilistMeta = null;
+  // Resolve IDs via offline DB first (no API call)
   if (malId && !anilistId) {
-    anilistMeta = await malToAnilist(malId);
-    anilistId = anilistMeta.id;
-    malId = anilistMeta.idMal;
-  } else if (anilistId) {
+    const mapped = await offlineDb.malToAnilist(malId);
+    if (mapped) anilistId = mapped.id;
+  }
+  if (anilistId && !malId) {
+    const mapped = await offlineDb.anilistToMal(anilistId);
+    if (mapped) malId = mapped.malId;
+  }
+
+  // Fetch metadata from AniList (single call using whichever ID we have)
+  let anilistMeta = null;
+  if (anilistId) {
     try {
       const data = await anilistGraphQL(ANILIST_MEDIA_QUERY, { id: anilistId });
       if (data && data.Media) {
