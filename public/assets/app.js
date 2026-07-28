@@ -397,8 +397,7 @@ function createAnimeCardHTML(anime) {
   
   const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : (anime.score ? anime.score.toFixed(1) : null);
   const scoreBadge = score ? `<div class="score-badge">★ ${score}</div>` : '';
-  const formatText = anime.format || anime.type || '';
-  const typeBadge = formatText ? `<div class="type-badge">${formatText}</div>` : '';
+  const typeBadge = '';
   const yearText = anime.seasonYear || (anime.aired && anime.aired.prop && anime.aired.prop.from && anime.aired.prop.from.year) || '';
   const epsCount = anime.episodes || (anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : null);
   const epsText = epsCount ? `${epsCount} Ep` : '';
