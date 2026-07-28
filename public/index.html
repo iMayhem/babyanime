@@ -282,15 +282,6 @@
           </div>
         </section>
 
-        <!-- 7. Newly Released -->
-        <section id="newlyReleasedSection" class="shelf-section">
-          <div class="section-title">
-            <h2>Recently Finished</h2>
-          </div>
-          <div class="shelf-container" id="newlyReleasedShelf">
-            <div class="loading-container"><div class="spinner"></div></div>
-          </div>
-        </section>
           </div> <!-- .home-main-content -->
         </div> <!-- .home-layout -->
       </div> <!-- #homeView -->
@@ -887,7 +878,6 @@
       loadShelf('POPULARITY_DESC', 'MOVIE', null, 'moviesShelf');
       loadShelf('POPULARITY_DESC', null, 'NOT_YET_RELEASED', 'upcomingShelf');
       loadShelf('POPULARITY_DESC', null, 'RELEASING', 'popularAiringShelf');
-      loadShelf('ID_DESC', null, 'FINISHED', 'newlyReleasedShelf');
     }
 
     async function loadShelf(sortValue, formatValue, statusValue, containerId) {
