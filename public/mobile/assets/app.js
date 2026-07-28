@@ -1,9 +1,8 @@
 // Theme Switcher
 (function () {
   const root = document.documentElement;
-  const savedTheme = localStorage.getItem('theme');
-  const currentTheme = savedTheme || 'light';
-  root.setAttribute('data-theme', currentTheme);
+  root.setAttribute('data-theme', 'light');
+  localStorage.setItem('theme', 'light');
   const savedClr = localStorage.getItem('clr');
   if (savedClr) root.setAttribute('data-clr', savedClr);
 })();
@@ -612,7 +611,7 @@ async function getTmdbPoster(title, anilistId) {
 function createAnimeCardHTML(anime) {
   const id = anime.id || anime.idMal;
   const isMal = !!anime.idMal && !anime.id;
-  const watchUrl = `/watch.html?${isMal ? 'mal_id' : 'id'}=${id}`;
+  const watchUrl = `watch.html?${isMal ? 'mal_id' : 'id'}=${id}`;
   const titleText = typeof anime.title === 'string' ? anime.title : (anime.title?.english || anime.title?.romaji || anime.title?.userPreferred || 'Unknown Title');
   const rawCover = typeof anime.coverImage === 'string' ? anime.coverImage : (anime.coverImage?.large || anime.coverImage?.medium || '');
   const proxiedCover = proxyImageUrl(rawCover);

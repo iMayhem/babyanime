@@ -828,6 +828,7 @@
         let toPlay = scraperSources;
         if (provider !== 'all') { toPlay = scraperSources.filter(s => s.provider === provider); if (toPlay.length === 0) toPlay = scraperSources; }
         const firstIdx = scraperSources.indexOf(toPlay[0]);
+        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
         try {
           const nextEp = activeEpisode + 1;
           const totalEps = (typeof activeAnime !== 'undefined' && activeAnime ? (activeAnime.episodes || 9999) : 9999);
