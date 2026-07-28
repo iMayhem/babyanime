@@ -567,7 +567,12 @@
       }
     }
 
-    onAuth((user) => updateAuthUI(user));
+    // Guard: onAuth may not be ready if app.js hasn't finished loading
+    function tryInitAuthUI() {
+      if (typeof onAuth !== 'undefined') onAuth((u) => updateAuthUI(u));
+      else setTimeout(tryInitAuthUI, 100);
+    }
+    tryInitAuthUI();
 
     authBtn.addEventListener('click', () => {
       if (getCurrentUser()) { signOut(); return; }
@@ -619,9 +624,10 @@
     });
 
     // Re-render bookmarks/history on auth change
-    onAuth(async (user) => {
+    function setupAuthSync() {
+      if (typeof onAuth === 'undefined') { setTimeout(setupAuthSync, 200); return; }
+      onAuth(async (user) => {
       if (user) {
-        // Try fetching remote data to merge
         try {
           const remoteBm = await fetchRemoteBookmarks();
           if (remoteBm) {
@@ -637,7 +643,9 @@
           }
         } catch(e) {}
       }
-    });
+      });
+    }
+    setupAuthSync();
 
     // Load Watch History & Bookmarks on home load
     window.addEventListener('DOMContentLoaded', () => {
