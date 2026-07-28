@@ -575,7 +575,7 @@
     tryInitAuthUI();
 
     authBtn.addEventListener('click', () => {
-      if (getCurrentUser()) { signOut(); return; }
+      if (typeof getCurrentUser !== 'undefined' && getCurrentUser()) { if (typeof signOut !== 'undefined') signOut(); return; }
       authMode = 'login';
       authModalTitle.textContent = 'Login';
       authSubmitBtn.textContent = 'Login';
