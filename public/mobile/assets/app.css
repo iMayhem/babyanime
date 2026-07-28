@@ -495,18 +495,35 @@ header {
   font-weight: 700;
 }
 
-/* History / Recent Grid */
 .recent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.2rem;
-  margin-bottom: 2.5rem;
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 0.6rem;
+  margin-bottom: 2rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.recent-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.recent-grid::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.recent-grid::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
 }
 
 .recent-card {
   display: flex;
   gap: 0.8rem;
   align-items: center;
+  flex: 0 0 250px;
+  scroll-snap-align: start;
 }
 
 .recent-thumb {

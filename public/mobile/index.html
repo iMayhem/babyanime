@@ -813,7 +813,7 @@
       }
       
       section.style.display = 'block';
-      grid.innerHTML = history.map(item => {
+      grid.innerHTML = history.slice(0, 15).map(item => {
         const idParam = item.type === 'mal' ? 'mal_id' : 'id';
         const url = `/watch.html?${idParam}=${item.id}&ep=${item.episode}`;
         const titleText = item.title.english || item.title.romaji || item.title.userPreferred || 'Unknown Title';
