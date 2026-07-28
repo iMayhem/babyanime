@@ -1450,7 +1450,7 @@
       let hls = null;
       let isHost = false;
       let curId = null, curEp = 1, curTotal = 12, curTitle = '';
-      let epLimit = 100;
+      let epLimit = 3000;
       let syncing = false;
       let userMap = {};
       let partySources = [];
@@ -1601,7 +1601,8 @@
       }
 
       function renderEpisodes() {
-        const total = curTotal || 12, limit = Math.min(epLimit, total);
+        const maxEp = curTotal || 220;
+        const limit = Math.min(maxEp, epLimit);
         epGrid.innerHTML = '';
         for (let i = 1; i <= limit; i++) {
           const b = document.createElement('button'); b.type = 'button'; b.className = 'ep-btn' + (i === curEp ? ' active' : ''); b.textContent = i;
@@ -1644,7 +1645,7 @@
             }
           } catch(e) { /* table might not exist, proceed anyway */ }
         }
-        isHost = false; epLimit = 100; curId = null; curEp = 1; curTotal = 12; curTitle = '';
+        isHost = false; epLimit = 3000; curId = null; curEp = 1; curTotal = 12; curTitle = '';
         await joinChannel(rid);
         enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
         $('workspaceTitle').textContent = 'Joining room...'; $('workspaceSubtitle').textContent = '';
@@ -1653,7 +1654,7 @@
       };
 
       window.createRoom = async function(anilistId, episode, seriesTitle, totalEps, isPrivate, password) {
-        isHost = true; epLimit = 100; curId = anilistId; curEp = episode; curTotal = totalEps || 12; curTitle = seriesTitle;
+        isHost = true; epLimit = 3000; curId = anilistId; curEp = episode; curTotal = totalEps || 12; curTitle = seriesTitle;
         const rid = genId();
         // Store in Supabase
         if (sb) sb.from('parties').insert({id:rid,anime_id:String(anilistId),episode,series_title:seriesTitle,is_private:!!isPrivate,password:password||null}).then(()=>{}).catch(()=>{});
