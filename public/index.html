@@ -285,32 +285,12 @@
           </div>
         </section>
 
-        <!-- 6. Top Rated Completed -->
-        <section id="topRatedCompletedSection" class="shelf-section">
-          <div class="section-title">
-            <h2>Top Rated Completed</h2>
-          </div>
-          <div class="shelf-container" id="topRatedCompletedShelf">
-            <div class="loading-container"><div class="spinner"></div></div>
-          </div>
-        </section>
-
         <!-- 7. Newly Released -->
         <section id="newlyReleasedSection" class="shelf-section">
           <div class="section-title">
             <h2>Recently Finished</h2>
           </div>
           <div class="shelf-container" id="newlyReleasedShelf">
-            <div class="loading-container"><div class="spinner"></div></div>
-          </div>
-        </section>
-
-        <!-- 8. TV Series -->
-        <section id="tvSeriesSection" class="shelf-section">
-          <div class="section-title">
-            <h2>TV Series</h2>
-          </div>
-          <div class="shelf-container" id="tvSeriesShelf">
             <div class="loading-container"><div class="spinner"></div></div>
           </div>
         </section>
@@ -923,9 +903,7 @@
       loadShelf('POPULARITY_DESC', 'MOVIE', null, 'moviesShelf');
       loadShelf('POPULARITY_DESC', null, 'NOT_YET_RELEASED', 'upcomingShelf');
       loadShelf('POPULARITY_DESC', null, 'RELEASING', 'popularAiringShelf');
-      loadShelf('SCORE_DESC', null, 'FINISHED', 'topRatedCompletedShelf');
       loadShelf('ID_DESC', null, 'FINISHED', 'newlyReleasedShelf');
-      loadShelf('TRENDING_DESC', 'TV', null, 'tvSeriesShelf');
     }
 
     async function loadShelf(sortValue, formatValue, statusValue, containerId) {
