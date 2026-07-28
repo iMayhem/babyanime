@@ -822,8 +822,8 @@
       grid.innerHTML = history.slice(0, 15).map(item => {
         const idParam = item.type === 'mal' ? 'mal_id' : 'id';
         const url = `/watch.html?${idParam}=${item.id}&ep=${item.episode}`;
-        const titleText = item.title.english || item.title.romaji || item.title.userPreferred || 'Unknown Title';
-        const coverImg = item.coverImage.large || item.coverImage.medium || '';
+        const titleText = (typeof item.title === 'string' ? item.title : (item.title?.english || item.title?.romaji || item.title?.userPreferred || 'Unknown Title'));
+        const coverImg = (typeof item.coverImage === 'string' ? item.coverImage : (item.coverImage?.large || item.coverImage?.medium || ''));
         
         return `
           <div class="card recent-card interactive" onclick="window.location.href='${url}'" style="cursor: pointer;">

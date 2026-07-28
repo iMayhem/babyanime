@@ -338,8 +338,8 @@ function createAnimeCardHTML(anime) {
   const id = anime.id || anime.idMal;
   const isMal = !!anime.idMal && !anime.id;
   const watchUrl = `/watch.html?${isMal ? 'mal_id' : 'id'}=${id}`;
-  const titleText = anime.title.english || anime.title.romaji || anime.title.userPreferred || 'Unknown Title';
-  const coverImg = anime.coverImage.large || anime.coverImage.medium || '';
+  const titleText = typeof anime.title === 'string' ? anime.title : (anime.title?.english || anime.title?.romaji || anime.title?.userPreferred || 'Unknown Title');
+  const coverImg = typeof anime.coverImage === 'string' ? anime.coverImage : (anime.coverImage?.large || anime.coverImage?.medium || '');
   const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : (anime.score ? anime.score.toFixed(1) : null);
   const scoreBadge = score ? `<div class="score-badge">★ ${score}</div>` : '';
   const formatText = anime.format || anime.type || '';
