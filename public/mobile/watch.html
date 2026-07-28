@@ -527,8 +527,14 @@
       const playerAnimeTitle = document.getElementById('playerAnimeTitle');
       if (playerAnimeTitle) playerAnimeTitle.textContent = titleEng;
       document.title = `Watch ${titleEng} - babyanime`;
-      detailsPoster.src = activeAnime.coverImage.large;
+      const rawPoster = activeAnime.coverImage ? (activeAnime.coverImage.large || activeAnime.coverImage.medium || '') : '';
+      detailsPoster.src = (typeof proxyImageUrl !== 'undefined' ? proxyImageUrl(rawPoster) : rawPoster);
       detailsPoster.alt = titleEng;
+      if (typeof getTmdbPoster !== 'undefined') {
+        getTmdbPoster(titleEng, activeAnime.id).then(tmdbImg => {
+          if (tmdbImg) detailsPoster.src = proxyImageUrl(tmdbImg);
+        }).catch(() => {});
+      }
       detailsTitleRomaji.textContent = titleRomaji;
       detailsTitleEnglish.textContent = activeAnime.title.english || '';
       detailsSynopsisText.innerHTML = activeAnime.description || 'No description available.';

@@ -333,13 +333,67 @@ function addToHistory(animeData, episode, percent = 0) {
   saveWatchHistory(history);
 }
 
+const IMAGE_STREAM_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
+
+function proxyImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('/stream-proxy?url=')) return url;
+  return `${IMAGE_STREAM_PROXY}${encodeURIComponent(url)}`;
+}
+
+const TMDB_KEY = "439c478a771f35c05022f9feabcca01c";
+const TMDB_IMG_BASE = "https://image.tmdb.org/t/p/w500";
+const _tmdbPosterCache = new Map();
+
+async function getTmdbPoster(title, anilistId) {
+  const cacheKey = `${anilistId}_${title}`;
+  if (_tmdbPosterCache.has(cacheKey)) return _tmdbPosterCache.get(cacheKey);
+
+  let posterPath = null;
+  if (anilistId) {
+    try {
+      const armRes = await fetch(`https://arm.haglund.dev/api/v2/tmdb?id=${anilistId}`);
+      if (armRes.ok) {
+        const armData = await armRes.json();
+        const tid = armData?.tmdb_id || (Array.isArray(armData) ? armData[0]?.tmdb_id : null);
+        if (tid) {
+          const tmdbRes = await fetch(`https://api.themoviedb.org/3/tv/${tid}?api_key=${TMDB_KEY}`);
+          if (tmdbRes.ok) {
+            const tData = await tmdbRes.json();
+            if (tData?.poster_path) posterPath = tData.poster_path;
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (!posterPath && title) {
+    try {
+      const cleanTitle = (typeof title === 'string' ? title : title.english || title.romaji || '').replace(/\(TV\)/gi,'').trim();
+      if (cleanTitle) {
+        const sRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(cleanTitle)}`);
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          if (sData?.results?.[0]?.poster_path) posterPath = sData.results[0].poster_path;
+        }
+      }
+    } catch(e) {}
+  }
+
+  const finalUrl = posterPath ? (TMDB_IMG_BASE + posterPath) : null;
+  if (finalUrl) _tmdbPosterCache.set(cacheKey, finalUrl);
+  return finalUrl;
+}
+
 // UI render helpers
 function createAnimeCardHTML(anime) {
   const id = anime.id || anime.idMal;
   const isMal = !!anime.idMal && !anime.id;
   const watchUrl = `/watch.html?${isMal ? 'mal_id' : 'id'}=${id}`;
   const titleText = typeof anime.title === 'string' ? anime.title : (anime.title?.english || anime.title?.romaji || anime.title?.userPreferred || 'Unknown Title');
-  const coverImg = typeof anime.coverImage === 'string' ? anime.coverImage : (anime.coverImage?.large || anime.coverImage?.medium || '');
+  const rawCover = typeof anime.coverImage === 'string' ? anime.coverImage : (anime.coverImage?.large || anime.coverImage?.medium || '');
+  const proxiedCover = proxyImageUrl(rawCover);
+  
   const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : (anime.score ? anime.score.toFixed(1) : null);
   const scoreBadge = score ? `<div class="score-badge">★ ${score}</div>` : '';
   const formatText = anime.format || anime.type || '';
@@ -349,6 +403,16 @@ function createAnimeCardHTML(anime) {
   const epsText = epsCount ? `${epsCount} Ep` : '';
   const metaText = [yearText, epsText].filter(Boolean).join(' · ');
 
+  const cardImgId = 'tmdb_img_' + Math.random().toString(36).substring(2, 9);
+  if (id || titleText) {
+    getTmdbPoster(titleText, anime.id).then(tmdbImg => {
+      if (tmdbImg) {
+        const el = document.getElementById(cardImgId);
+        if (el) el.src = proxyImageUrl(tmdbImg);
+      }
+    }).catch(() => {});
+  }
+
   const fallbackSvg = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22150%22 viewBox=%220 0 100 150%22><rect width=%22100%22 height=%22150%22 fill=%22%23262e42%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23939db4%22 font-size=%2212%22>No Cover</text></svg>';
   return `
     <a href="${watchUrl}" class="anime-card-link">
@@ -356,7 +420,7 @@ function createAnimeCardHTML(anime) {
       <div class="anime-poster-wrap">
         ${scoreBadge}
         ${typeBadge}
-        <img class="anime-poster" src="${coverImg}" alt="${titleText}" loading="lazy" onerror="this.src='${fallbackSvg}'">
+        <img id="${cardImgId}" class="anime-poster" src="${proxiedCover}" alt="${titleText}" loading="lazy" onerror="this.src='${fallbackSvg}'">
       </div>
       <div class="anime-info">
         <h3 class="anime-title" title="${titleText}">${titleText}</h3>
