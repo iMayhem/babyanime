@@ -560,6 +560,7 @@ const IMAGE_STREAM_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.work
 function proxyImageUrl(url) {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('/stream-proxy?url=')) return url;
+  if (url.includes('image.tmdb.org') || url.includes('anilist.co') || url.includes('myanimelist.net') || url.includes('flawlessfiles.com') || url.includes('tmdb.org')) return url;
   return `${IMAGE_STREAM_PROXY}${encodeURIComponent(url)}`;
 }
 
