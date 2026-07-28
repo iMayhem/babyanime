@@ -175,36 +175,74 @@ function setupMascot() {
 
 // GraphQL Query Helper for AniList
 const aniListCache = new Map();
+const aniListInFlight = new Map();
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
+}
 
 async function queryAniList(query, variables, signal) {
-  const cacheKey = JSON.stringify(variables);
+  const cacheKey = JSON.stringify({ query: hashStr(query), variables });
+  const cacheVal = JSON.stringify({ query, variables });
+
   if (!signal) {
-    const cached = aniListCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < 600000) return cached.data;
+    // L1: in-memory cache (10 min)
+    const mem = aniListCache.get(cacheKey);
+    if (mem && Date.now() - mem.ts < 600000) return mem.data;
+    // L2: localStorage cache (24h)
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const ls = JSON.parse(raw);
+        if (Date.now() - ls.ts < 86400000) {
+          aniListCache.set(cacheKey, ls);
+          return ls.data;
+        }
+        localStorage.removeItem(cacheKey);
+      }
+    } catch (_) {}
+    // Dedup in-flight requests
+    if (aniListInFlight.has(cacheKey)) return aniListInFlight.get(cacheKey);
   }
-  try {
-    const response = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ query, variables }),
-      signal
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+
+  const runner = async () => {
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        const response = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: cacheVal,
+          signal,
+        });
+        if (response.status === 429) { lastErr = new Error('429'); continue; }
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        const result = await response.json();
+        if (result.errors) throw new Error(result.errors[0].message);
+        if (!signal) {
+          const entry = { data: result.data, ts: Date.now() };
+          aniListCache.set(cacheKey, entry);
+          try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
+        }
+        return result.data;
+      } catch (err) {
+        lastErr = err;
+        if (err.name === 'AbortError') throw err;
+        if (!err.message.includes('429')) break;
+      }
     }
-    const result = await response.json();
-    if (result.errors) {
-      throw new Error(result.errors[0].message);
-    }
-    if (!signal) aniListCache.set(cacheKey, { data: result.data, ts: Date.now() });
-    return result.data;
-  } catch (err) {
-    console.error('AniList API Error:', err);
-    throw err;
-  }
+    throw lastErr;
+  };
+
+  if (signal) return runner();
+
+  const promise = runner();
+  aniListInFlight.set(cacheKey, promise);
+  promise.catch(() => {}).finally(() => aniListInFlight.delete(cacheKey));
+  return promise;
 }
 
 // Fetch metadata from MAL (Jikan API v4) as a secondary fallback

@@ -175,33 +175,67 @@ function setupMascot() {
 
 // GraphQL Query Helper for AniList
 const aniListCache = new Map();
+const aniListInFlight = new Map();
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
+}
 
 async function queryAniList(query, variables) {
-  const cacheKey = JSON.stringify(variables);
-  const cached = aniListCache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < 600000) return cached.data;
+  const cacheKey = JSON.stringify({ query: hashStr(query), variables });
+  const cacheVal = JSON.stringify({ query, variables });
+
+  // L1: in-memory cache (10 min)
+  const mem = aniListCache.get(cacheKey);
+  if (mem && Date.now() - mem.ts < 600000) return mem.data;
+
+  // L2: localStorage cache (24h)
   try {
-    const response = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ query, variables })
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      const ls = JSON.parse(raw);
+      if (Date.now() - ls.ts < 86400000) {
+        aniListCache.set(cacheKey, ls);
+        return ls.data;
+      }
+      localStorage.removeItem(cacheKey);
     }
-    const result = await response.json();
-    if (result.errors) {
-      throw new Error(result.errors[0].message);
+  } catch (_) {}
+
+  // Dedup in-flight requests
+  if (aniListInFlight.has(cacheKey)) return aniListInFlight.get(cacheKey);
+
+  const promise = (async () => {
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        const response = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: cacheVal,
+        });
+        if (response.status === 429) { lastErr = new Error('429'); continue; }
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        const result = await response.json();
+        if (result.errors) throw new Error(result.errors[0].message);
+        const entry = { data: result.data, ts: Date.now() };
+        aniListCache.set(cacheKey, entry);
+        try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
+        return result.data;
+      } catch (err) {
+        lastErr = err;
+        if (!err.message.includes('429')) break;
+      }
     }
-    aniListCache.set(cacheKey, { data: result.data, ts: Date.now() });
-    return result.data;
-  } catch (err) {
-    console.error('AniList API Error:', err);
-    throw err;
-  }
+    throw lastErr;
+  })();
+
+  aniListInFlight.set(cacheKey, promise);
+  promise.catch(() => {}).finally(() => aniListInFlight.delete(cacheKey));
+  return promise;
 }
 
 // Fetch metadata from MAL (Jikan API v4) as a secondary fallback
