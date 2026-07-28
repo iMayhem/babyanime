@@ -1379,7 +1379,6 @@
         }, 300);
       });
 
-      // Create room form
       document.getElementById('partyCreateForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const roomNameInput = document.getElementById('partyCreateRoomName');
@@ -1391,19 +1390,24 @@
         const coverImg = document.getElementById('partyAnimeImageInput').value || '';
         const isPrivate = document.getElementById('partyPrivateCheck').checked;
         const submitBtn = e.target.querySelector('button[type="submit"]');
-        if (!animeId) { alert('Please select an anime'); return; }
+        if (!animeId) { alert('Please select an anime from search results'); return; }
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creating...';
         try {
-          const roomName = roomNameInput ? roomNameInput.value.trim() : (animeTitle || 'New Room');
-          const user = getCurrentUser();
-          const body = { roomName, animeId: parseInt(animeId), episode, password, animeTitle, totalEpisodes, coverImg, isPrivate, userId: user?.id || 'anon' };
-          const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          const room = await res.json();
-          if (room.error) { alert(room.error); submitBtn.disabled = false; submitBtn.textContent = 'Launch Room'; return; }
+          const genId = () => { const b = new Uint8Array(4); crypto.getRandomValues(b); return Array.from(b, x => x.toString(16).padStart(2,'0')).join(''); };
+          const roomId = genId();
+          const sb = sbClient();
+          if (sb) {
+            sb.from('parties').insert({
+              id: roomId,
+              anime_id: String(animeId),
+              episode: episode,
+              series_title: animeTitle,
+              is_private: !!isPrivate,
+              password: password || null,
+              cover_image: coverImg || null
+            }).then(()=>{}).catch(()=>{});
+          }
           document.getElementById('partyAnimeIdInput').value = '';
           document.getElementById('partyAnimeSearchInput').value = '';
           document.getElementById('partySelectedAnime').style.display = 'none';
@@ -1417,9 +1421,14 @@
           submitBtn.disabled = false;
           submitBtn.textContent = 'Launch Room';
           createScreen.style.display = 'none';
-          enterScreen.style.display = '';
-          enterRoom(room.id, password);
-        } catch(err) { alert('Failed to create room'); submitBtn.disabled = false; submitBtn.textContent = 'Launch Room'; }
+          enterScreen.style.display = 'none';
+          window.history.pushState({}, '', '/?room=' + roomId);
+          enterRoom(roomId, password, { mediaId: animeId, episode, seriesTitle: animeTitle, isHost: true });
+        } catch(err) {
+          alert('Failed to create room: ' + err.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Launch Room';
+        }
       });
 
       // Join button
@@ -1564,7 +1573,7 @@
     }
     window._refreshPartyRooms = refreshActiveRooms;
 
-    async function enterRoom(roomId, password) {
+    async function enterRoom(roomId, password, localRoomInfo) {
       const enterScreen = document.getElementById('partyEnterScreen');
       const createScreen = document.getElementById('partyCreateScreen');
       const workspaceScreen = document.getElementById('partyWorkspaceScreen');
@@ -1574,56 +1583,58 @@
       
       document.getElementById('partyConnectionStatus').textContent = '● Connecting...';
       document.getElementById('partyConnectionStatus').style.color = 'var(--muted)';
-      document.getElementById('partyUserCountDisplay').textContent = '0 online';
+      document.getElementById('partyUserCountDisplay').textContent = '1 online';
       document.getElementById('workspaceSubtitle').textContent = 'Loading...';
       document.getElementById('partyVideoPlayer').src = '';
       document.getElementById('partyEpisodesGrid').innerHTML = '';
       
       try {
         const user = getCurrentUser();
-        const body = { userId: user?.id || 'anon-'+Date.now(), userName: user?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'Guest' };
-        const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms/${roomId}/join`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (data.error) { alert(data.error); document.getElementById('partyConnectionStatus').textContent = '✕ Error'; document.getElementById('partyConnectionStatus').style.color = 'var(--accent)'; return; }
+        let roomData = localRoomInfo || null;
+        
+        const sb = sbClient();
+        if (!roomData && sb) {
+          try {
+            const { data, error } = await sb.from('parties').select('*').eq('id', roomId).single();
+            if (data && !error) {
+              roomData = {
+                mediaId: data.anime_id,
+                episode: data.episode,
+                seriesTitle: data.series_title,
+                isHost: false
+              };
+            }
+          } catch(e) {}
+        }
+        
+        const mediaId = roomData?.mediaId || null;
+        const episode = roomData?.episode || 1;
+        const seriesTitle = roomData?.seriesTitle || 'Watch Party';
+        const isHost = roomData?.isHost || false;
         
         _partyState.currentRoom = roomId;
-        _partyState.mediaId = data.media_id;
-        _partyState.episode = data.episode;
-        _partyState.userId = user?.id || body.userId;
+        _partyState.mediaId = mediaId;
+        _partyState.episode = episode;
+        _partyState.userId = user?.id || ('anon-' + Date.now());
+        _partyState.isHost = isHost;
         
         const roleBadge = document.getElementById('partyRoleBadge');
-        if (data.is_host) {
-          _partyState.isHost = true;
-          _partyState.userRole = 'host';
+        if (isHost) {
           roleBadge.textContent = '👑 Host';
           roleBadge.style.display = '';
         } else {
-          _partyState.isHost = false;
-          _partyState.userRole = 'member';
           roleBadge.style.display = 'none';
         }
         
-        document.getElementById('workspaceTitle').textContent = data.room_name || 'Watch Party';
-        document.getElementById('workspaceSubtitle').textContent = data.anime_title || 'Unknown Anime';
+        document.getElementById('workspaceTitle').textContent = seriesTitle + ' - Ep ' + episode;
+        document.getElementById('workspaceSubtitle').textContent = '';
         
-        // Load episodes
-        if (data.media_id) {
-          loadPartyEpisodes(data.media_id, data.episode);
-          loadPartyStream(data.media_id, data.episode);
+        if (mediaId) {
+          loadPartyEpisodes(mediaId, episode);
+          loadPartyStream(mediaId, episode);
         }
         
-        // Setup Realtime
-        setupPartyRealtime(roomId, data.is_host);
-        
-        // Update user list
-        if (data.users) {
-          _partyUsers = {};
-          data.users.forEach(u => { _partyUsers[u.id] = u; });
-          updatePartyUserList();
-        }
+        setupPartyRealtime(roomId, isHost);
       } catch(err) {
         document.getElementById('partyConnectionStatus').textContent = '✕ Connection failed';
         document.getElementById('partyConnectionStatus').style.color = 'var(--accent)';
