@@ -146,14 +146,18 @@ function resolveMapping(_0x459472, _0x2cc631, _0x460b16) {
 }
 function getMalTitle(_0x30d391) {
   return __async(this, null, function* () {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     try {
-      const _0x4abe52 = yield fetch("https://api.jikan.moe/v4/anime/" + _0x30d391);
+      const _0x4abe52 = yield fetch("https://api.jikan.moe/v4/anime/" + _0x30d391, { signal: controller.signal });
+      clearTimeout(timer);
       if (!_0x4abe52.ok) {
         return null;
       }
       const _0x238ad3 = yield _0x4abe52.json();
       return _0x238ad3.data.title;
     } catch (_0x263c9e) {
+      clearTimeout(timer);
       return null;
     }
   });

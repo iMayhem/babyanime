@@ -245,14 +245,18 @@ async function queryAniList(query, variables, signal) {
 
 // Fetch metadata from MAL (Jikan API v4) as a secondary fallback
 async function fetchMALMetadata(malId) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
-    const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}`);
+    const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!response.ok) {
       throw new Error(`Jikan HTTP Error: ${response.status}`);
     }
     const result = await response.json();
     return result.data;
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error('Jikan API Error:', err);
     throw err;
   }
