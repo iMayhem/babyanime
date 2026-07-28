@@ -113,6 +113,18 @@ function makeStream(name, title, url, quality, headers = {}, subtitles) {
   }
   return stream;
 }
+// Build Worker proxy URL for rewriting segments in M3U8
+function proxyM3u8Content(m3u8Text, baseUrl, referer, origin, ua) {
+  var proxyBase = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
+  var params = '&r=' + encodeURIComponent(referer) + '&o=' + encodeURIComponent(origin) + '&ua=' + encodeURIComponent(ua);
+  return m3u8Text.split('\n').map(function (line) {
+    var t = line.trim();
+    if (!t) return line;
+    if (t.startsWith('#')) return t.replace(/URI="([^"]+)"/g, function (_, u) { return 'URI="' + proxyBase + encodeURIComponent(u) + params + '"'; });
+    var abs = t.startsWith('http') ? t : new URL(t, baseUrl).href;
+    return proxyBase + encodeURIComponent(abs) + params;
+  }).join('\n');
+}
 function buildStreamLabels(serverType, quality, label, showInfo) {
   const q = quality || "HD";
   const displayName = q + (label ? " " + label : "");
@@ -389,9 +401,22 @@ function extractMegaPlay(url, label, showInfo) {
       });
       if (!src || !src.sources || !src.sources.file)
         return [];
+      // Immediately fetch M3U8 while cookies/token are fresh
+      var m3u8Content = null;
+      try {
+        var m3u8Resp = yield fetchSafe(src.sources.file, {
+          headers: { "Referer": "https://megaplay.buzz/", "Origin": "https://megaplay.buzz", "User-Agent": HEADERS["User-Agent"] }
+        });
+        if (m3u8Resp) {
+          var m3u8Text = yield m3u8Resp.text();
+          if (m3u8Text.trim().startsWith('#EXTM3U')) {
+            m3u8Content = proxyM3u8Content(m3u8Text, src.sources.file, "https://megaplay.buzz/", "https://megaplay.buzz", HEADERS["User-Agent"]);
+          }
+        }
+      } catch (e) {}
       const subtitles = (src.tracks || []).filter((t) => t.kind === "captions" || t.kind === "subtitles").map((t) => ({ label: t.label || "Unknown", url: t.file })).filter((t) => t.url);
       const labels = buildStreamLabels("MegaPlay", "1080p", label, showInfo);
-      return [makeStream(
+      var stream = makeStream(
         labels.name,
         labels.title,
         src.sources.file,
@@ -402,7 +427,9 @@ function extractMegaPlay(url, label, showInfo) {
           "User-Agent": HEADERS["User-Agent"]
         },
         subtitles.length > 0 ? subtitles : void 0
-      )];
+      );
+      if (m3u8Content) stream.m3u8Content = m3u8Content;
+      return [stream];
     } catch (e) {
       console.error("[" + PROVIDER_NAME + "] MegaPlay error: " + e.message);
       return [];

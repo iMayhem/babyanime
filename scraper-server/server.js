@@ -19,6 +19,15 @@ const sseClients = new Set();
 // M3U8 cache: pre-fetched shortly after scraper returns URLs (before tokens expire)
 const m3u8Cache = new Map();
 const CACHE_TTL = 120_000; // 2 minutes
+const WORKER_BASE = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
+
+function workerProxyUrl(url, referer, origin, ua) {
+  let proxyUrl = `${WORKER_BASE}${encodeURIComponent(url)}`;
+  if (referer) proxyUrl += `&r=${encodeURIComponent(referer)}`;
+  if (origin) proxyUrl += `&o=${encodeURIComponent(origin)}`;
+  if (ua) proxyUrl += `&ua=${encodeURIComponent(ua)}`;
+  return proxyUrl;
+}
 
 async function prefetchM3u8(url, headers) {
   const key = Buffer.from(url).toString('base64').slice(0, 32);
@@ -30,7 +39,7 @@ async function prefetchM3u8(url, headers) {
     const text = await resp.text();
     if (!text.trim().startsWith('#EXTM3U')) return null;
 
-    const workerBase = 'https://proxy.babyanime.top/stream-proxy?url=';
+    const workerBase = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
     const extraParams = [];
     if (headers['Referer']) extraParams.push('r=' + encodeURIComponent(headers['Referer']));
     if (headers['Origin']) extraParams.push('o=' + encodeURIComponent(headers['Origin']));
@@ -108,13 +117,34 @@ app.get("/api/stream", async (req, res) => {
       sources = await providers.runAll(resolved, audio || "sub", broadcastScraperUsage);
     }
 
-    // Pre-fetch M3U8 immediately while CDN tokens are still valid
+    // Cache M3U8: use scraper-pre-fetched content or pre-fetch now
     await Promise.allSettled(sources.map(async (s) => {
       if (s.format === 'hls' && s.url && !s.url.startsWith('/api/')) {
+        // If scraper already fetched and rewrote the M3U8, use it directly
+        if (s.m3u8Content) {
+          const key = Buffer.from(String(Math.random())).toString('base64').slice(0, 16);
+          m3u8Cache.set(key, { content: s.m3u8Content, contentType: 'application/vnd.apple.mpegurl', ts: Date.now() });
+          setTimeout(() => m3u8Cache.delete(key), CACHE_TTL);
+          s.url = `https://${req.get('host')}/api/m3u8-cache/${key}`;
+          return;
+        }
+        // Otherwise try pre-fetch (less likely to work without scraper cookies)
         const key = await prefetchM3u8(s.url, s.headers || {});
         if (key) s.url = `https://${req.get('host')}/api/m3u8-cache/${key}`;
       }
     }));
+
+    // Rewrite subtitle URLs through the Worker proxy
+    for (const s of sources) {
+      if (s.subtitles && Array.isArray(s.subtitles)) {
+        for (const sub of s.subtitles) {
+          if (sub.url && !sub.url.startsWith('http://localhost') && !sub.url.includes('/stream-proxy')) {
+            const wh = s.headers || {};
+            sub.url = workerProxyUrl(sub.url, wh['Referer'] || wh['referer'] || '', wh['Origin'] || wh['origin'] || '', wh['User-Agent'] || wh['user-agent'] || '');
+          }
+        }
+      }
+    }
 
     res.json({
       success: true,
@@ -250,7 +280,7 @@ app.get("/api/stream-proxy", async (req, res) => {
       const text = await resp.text();
       if (text.trim().startsWith("#EXTM3U")) {
         // Rewrite segment URLs to go through Cloudflare Worker (no VPS bandwidth)
-        const workerBase = "https://proxy.babyanime.top/stream-proxy?url=";
+        const workerBase = "https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=";
 
         const extraParams = [];
         if (req.query.r) extraParams.push(`r=${encodeURIComponent(req.query.r)}`);
@@ -396,7 +426,7 @@ async function _serveFreshM3U8(req, res, ep_url, videoUrl, referer, UA) {
   const contentType = m3u8Resp.headers.get("Content-Type") || "application/vnd.apple.mpegurl";
 
   // Rewrite all URLs through the Cloudflare Worker
-  const proxyBase = `https://proxy.babyanime.top/stream-proxy?url=`;
+  const proxyBase = `https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=`;
   const extraParams = `&r=${encodeURIComponent(referer)}&o=${encodeURIComponent(referer.replace(/\/$/, ""))}&ua=${encodeURIComponent(UA)}`;
 
   const proxyUrl = (rawUrl) => {
