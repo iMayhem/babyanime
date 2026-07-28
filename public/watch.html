@@ -147,12 +147,14 @@
       border: 2px solid var(--ink);
     }
 
-    .player-wrapper video {
+    .player-wrapper video,
+    .player-wrapper iframe {
       width: 100%;
       display: block;
       aspect-ratio: 16 / 9;
       background: #000;
       cursor: pointer;
+      border: none;
     }
 
     .ctrl-bar {
@@ -570,6 +572,7 @@
           <div class="player-wrapper" id="playerWrapper">
             <div class="scraper-status" id="scraperStatus"></div>
             <video id="playerVideo" class="player-iframe" playsinline></video>
+            <iframe id="embedIframe" class="player-iframe" style="display:none;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
             <!-- Loading spinner -->
             <div class="buf-spinner" id="bufSpinner">
               <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -635,6 +638,8 @@
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
                 <option value="scraper_all" selected>🔍 All Scrapers (Auto)</option>
+                <option value="embed_vidsrc" style="font-weight:700;">🎬 VidSrc</option>
+                <option value="embed_animecfd" style="font-weight:700;">🎬 AnimeCFD</option>
               </select>
             </div>
 
@@ -1527,8 +1532,10 @@
       // Save current selection
       const current = serverSelect.value;
 
-      // Rebuild options: always keep "All" at top, then one per provider
+      // Rebuild options: always keep "All" + embeds at top, then one per provider
       serverSelect.innerHTML = `<option value="scraper_all">🔍 All (${sources.length} sources)</option>`
+        + `<option value="embed_vidsrc" style="font-weight:700;">🎬 VidSrc</option>`
+        + `<option value="embed_animecfd" style="font-weight:700;">🎬 AnimeCFD</option>`
         + providers.map(p => `<option value="scraper_${p}">${p}</option>`).join('');
 
       // Restore selection if still valid
@@ -1588,7 +1595,52 @@
       }
     }
 
+    const embedIframe = document.getElementById('embedIframe');
+    let embedMapped = null;
+
+    async function ensureEmbedMapped() {
+      if (embedMapped) return embedMapped;
+      const params = new URLSearchParams({ ep: activeEpisode, audio: activeAudio || 'sub' });
+      if (anilistId) params.set('anilist_id', anilistId);
+      else if (malId) params.set('mal_id', malId);
+      try {
+        const resp = await fetch(`${SCRAPER_API}/map?${params}`);
+        const data = await resp.json();
+        if (data.success) {
+          embedMapped = { tmdbId: data.tmdbId, anilistId: data.anilistId, season: data.season || 1, type: data.type || 'tv' };
+        }
+      } catch {}
+      return embedMapped;
+    }
+
     function updatePlayer() {
+      const val = serverSelect.value;
+      // Embed mode
+      if (val === 'embed_vidsrc' || val === 'embed_animecfd') {
+        ensureEmbedMapped().then(mapped => {
+          const ep = activeEpisode;
+          const audio = activeAudio || 'sub';
+          let embedUrl = null;
+          if (val === 'embed_vidsrc' && mapped && mapped.tmdbId) {
+            embedUrl = mapped.type === 'movie'
+              ? `https://vidsrc.to/embed/movie/${mapped.tmdbId}`
+              : `https://vidsrc.to/embed/tv/${mapped.tmdbId}/${mapped.season || 1}/${ep}`;
+          } else if (val === 'embed_animecfd') {
+            const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
+            if (aid) embedUrl = `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}`;
+          }
+          if (embedUrl) {
+            playerVideo.style.display = 'none';
+            embedIframe.style.display = 'block';
+            embedIframe.src = embedUrl;
+          }
+        });
+        return;
+      }
+      // Scraper mode
+      embedIframe.style.display = 'none';
+      embedIframe.src = '';
+      playerVideo.style.display = 'block';
 
       loadScraperStreams();
       addToHistory(activeAnime, activeEpisode);

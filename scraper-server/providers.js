@@ -2,12 +2,10 @@ const path = require("path");
 const admin = require("./admin");
 
 const PROVIDERS = [
-  { name: "Naruto",   file: "allwish.js" },
-  { name: "Eren",     file: "eren.js" },
-  { name: "Luffy",    file: "animesdigital.js" },
-  { name: "Goku",     file: "animekai.js" },
-  { name: "VidSrc",   file: "vidsrc.js" },
-  { name: "AnimeCFD", file: "animecfd.js" },
+  { name: "Naruto",  file: "allwish.js" },
+  { name: "Eren",    file: "eren.js" },
+  { name: "Luffy",   file: "animesdigital.js" },
+  { name: "Goku",    file: "animekai.js" },
 ];
 
 let loadedProviders = [];

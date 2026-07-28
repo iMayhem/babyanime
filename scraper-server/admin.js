@@ -8,8 +8,6 @@ const DEFAULT_PROVIDERS = [
   'Eren',
   'Luffy',
   'Goku',
-  'VidSrc',
-  'AnimeCFD',
 ];
 
 function loadConfig() {
