@@ -121,7 +121,7 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 1.2rem 0;
-  border-bottom: 2px dashed var(--line);
+  border-bottom: none;
   margin-bottom: 2rem;
 }
 
@@ -823,8 +823,8 @@ header {
   font-size: 0.9rem;
   color: var(--ink);
   line-height: 1.5;
-  border-top: 2.5px dashed var(--line);
-  padding-top: 0.8rem;
+  border-top: none;
+  padding-top: 0.4rem;
   margin: 0;
 }
 
@@ -840,8 +840,8 @@ header {
   grid-template-columns: repeat(2, 1fr);
   gap: 0.8rem;
   font-size: 0.85rem;
-  border-top: 2.5px dashed var(--line);
-  padding-top: 0.8rem;
+  border-top: none;
+  padding-top: 0.4rem;
 }
 
 .info-item {
@@ -1372,7 +1372,7 @@ footer {
   max-width: 1200px;
   margin: clamp(2.4rem, 8vh, 3.8rem) auto 0;
   padding: 1.4rem 1.2rem 3.2rem;
-  border-top: 2px dashed var(--line);
+  border-top: none;
   text-align: center;
   font-size: .92em;
   position: relative;
@@ -1745,7 +1745,7 @@ footer {
 }
 
 .schedule-header {
-  border-bottom: 2px dashed var(--line);
+  border-bottom: none;
   padding-bottom: 0.8rem;
 }
 
@@ -1966,7 +1966,7 @@ footer {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  border-bottom: 2px dashed var(--line);
+  border-bottom: none;
   padding-bottom: 1rem;
 }
 
@@ -2116,7 +2116,7 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px dashed var(--line);
+  border-bottom: none;
   padding-bottom: 1rem;
   margin-bottom: 0.5rem;
 }
@@ -2191,7 +2191,7 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-  border-bottom: 2px dashed var(--line);
+  border-bottom: none;
 }
 
 #partyEpisodesGrid {
