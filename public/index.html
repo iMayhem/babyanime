@@ -27,6 +27,41 @@
   <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
+  <style>
+    .ctrl-bar{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:0.5rem 0.6rem 0.4rem;transition:opacity .3s ease;opacity:1;pointer-events:auto}
+    .ctrl-bar.hidden{opacity:0;pointer-events:none}
+    .ctrl-row{display:flex;align-items:center;gap:0.4rem}
+    .ctrl-seek-row{margin-bottom:0.2rem}
+    .seek-bar{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(to right,var(--accent,#e25c5c) 0%,var(--accent,#e25c5c) 0%,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0.2) 100%);outline:none;cursor:pointer;transition:height .1s ease}
+    .seek-bar:hover{height:8px}
+    .seek-bar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px var(--accent,#e25c5c);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+    .seek-bar::-webkit-slider-thumb:hover{transform:scale(1.3);box-shadow:0 0 0 4px var(--accent,#e25c5c),0 0 10px rgba(226,92,92,0.5)}
+    .seek-bar::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--accent,#e25c5c);cursor:pointer;box-sizing:border-box}
+    .seek-bar::-moz-range-progress{background:var(--accent,#e25c5c);border-radius:3px;height:6px}
+    .seek-bar::-moz-range-track{background:rgba(255,255,255,0.2);border-radius:3px;height:6px}
+    .ctrl-btn{background:transparent;border:none;color:#fff;cursor:pointer;padding:0.3rem;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s;line-height:1}
+    .ctrl-btn:hover{background:rgba(255,255,255,0.15)}
+    .time-label{color:#fff;font-size:0.75rem;font-weight:700;font-family:'Nunito',sans-serif;min-width:36px;text-align:center;font-variant-numeric:tabular-nums}
+    .time-sep{color:rgba(255,255,255,0.4);font-size:0.75rem}
+    .ctrl-spacer{flex:1}
+    .speed-pills{display:flex;gap:2px}
+    .speed-pills .speed-opt{padding:0.2rem 0.4rem;font-size:0.7rem;font-weight:800;border:1.5px solid rgba(255,255,255,0.3);background:transparent;color:rgba(255,255,255,0.7);border-radius:6px;cursor:pointer;transition:all .15s}
+    .speed-pills .speed-opt:hover{background:rgba(255,255,255,0.12);color:#fff}
+    .speed-pills .speed-opt.active{background:var(--accent,#e25c5c);border-color:var(--ink);color:#fff;box-shadow:1.5px 1.5px 0 var(--shadow)}
+    .vol-bar{-webkit-appearance:none;appearance:none;width:60px;height:5px;border-radius:3px;background:rgba(255,255,255,0.25);outline:none;cursor:pointer}
+    .vol-bar::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:none;cursor:pointer}
+    .vol-bar::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:none;cursor:pointer}
+    .vol-btn svg{transition:transform .15s}
+    .vol-btn:hover svg{transform:scale(1.15)}
+    .source-badge{font-size:0.6rem;font-weight:800;padding:0.15rem 0.45rem;border-radius:6px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);border:1.5px solid rgba(255,255,255,0.2);white-space:nowrap;font-family:'Nunito',sans-serif;letter-spacing:0.02em}
+    .big-play-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;background:rgba(0,0,0,0.65);border:3px solid rgba(255,255,255,0.85);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;z-index:6;transition:transform .15s ease,background .15s ease,opacity .2s ease;pointer-events:auto}
+    .big-play-overlay:hover{transform:translate(-50%,-50%) scale(1.12);background:var(--accent,#e25c5c)}
+    .big-play-overlay.hidden{opacity:0;pointer-events:none}
+    .buf-spinner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;z-index:7;pointer-events:none;opacity:0;transition:opacity .2s ease}
+    .buf-spinner.visible{opacity:1}
+    .buf-spinner svg{width:100%;height:100%;animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" defer></script>
   <div class="shell">
@@ -370,13 +405,49 @@
             </div>
 
             <div class="party-player-col">
-              <div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:5px 5px 0 var(--shadow);">
-                <video id="partyVideoPlayer" style="width:100%;height:100%;object-fit:contain;" playsinline controls></video>
-                <div id="partyLoadingOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:2;">
+              <div class="player-wrapper" id="partyPlayerWrapper" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:5px 5px 0 var(--shadow);">
+                <video id="partyVideoPlayer" style="width:100%;height:100%;object-fit:contain;" playsinline></video>
+                <div class="buf-spinner" id="partyBufSpinner">
+                  <svg viewBox="0 0 50 50" fill="none"><circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.15)" stroke-width="5"/><path d="M25 5 A20 20 0 0 1 45 25" stroke="var(--accent,#e25c5c)" stroke-width="5" stroke-linecap="round"/></svg>
+                </div>
+                <div class="big-play-overlay" id="partyBigPlayOverlay" title="Play">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" style="margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>
+                </div>
+                <div class="ctrl-bar" id="partyCtrlBar">
+                  <div class="ctrl-row ctrl-seek-row">
+                    <input type="range" class="seek-bar" id="partySeekBar" value="0" min="0" step="0.1">
+                  </div>
+                  <div class="ctrl-row ctrl-main-row">
+                    <button class="ctrl-btn" id="partyPlayBtn" aria-label="Play/Pause">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                    </button>
+                    <span class="time-label" id="partyTimeCurrent">0:00</span>
+                    <span class="time-sep">/</span>
+                    <span class="time-label" id="partyTimeTotal">0:00</span>
+                    <span class="source-badge" id="partySourceBadge" style="display:none;"></span>
+                    <div class="ctrl-spacer"></div>
+                    <div id="partyQualityPills" style="display:flex;gap:2px;"></div>
+                    <div class="speed-pills" id="partySpeedPills">
+                      <button class="pill-opt speed-opt" data-speed="0.5">0.5×</button>
+                      <button class="pill-opt speed-opt active" data-speed="1">1×</button>
+                      <button class="pill-opt speed-opt" data-speed="1.5">1.5×</button>
+                      <button class="pill-opt speed-opt" data-speed="2">2×</button>
+                    </div>
+                    <button class="ctrl-btn vol-btn" id="partyVolBtn" aria-label="Volume">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+                    </button>
+                    <input type="range" class="vol-bar" id="partyVolBar" min="0" max="1" step="0.05" value="1">
+                    <button class="ctrl-btn" id="partyPipBtn" aria-label="Picture in Picture">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="partyFsBtn" aria-label="Fullscreen">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><polyline points="21 15 21 21 15 21"/><polyline points="3 9 3 3 9 3"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="partyLoadingOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:2;">
                   <div class="spinner"></div>
                 </div>
-                <div id="partySourceBadge" style="position:absolute;top:0.5rem;left:0.5rem;background:rgba(0,0,0,0.8);color:#fff;padding:0.2rem 0.6rem;border-radius:8px;font-size:0.75rem;font-weight:700;display:none;z-index:3;"></div>
-                <div id="partyQualityPills" style="position:absolute;top:0.5rem;right:0.5rem;display:flex;gap:0.3rem;z-index:3;"></div>
               </div>
               <div id="partyStatusBar" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;font-size:0.8rem;font-weight:700;">
                 <span id="partyConnectionStatus" style="color:var(--teal);">● Connected</span>
@@ -1460,6 +1531,11 @@
       const enterScr = $('partyEnterScreen'), createScr = $('partyCreateScreen'), workScr = $('partyWorkspaceScreen');
       const video = $('partyVideoPlayer'), loader = $('partyLoadingOverlay');
       const partySourceBadge = $('partySourceBadge'), partyQualityPills = $('partyQualityPills');
+      const ctrlBar = $('partyCtrlBar'), seekBar = $('partySeekBar'), playBtn = $('partyPlayBtn');
+      const timeCurrent = $('partyTimeCurrent'), timeTotal = $('partyTimeTotal');
+      const volBtn = $('partyVolBtn'), volBar = $('partyVolBar'), speedPills = $('partySpeedPills');
+      const pipBtn = $('partyPipBtn'), fsBtn = $('partyFsBtn'), bigPlay = $('partyBigPlayOverlay');
+      const bufSpinner = $('partyBufSpinner'), playerWrapper = $('partyPlayerWrapper');
       const connStatus = $('partyConnectionStatus'), userCount = $('partyUserCountDisplay'), roleBadge = $('partyRoleBadge'), userListEl = $('partyUserList');
       const chatMsgs = $('partyChatMessages'), chatForm = $('partyChatForm'), chatInp = $('partyChatInput');
       const epGrid = $('partyEpisodesGrid'), epJumpInp = $('partyEpJumpInput'), epJumpBtn = $('partyEpJumpBtn');
@@ -1530,21 +1606,23 @@
             hls.loadSource(url); hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
               loader.style.display = 'none';
+              bufSpinner.classList.remove('visible');
               video.play().catch(()=>{});
             });
             hls.on(Hls.Events.ERROR, (e,d) => {
               if (d.fatal) { hls.destroy(); hls=null; }
             });
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; video.load(); loader.style.display = 'none'; }
-        } else { video.src = url; video.load(); loader.style.display = 'none'; }
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; video.load(); loader.style.display = 'none'; bufSpinner.classList.remove('visible'); }
+        } else { video.src = url; video.load(); loader.style.display = 'none'; bufSpinner.classList.remove('visible'); }
         const label = (src.provider||'') + (src.quality ? ' \u00B7 ' + src.quality : '');
         partySourceBadge.textContent = label;
+        partySourceBadge.style.display = label ? '' : 'none';
       }
 
       function renderPartyQualityPills(sources) {
         partyQualityPills.innerHTML = sources.map((s,i) => {
           const label = (s.provider||'') + (s.quality ? ' \u00B7 ' + s.quality : '');
-          return '<button type="button" class="pill-opt'+(i===0?' active':'')+'" data-idx="'+i+'" style="padding:0.15rem 0.5rem;font-size:0.7rem;background:rgba(0,0,0,0.8);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;font-weight:700;">'+label+'</button>';
+          return '<button type="button" class="pill-opt'+(i===0?' active':'')+'" data-idx="'+i+'" style="padding:0.15rem 0.4rem;font-size:0.65rem;font-weight:700;">'+label+'</button>';
         }).join('');
         partyQualityPills.querySelectorAll('.pill-opt').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -1558,18 +1636,21 @@
 
       async function loadEpisode(anilistId, ep) {
         loader.style.display = 'flex';
+        bufSpinner.classList.add('visible');
         if (hls) { hls.destroy(); hls = null; }
         partySources = [];
         partySourceIdx = 0;
+        partySourceBadge.style.display = 'none';
+        partyQualityPills.innerHTML = '';
         try {
           const p = new URLSearchParams({ep:ep,anilist_id:anilistId,provider:'Naruto'});
           const resp = await fetch(PARTY_SCRAPER_API + '/stream?' + p);
           const d = await resp.json();
-          if (!d.success || !d.sources || !d.sources.length) { loader.style.display = 'none'; return; }
+          if (!d.success || !d.sources || !d.sources.length) { loader.style.display = 'none'; bufSpinner.classList.remove('visible'); return; }
           partySources = d.sources;
           renderPartyQualityPills(partySources);
           playPartySource(partySources[0], 0);
-        } catch(e) { console.warn('Party load error:', e); loader.style.display = 'none'; }
+        } catch(e) { console.warn('Party load error:', e); loader.style.display = 'none'; bufSpinner.classList.remove('visible'); }
       }
 
       function handleAction(p) {
@@ -1588,10 +1669,6 @@
         loadEpisode(curId, curEp);
         renderEpisodes();
       }
-
-      video.addEventListener('play', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:true,pos:video.currentTime,ts:Date.now()}}); });
-      video.addEventListener('pause', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:false,pos:video.currentTime,ts:Date.now()}}); });
-      video.addEventListener('seeked', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:!video.paused,pos:video.currentTime,ts:Date.now()}}); });
 
       function appendMsg(user, text, sys) {
         const el = document.createElement('div'); el.className = 'chat-message';
@@ -1619,6 +1696,130 @@
         renderEpisodes();
         channel.send({type:'broadcast',event:'video_change',payload:{u:userId,anilist_id:anilistId,episode:ep,series_title:title,total_eps:curTotal}});
       }
+
+      // ── Custom Player Controls ──
+      function partyTogglePlay() {
+        if (video.paused) { video.play().catch(()=>{}); } else { video.pause(); }
+      }
+      function partyUpdatePlayBtn() {
+        const paused = video.paused;
+        playBtn.innerHTML = paused
+          ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+        bigPlay.classList.toggle('hidden', !paused);
+      }
+      function partyUpdateSeekBar() {
+        if (video.duration) {
+          seekBar.max = video.duration;
+          seekBar.value = video.currentTime;
+          timeCurrent.textContent = partyFormatTime(video.currentTime);
+          timeTotal.textContent = partyFormatTime(video.duration);
+          const pct = (video.currentTime / video.duration) * 100;
+          seekBar.style.background = `linear-gradient(to right, var(--accent,#e25c5c) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
+        }
+      }
+      function partyUpdateVolBtn() {
+        const muted = video.muted || video.volume === 0;
+        volBtn.innerHTML = muted
+          ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>';
+      }
+      function partyFormatTime(s) {
+        if (!s || !isFinite(s)) return '0:00';
+        const m = Math.floor(s/60), sec = Math.floor(s%60);
+        return m + ':' + sec.toString().padStart(2,'0');
+      }
+      let hideTimer = null;
+      function partyShowControls() { ctrlBar.classList.remove('hidden'); clearTimeout(hideTimer); if (!video.paused) hideTimer = setTimeout(() => ctrlBar.classList.add('hidden'), 3000); }
+      function partyHideControls() { clearTimeout(hideTimer); if (!video.paused) ctrlBar.classList.add('hidden'); }
+
+      playBtn.addEventListener('click', partyTogglePlay);
+      video.addEventListener('click', partyTogglePlay);
+      bigPlay.addEventListener('click', partyTogglePlay);
+      video.addEventListener('play', () => { partyUpdatePlayBtn(); if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:true,pos:video.currentTime,ts:Date.now()}}); });
+      video.addEventListener('pause', () => { partyUpdatePlayBtn(); partyShowControls(); if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:false,pos:video.currentTime,ts:Date.now()}}); });
+      video.addEventListener('seeked', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:!video.paused,pos:video.currentTime,ts:Date.now()}}); });
+      video.addEventListener('timeupdate', partyUpdateSeekBar);
+      video.addEventListener('loadedmetadata', () => {
+        seekBar.max = video.duration || 100;
+        timeTotal.textContent = partyFormatTime(video.duration);
+        partyUpdateSeekBar();
+      });
+      video.addEventListener('waiting', () => bufSpinner.classList.add('visible'));
+      video.addEventListener('seeking', () => bufSpinner.classList.add('visible'));
+      video.addEventListener('seeked', () => bufSpinner.classList.remove('visible'));
+      video.addEventListener('playing', () => bufSpinner.classList.remove('visible'));
+      video.addEventListener('canplay', () => bufSpinner.classList.remove('visible'));
+
+      seekBar.addEventListener('mousedown', (e) => {
+        if (video.duration) {
+          const rect = seekBar.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          video.currentTime = pct * video.duration;
+          seekBar.value = video.currentTime;
+          const p = pct * 100;
+          seekBar.style.background = `linear-gradient(to right, var(--accent,#e25c5c) ${p}%, rgba(255,255,255,0.2) ${p}%)`;
+        }
+      });
+      seekBar.addEventListener('input', () => {
+        if (video.duration) {
+          video.currentTime = (seekBar.value / seekBar.max) * video.duration;
+          const pct = (seekBar.value / seekBar.max) * 100;
+          seekBar.style.background = `linear-gradient(to right, var(--accent,#e25c5c) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
+        }
+      });
+
+      volBar.addEventListener('input', () => {
+        video.volume = parseFloat(volBar.value);
+        video.muted = video.volume === 0;
+        localStorage.setItem('partyVol', volBar.value);
+        partyUpdateVolBtn();
+      });
+      volBtn.addEventListener('click', () => { video.muted = !video.muted; partyUpdateVolBtn(); });
+
+      speedPills.querySelectorAll('.speed-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          speedPills.querySelectorAll('.speed-opt').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          video.playbackRate = parseFloat(btn.dataset.speed);
+          localStorage.setItem('partySpeed', video.playbackRate);
+        });
+      });
+
+      pipBtn.addEventListener('click', async () => {
+        try { if (document.pictureInPictureElement) await document.exitPictureInPicture(); else await video.requestPictureInPicture(); }
+        catch(err) { console.warn('PiP failed:', err); }
+      });
+      fsBtn.addEventListener('click', () => {
+        if (document.fullscreenElement) document.exitFullscreen(); else playerWrapper.requestFullscreen();
+      });
+
+      playerWrapper.addEventListener('mousemove', partyShowControls);
+      playerWrapper.addEventListener('mouseleave', () => partyHideControls());
+      video.addEventListener('playing', () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => ctrlBar.classList.add('hidden'), 3000); });
+      video.addEventListener('pause', () => { clearTimeout(hideTimer); ctrlBar.classList.remove('hidden'); });
+
+      const savedVol = localStorage.getItem('partyVol');
+      if (savedVol !== null) { volBar.value = savedVol; video.volume = parseFloat(savedVol); partyUpdateVolBtn(); }
+      const savedSpeed = localStorage.getItem('partySpeed');
+      if (savedSpeed !== null) {
+        video.playbackRate = parseFloat(savedSpeed);
+        speedPills.querySelectorAll('.speed-opt').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.speed) === parseFloat(savedSpeed)));
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (workScr.style.display !== 'block') return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        switch (e.code) {
+          case 'Space': e.preventDefault(); partyTogglePlay(); break;
+          case 'KeyF': fsBtn.click(); break;
+          case 'KeyM': volBtn.click(); break;
+          case 'ArrowLeft': video.currentTime = Math.max(0, video.currentTime - 10); break;
+          case 'ArrowRight': video.currentTime = Math.min(video.duration, video.currentTime + 10); break;
+          case 'ArrowUp': volBar.value = Math.min(1, parseFloat(volBar.value) + 0.1).toFixed(2); volBar.dispatchEvent(new Event('input')); break;
+          case 'ArrowDown': volBar.value = Math.max(0, parseFloat(volBar.value) - 0.1).toFixed(2); volBar.dispatchEvent(new Event('input')); break;
+        }
+      });
 
       // --- UI Events ---
       $('partyCreateBtn').addEventListener('click', () => {
