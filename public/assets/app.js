@@ -2,8 +2,7 @@
 (function () {
   const root = document.documentElement;
   const savedTheme = localStorage.getItem('theme');
-  const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const currentTheme = savedTheme || (systemDark ? 'dark' : 'light');
+  const currentTheme = savedTheme || 'light';
   root.setAttribute('data-theme', currentTheme);
   const savedClr = localStorage.getItem('clr');
   if (savedClr) root.setAttribute('data-clr', savedClr);
