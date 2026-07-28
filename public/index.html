@@ -1664,6 +1664,20 @@
         partySourceIdx = 0;
         partySourceBadge.style.display = 'none';
         partyQualityPills.innerHTML = '';
+
+        if (anilistId) {
+          queryAniList('query($id:Int){Media(id:$id){episodes nextAiringEpisode{episode}}}', {id: parseInt(anilistId)})
+            .then(data => {
+              if (data && data.Media) {
+                const total = data.Media.episodes || (data.Media.nextAiringEpisode ? data.Media.nextAiringEpisode.episode - 1 : null);
+                if (total && total > 0) {
+                  curTotal = total;
+                  renderEpisodes();
+                }
+              }
+            }).catch(() => {});
+        }
+
         try {
           const p = new URLSearchParams({ep:ep,anilist_id:anilistId,provider:'Naruto'});
           const resp = await fetch(PARTY_SCRAPER_API + '/stream?' + p);
@@ -1700,21 +1714,22 @@
       }
 
       function renderEpisodes() {
+        const total = curTotal || 12;
         const chunk = 200;
         const start = 1;
-        const end = Math.min((epPageOffset + 1) * chunk, 3000);
+        const end = Math.min((epPageOffset + 1) * chunk, total);
         epGrid.innerHTML = '';
         for (let i = start; i <= end; i++) {
           const b = document.createElement('button'); b.type = 'button'; b.className = 'ep-btn' + (i === curEp ? ' active' : ''); b.textContent = i;
           b.addEventListener('click', () => { if (i === curEp || !channel) return; broadcastChange(curId, i, curTitle); });
           epGrid.appendChild(b);
         }
-        if (end < 3000) {
+        if (end < total) {
           const loadMore = document.createElement('button');
           loadMore.type = 'button';
           loadMore.className = 'ep-btn load-more-btn';
-          loadMore.textContent = 'Show next ' + Math.min(chunk, 3000 - end) + ' (' + (end + 1) + '-' + Math.min(end + chunk, 3000) + ')';
-          loadMore.style.cssText = 'grid-column:1/-1;padding:0.6rem;font-size:0.85rem;font-weight:800;color:var(--accent);background:var(--bg);border:2px dashed var(--line);border-radius:12px;cursor:pointer;';
+          loadMore.textContent = 'Show next ' + Math.min(chunk, total - end) + ' (' + (end + 1) + '-' + Math.min(end + chunk, total) + ')';
+          loadMore.style.cssText = 'grid-column:1/-1;padding:0.6rem;font-size:0.85rem;font-weight:800;color:var(--accent);background:var(--bg);border-radius:12px;cursor:pointer;';
           loadMore.addEventListener('click', () => { epPageOffset++; renderEpisodes(); });
           epGrid.appendChild(loadMore);
         }

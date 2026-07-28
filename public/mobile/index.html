@@ -1918,9 +1918,9 @@
       if (!grid) return;
       grid.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
       try {
-        const q = `query($id:Int){Media(id:$id){id title{romaji english}episodes}}`;
-        const data = await queryAniList(q, { id: mediaId });
-        const total = data?.Media?.episodes || 12;
+        const q = `query($id:Int){Media(id:$id){id title{romaji english}episodes nextAiringEpisode{episode}}}`;
+        const data = await queryAniList(q, { id: parseInt(mediaId) });
+        const total = data?.Media?.episodes || (data?.Media?.nextAiringEpisode ? data.Media.nextAiringEpisode.episode - 1 : 12);
         grid.innerHTML = '';
         for (let i = 1; i <= total; i++) {
           const btn = document.createElement('button');
