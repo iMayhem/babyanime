@@ -27,6 +27,8 @@
   <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" defer></script>
   <div class="shell">
     <header>
       <div class="brand-container">
@@ -260,21 +262,26 @@
         </section>
       </div>
 
-      <!-- WATCH TOGETHER NATIVE VIEW -->
+      <!-- WATCH TOGETHER - SUPABASE REALTIME -->
       <div id="partyView" style="display: none; margin-bottom: 3rem;">
-        
-        <!-- LOBBY SCREEN -->
-        <div id="partyLobbyScreen">
+
+        <!-- ENTER SCREEN -->
+        <div id="partyEnterScreen">
           <div class="party-lobby-header">
             <div class="party-lobby-title">
               <h2>Watch Together</h2>
-              <p>Host watch parties and chat with friends in real time.</p>
+              <p>Host a watch party with friends using real-time sync.</p>
             </div>
-            <button type="button" class="btn-primary" id="lobbyCreateRoomBtn">+ Create Party Room</button>
           </div>
-          
-          <div class="rooms-grid" id="lobbyRoomsGrid">
-            <!-- Room cards dynamically populated here -->
+          <div class="card party-form-card" style="margin-top:1rem;">
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+              <button type="button" class="btn-primary" id="partyCreateBtn">+ Create New Room</button>
+              <div style="border-bottom:2px dashed var(--line);"></div>
+              <div style="display:flex;gap:0.5rem;">
+                <input type="text" id="partyJoinInput" class="form-input" placeholder="Paste room link or ID" style="flex-grow:1;">
+                <button type="button" class="tt" id="partyJoinBtn" style="padding:0.6rem 1rem;font-weight:800;">Join</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -284,137 +291,91 @@
             <div class="party-lobby-header" style="margin-bottom: 1.5rem;">
               <div class="party-lobby-title">
                 <h2>Create Watch Room</h2>
-                <p>Set up a room to invite friends to watch together.</p>
+                <p>Pick an anime and episode to watch together.</p>
               </div>
             </div>
             <form id="partyCreateForm">
               <div class="form-group">
-                <label class="form-label" for="partyRoomNameInput">Room Name</label>
-                <input type="text" id="partyRoomNameInput" class="form-input" placeholder="My Watch Lounge" required>
+                <label class="form-label">Anime</label>
+                <input type="text" id="partyAnimeSearchInput" class="form-input" placeholder="Search anime on AniList..." autocomplete="off">
+                <div id="partyAnimeSearchResults" style="display:none;margin-top:0.3rem;max-height:200px;overflow-y:auto;border:2px solid var(--ink);border-radius:8px;background:var(--card);"></div>
+                <div id="partySelectedAnime" style="display:none;margin-top:0.5rem;padding:0.5rem;border:2px solid var(--accent);border-radius:8px;font-weight:700;font-size:0.85rem;"></div>
               </div>
               <div class="form-group">
-                <label class="form-label" for="partyAnimeTitleInput">Anime Title</label>
-                <input type="text" id="partyAnimeTitleInput" class="form-input" placeholder="e.g. Renegade Immortal" required>
-              </div>
-              <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div>
-                  <label class="form-label" for="partyEpisodeInput">Episode</label>
-                  <input type="number" id="partyEpisodeInput" class="form-input" min="1" value="1" required>
-                </div>
-                <div>
-                  <label class="form-label" for="partyServerInput">Server</label>
-                  <select id="partyServerInput" class="form-input" style="height: 43px;">
-                    <option value="aniplay_mal" selected>AnimePlay (MAL)</option>
-                    <option value="aniplay_ani">AnimePlay (AniList)</option>
-                    <option value="moviesrc_mal">Movie-Src (MAL)</option>
-                    <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
-                    <option value="vidsrc_to">VidSrc.to (MAL)</option>
-                    <option value="arceus">Arceus (Miruro)</option>
-                  </select>
-                </div>
+                <label class="form-label" for="partyEpisodeInput">Episode</label>
+                <input type="number" id="partyEpisodeInput" class="form-input" min="1" value="1" required>
               </div>
               <input type="hidden" id="partyAnimeIdInput">
+              <input type="hidden" id="partyAnimeEpisodesInput">
               <div class="form-actions">
-                <button type="button" class="tt" id="partyCreateCancelBtn" style="padding: 0.6rem 1.2rem;">Cancel</button>
+                <button type="button" class="tt" id="partyCreateBackBtn" style="padding: 0.6rem 1.2rem;">Back</button>
                 <button type="submit" class="btn-primary" style="padding: 0.6rem 1.2rem;">Launch Room</button>
               </div>
             </form>
           </div>
         </div>
 
-        <!-- WORKSPACE SCREEN (ROOM ACTIVE) -->
+        <!-- WORKSPACE SCREEN -->
         <div id="partyWorkspaceScreen" style="display: none;">
           <div class="party-workspace">
             <div class="party-workspace-header">
               <div class="party-workspace-title">
-                <h3 id="workspaceRoomName">Late Night Room</h3>
-                <p>Watching: <span id="workspaceAnimeTitle" style="color: var(--accent); font-weight: 800;">Renegade Immortal</span></p>
+                <h3 id="workspaceTitle">Watch Party</h3>
+                <p id="workspaceSubtitle">Loading...</p>
               </div>
               <div class="party-workspace-actions">
-                <button type="button" class="tt" id="workspaceInviteBtn" style="padding: 0.5rem 0.9rem; font-size: 0.85rem;">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right: 2px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <button type="button" class="tt" id="workspaceInviteBtn" style="padding:0.5rem 0.9rem;font-size:0.85rem;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                   Copy Invite
                 </button>
-                <button type="button" class="tt" id="workspaceLeaveBtn" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; background: var(--bg-hover); border-color: var(--ink);">
-                  Leave Party
-                </button>
+                <button type="button" class="tt" id="workspaceLeaveBtn" style="padding:0.5rem 0.9rem;font-size:0.85rem;background:var(--bg-hover);border-color:var(--ink);">Leave</button>
               </div>
             </div>
 
-            <!-- Left: Video Player column -->
             <div class="party-player-col">
-              <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border: 2px solid var(--ink); border-radius: 16px; overflow: hidden; box-shadow: 5px 5px 0 var(--shadow);">
-                <iframe id="partyPlayerIframe" style="position: absolute; top:0; left:0; width:100%; height:100%; border:none;" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>
+              <div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:5px 5px 0 var(--shadow);">
+                <video id="partyVideoPlayer" style="width:100%;height:100%;object-fit:contain;" playsinline></video>
+                <div id="partyLoadingOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:2;">
+                  <div class="spinner"></div>
+                </div>
               </div>
-              
-              <!-- Stream settings below player -->
-              <div class="card" style="padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span style="font-weight: 800; font-size: 0.85rem; color: var(--muted); text-transform: uppercase;">Streaming Server:</span>
-                  <select id="partyWorkspaceServerInput" class="form-input" style="height: 36px; padding: 0.3rem 0.6rem; font-size: 0.85rem; width: auto; min-width: 180px;">
-                    <option value="aniplay_mal" selected>AnimePlay (MAL)</option>
-                    <option value="aniplay_ani">AnimePlay (AniList)</option>
-                    <option value="moviesrc_mal">Movie-Src (MAL)</option>
-                    <option value="vidsrc_cc">VidSrc.cc (MAL)</option>
-                    <option value="vidsrc_to">VidSrc.to (MAL)</option>
-                    <option value="arceus">Arceus (Miruro)</option>
-                  </select>
-                </div>
-                <div style="font-weight: 800; font-size: 0.85rem; color: var(--teal);">
-                  🟢 3 users online
-                </div>
+              <div id="partyStatusBar" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;font-size:0.8rem;font-weight:700;">
+                <span id="partyConnectionStatus" style="color:var(--teal);">● Connected</span>
+                <span id="partyUserCountDisplay">1 online</span>
+                <span id="partyRoleBadge" style="color:var(--accent);">👑 Host</span>
               </div>
             </div>
 
-            <!-- Right: Chat & Episodes sidebar -->
             <div class="party-sidebar-col">
-              
-              <!-- Tabbed panel for Chat / Episodes -->
-              <div class="card" style="padding: 1rem;">
-                <div style="display: flex; border-bottom: 2px dashed var(--line); padding-bottom: 0.6rem; margin-bottom: 0.8rem; gap: 0.5rem;">
-                  <button type="button" class="tab-btn active" id="partySidebarTabChat" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px;">Chat</button>
-                  <button type="button" class="tab-btn" id="partySidebarTabEpisodes" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px;">Episodes</button>
+              <div class="card" style="padding:1rem;">
+                <div style="margin-bottom:0.8rem;padding-bottom:0.6rem;border-bottom:2px dashed var(--line);">
+                  <div style="font-weight:800;font-size:0.8rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.4rem;">Online</div>
+                  <div id="partyUserList" style="display:flex;flex-wrap:wrap;gap:0.3rem;"></div>
                 </div>
-
-                <!-- Chat Panel -->
-                <div id="partySidebarChatContent" class="party-chat-panel">
-                  <div class="party-chat-messages" id="partyChatMessages">
-                    <!-- Chat bubbles populated dynamically -->
-                  </div>
-                  <form id="partyChatInputForm" class="party-chat-input-area">
+                <div style="display:flex;border-bottom:2px dashed var(--line);padding-bottom:0.6rem;margin-bottom:0.8rem;gap:0.5rem;">
+                  <button type="button" class="tab-btn active" id="partyTabChat" style="padding:0.4rem 0.8rem;font-size:0.85rem;border-radius:6px;">Chat</button>
+                  <button type="button" class="tab-btn" id="partyTabEpisodes" style="padding:0.4rem 0.8rem;font-size:0.85rem;border-radius:6px;">Episodes</button>
+                </div>
+                <div id="partyChatPanel">
+                  <div class="party-chat-messages" id="partyChatMessages"></div>
+                  <form id="partyChatForm" class="party-chat-input-area">
                     <input type="text" id="partyChatInput" class="party-chat-input" placeholder="Type a message..." required>
                     <button type="submit" class="party-chat-send-btn">Send</button>
                   </form>
                 </div>
-
-                <!-- Episodes Panel -->
-                <div id="partySidebarEpisodesContent" style="display: none; max-height: 400px; overflow-y: auto; padding: 0.5rem;">
-                  <!-- Episode Jump Input Row -->
-                  <div style="display: flex; gap: 0.4rem; margin-bottom: 0.8rem; align-items: center;">
-                    <input type="number" id="partyWorkspaceEpJumpInput" class="form-input" placeholder="Jump to Ep" style="height: 34px; padding: 0.3rem 0.6rem; font-size: 0.85rem; flex-grow: 1;" min="1">
-                    <button type="button" class="party-chat-send-btn" id="partyWorkspaceEpJumpBtn" style="padding: 0.3rem 0.6rem; height: 34px; line-height: 20px;">Go</button>
+                <div id="partyEpisodesPanel" style="display:none;max-height:400px;overflow-y:auto;padding:0.5rem 0;">
+                  <div style="display:flex;gap:0.4rem;margin-bottom:0.8rem;align-items:center;">
+                    <input type="number" id="partyEpJumpInput" class="form-input" placeholder="Jump to Ep" style="height:34px;padding:0.3rem 0.6rem;font-size:0.85rem;flex-grow:1;" min="1">
+                    <button type="button" class="party-chat-send-btn" id="partyEpJumpBtn" style="padding:0.3rem 0.6rem;height:34px;line-height:20px;">Go</button>
                   </div>
-                  <div class="episode-grid" id="partyWorkspaceEpisodesGrid">
-                    <!-- Episode list buttons populated dynamically -->
-                  </div>
-                  <!-- Load More Button -->
-                  <div id="partyEpisodesLoadMoreWrap" style="text-align: center; margin-top: 1rem; display: none;">
-                    <button type="button" class="tt" id="partyEpisodesLoadMoreBtn" style="padding: 0.4rem 1rem; font-size: 0.8rem; font-weight: 800; border-color: var(--ink);">
-                      Load Next 100
-                    </button>
-                  </div>
+                  <div class="episode-grid" id="partyEpisodesGrid"></div>
                 </div>
-
               </div>
-
             </div>
-
           </div>
         </div>
-
       </div>
 
-      <!-- General toast notifier -->
       <div class="party-toast" id="partyToast">
         <span>Invite link copied to clipboard!</span>
       </div>
@@ -561,29 +522,31 @@
         tabParty.click();
         
         if (roomParam) {
-          // Allow DOM and state to boot before joining
           setTimeout(() => {
-            joinRoom(roomParam);
-          }, 100);
+            if (window.enterRoom) window.enterRoom(roomParam);
+          }, 300);
         } else {
           const mediaParam = urlParams.get('media');
           const titleParam = urlParams.get('title');
           
           if (mediaParam && titleParam) {
-            // Trigger prefill and open creation screen
-            document.getElementById('lobbyCreateRoomBtn').click();
-            document.getElementById('partyRoomNameInput').value = `${titleParam} Watching Lobby`;
-            document.getElementById('partyAnimeTitleInput').value = titleParam;
-            
-            let rawId = mediaParam;
-            let activeEp = 1;
-            if (mediaParam.includes('_ep')) {
-              const parts = mediaParam.split('_ep');
-              rawId = parts[0];
-              activeEp = parseInt(parts[1]) || 1;
-            }
-            document.getElementById('partyAnimeIdInput').value = rawId;
-            document.getElementById('partyEpisodeInput').value = activeEp;
+            setTimeout(() => {
+              document.getElementById('partyCreateBtn').click();
+              let rawId = mediaParam;
+              let activeEp = 1;
+              if (mediaParam.includes('_ep')) {
+                const parts = mediaParam.split('_ep');
+                rawId = parts[0];
+                activeEp = parseInt(parts[1]) || 1;
+              }
+              document.getElementById('partyAnimeIdInput').value = rawId;
+              document.getElementById('partyEpisodeInput').value = activeEp;
+              document.getElementById('partyAnimeSearchInput').value = titleParam;
+              const ep = document.getElementById('partyAnimeEpisodesInput');
+              if (!ep.value) ep.value = '12';
+              document.getElementById('partySelectedAnime').innerHTML = '<span style="color:var(--teal);font-weight:800;">✓</span> ' + titleParam;
+              document.getElementById('partySelectedAnime').style.display = 'block';
+            }, 300);
           }
         }
       }
@@ -1303,586 +1266,272 @@
       }
     }
 
-    // Watch Together Native State & Logic
-    let partyRooms = [];
-    let partyActiveRoom = null;
-    let partyChatInterval = null;
-
-    const dummyChatUsers = ['Hina', 'Goku_99', 'Luffy_Pirate', 'Sasuke_Uchiha', 'Miku_Vocal', 'Naruto_Dattebayo', 'vocaloid_fan', 'isekai_enjoyer'];
-    const dummyReplies = [
-      "Whoa, this episode is insane!",
-      "I love the soundtrack of this show.",
-      "The animation quality is so good here.",
-      "Wait, what just happened?",
-      "Did he really just say that? 😂",
-      "This part always gives me chills.",
-      "Anyone here watching this for the first time?",
-      "Sub over Dub any day!",
-      "Let's gooo!",
-      "This anime is a masterpiece honestly."
-    ];
+    // Watch Together - Supabase Realtime
+    const PARTY_SUPABASE_URL = 'https://mdrnjwljpbmfhttadwxj.supabase.co';
+    const PARTY_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcm5qd2xqcGJtZmh0dGFkd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNDk5NzcsImV4cCI6MjEwMDgyNTk3N30.jHFqFNI288mw5v-l2r8HSXOMXkfSj362HJxXedK7DE4';
+    const PARTY_SCRAPER_API = 'https://proxy.babyanime.top/api';
 
     function setupWatchTogether() {
-      // Elements
-      const lobbyScreen = document.getElementById('partyLobbyScreen');
-      const createScreen = document.getElementById('partyCreateScreen');
-      const workspaceScreen = document.getElementById('partyWorkspaceScreen');
-      
-      const lobbyCreateBtn = document.getElementById('lobbyCreateRoomBtn');
-      const createCancelBtn = document.getElementById('partyCreateCancelBtn');
-      const createForm = document.getElementById('partyCreateForm');
-      
-      const roomNameInput = document.getElementById('partyRoomNameInput');
-      const animeTitleInput = document.getElementById('partyAnimeTitleInput');
-      const animeIdInput = document.getElementById('partyAnimeIdInput');
-      const episodeInput = document.getElementById('partyEpisodeInput');
-      const serverInput = document.getElementById('partyServerInput');
-      
-      const workspaceRoomName = document.getElementById('workspaceRoomName');
-      const workspaceAnimeTitle = document.getElementById('workspaceAnimeTitle');
-      const workspaceInviteBtn = document.getElementById('workspaceInviteBtn');
-      const workspaceLeaveBtn = document.getElementById('workspaceLeaveBtn');
-      const workspaceServerInput = document.getElementById('partyWorkspaceServerInput');
-      const playerIframe = document.getElementById('partyPlayerIframe');
-      
-      const sidebarTabChat = document.getElementById('partySidebarTabChat');
-      const sidebarTabEpisodes = document.getElementById('partySidebarTabEpisodes');
-      const chatContent = document.getElementById('partySidebarChatContent');
-      const episodesContent = document.getElementById('partySidebarEpisodesContent');
-      
-      const chatMessages = document.getElementById('partyChatMessages');
-      const chatInputForm = document.getElementById('partyChatInputForm');
-      const chatInput = document.getElementById('partyChatInput');
-      const episodesGrid = document.getElementById('partyWorkspaceEpisodesGrid');
-      
-      const toast = document.getElementById('partyToast');
+      if (typeof supabase === 'undefined') { setTimeout(setupWatchTogether, 200); return; }
+      const sb = window.supabase.createClient(PARTY_SUPABASE_URL, PARTY_SUPABASE_ANON);
 
-      // Initialize default rooms in localStorage if not exists
-      const savedRooms = localStorage.getItem('babyanime_party_rooms_v2');
-      if (savedRooms) {
-        partyRooms = JSON.parse(savedRooms);
-      } else {
-        partyRooms = [
-          {
-            id: 'lounge-1',
-            name: 'Frieren Beyond Journey Lounge',
-            animeTitle: 'Frieren: Beyond Journey\'s End',
-            animeId: '154587',
-            episode: 1,
-            host: 'elf_elder',
-            watching: 6,
-            episodesCount: 28,
-            image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154587-n2755ZtpeS2y.jpg'
-          },
-          {
-            id: 'lounge-2',
-            name: 'Demon Slayer Corps Basecamp',
-            animeTitle: 'Demon Slayer: Kimetsu no Yaiba',
-            animeId: '101922',
-            episode: 1,
-            host: 'tanjiro_water',
-            watching: 4,
-            episodesCount: 26,
-            image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-W3vhgZ68JZ0f.jpg'
-          },
-          {
-            id: 'lounge-3',
-            name: 'Shingeki no Kyojin Screening',
-            animeTitle: 'Attack on Titan',
-            animeId: '16498',
-            episode: 1,
-            host: 'eren_yeager',
-            watching: 8,
-            episodesCount: 25,
-            image: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-738517.jpg'
+      let roomId = null;
+      let userId = crypto.randomUUID().slice(0,8);
+      let username = 'User-' + userId.slice(0,4);
+      let channel = null;
+      let hls = null;
+      let isHost = false;
+      let curId = null, curEp = 1, curTotal = 12, curTitle = '';
+      let epLimit = 100;
+      let syncing = false;
+      let userMap = {};
+
+      const $ = id => document.getElementById(id);
+      const enterScr = $('partyEnterScreen'), createScr = $('partyCreateScreen'), workScr = $('partyWorkspaceScreen');
+      const video = $('partyVideoPlayer'), loader = $('partyLoadingOverlay');
+      const connStatus = $('partyConnectionStatus'), userCount = $('partyUserCountDisplay'), roleBadge = $('partyRoleBadge'), userListEl = $('partyUserList');
+      const chatMsgs = $('partyChatMessages'), chatForm = $('partyChatForm'), chatInp = $('partyChatInput');
+      const epGrid = $('partyEpisodesGrid'), epJumpInp = $('partyEpJumpInput'), epJumpBtn = $('partyEpJumpBtn');
+      const toast = $('partyToast');
+
+      function genId() { const b = new Uint8Array(4); crypto.getRandomValues(b); return Array.from(b, x => x.toString(16).padStart(2,'0')).join(''); }
+      function showToast() { toast.classList.add('active'); setTimeout(() => toast.classList.remove('active'), 2000); }
+
+      async function joinChannel(rid) {
+        if (channel) { await channel.unsubscribe(); }
+        roomId = rid;
+        channel = sb.channel('room:' + rid);
+        channel.on('broadcast', {event:'video_action'}, ({payload}) => { if (payload.u !== userId) handleAction(payload); });
+        channel.on('broadcast', {event:'chat'}, ({payload}) => { appendMsg(payload.u, payload.t, false); });
+        channel.on('broadcast', {event:'video_change'}, ({payload}) => { if (payload.u !== userId) changeVideo(payload); });
+        channel.on('broadcast', {event:'request_state'}, ({payload}) => {
+          if (payload.u !== userId && isHost && curId) {
+            channel.send({type:'broadcast',event:'sync_state',payload:{u:userId,anilist_id:curId,episode:curEp,series_title:curTitle,is_playing:!video.paused,position:video.currentTime,timestamp:Date.now(),total_eps:curTotal}});
           }
-        ];
-        localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
-      }
-
-      // Render Lobby
-      function renderLobby() {
-        const grid = document.getElementById('lobbyRoomsGrid');
-        grid.innerHTML = partyRooms.map(room => `
-          <div class="card room-card">
-            <div class="room-card-head">
-              <img class="room-card-thumb" src="${room.image || 'https://placehold.co/120x160?text=Anime'}" alt="${room.animeTitle}">
-              <div class="room-card-details">
-                <h4 class="room-card-name" title="${room.name}">${room.name}</h4>
-                <p class="room-card-anime" title="${room.animeTitle}">${room.animeTitle} - Ep ${room.episode}</p>
-                <div class="room-card-meta">
-                  <span class="room-card-host">Host: <strong>${room.host}</strong></span>
-                  <span class="room-card-watching">${room.watching} watching</span>
-                </div>
-              </div>
-            </div>
-            <button type="button" class="btn-primary join-room-btn" data-id="${room.id}" style="font-size:0.85rem; padding:0.45rem 0.8rem; margin-top:0.4rem;">Join Room</button>
-          </div>
-        `).join('');
-
-        // Bind Join Buttons
-        grid.querySelectorAll('.join-room-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            joinRoom(id);
-          });
         });
+        channel.on('broadcast', {event:'sync_state'}, ({payload}) => {
+          if (payload.u === userId) return;
+          curId = payload.anilist_id; curEp = payload.episode; curTitle = payload.series_title; curTotal = payload.total_eps;
+          $('workspaceTitle').textContent = curTitle + ' - Ep ' + curEp;
+          $('workspaceSubtitle').textContent = '';
+          loadEpisode(curId, curEp);
+          renderEpisodes();
+          setTimeout(() => {
+            syncing = true;
+            const elapsed = (Date.now() - payload.timestamp) / 1000;
+            const pos = Math.min(payload.position + elapsed, video.duration || Infinity);
+            if (Math.abs(video.currentTime - pos) > 1) video.currentTime = pos;
+            if (payload.is_playing) video.play().catch(()=>{}); else video.pause();
+            setTimeout(() => syncing = false, 150);
+          }, 1000);
+        });
+        channel.on('presence', {event:'sync'}, () => updateUsers());
+        channel.on('presence', {event:'join'}, ({key,newPresences}) => { if (newPresences.length) { userMap[key] = newPresences[0]; updateUsers(); appendMsg('System', (newPresences[0].username||'Someone') + ' joined', true); } });
+        channel.on('presence', {event:'leave'}, ({key,leftPresences}) => { delete userMap[key]; updateUsers(); if (leftPresences.length) appendMsg('System', (leftPresences[0].username||'Someone') + ' left', true); });
+        await channel.subscribe();
+        await channel.track({user_id:userId,username,is_host:isHost});
+        connStatus.textContent = '● Connected';
+        connStatus.style.color = 'var(--teal)';
+        roleBadge.textContent = isHost ? '👑 Host' : '👤 Viewer';
+
+        // Request state from host
+        if (!isHost) {
+          setTimeout(() => {
+            channel.send({type:'broadcast',event:'request_state',payload:{u:userId}});
+          }, 500);
+        }
       }
 
-      // Join Room
-      window.joinRoom = function(roomId) {
-        const room = partyRooms.find(r => r.id === roomId);
-        if (!room) {
-          alert('Party room not found!');
-          return;
+      function updateUsers() {
+        const vals = Object.values(userMap);
+        userCount.textContent = vals.length + ' online';
+        userListEl.innerHTML = vals.map(p => '<span style="background:var(--bg-hover);border:1px solid var(--line);border-radius:12px;padding:0.15rem 0.5rem;font-size:0.75rem;font-weight:700;white-space:nowrap;">' + (p.is_host?'👑 ':'') + (p.username||'?') + '</span>').join('');
+      }
+
+      async function loadEpisode(anilistId, ep) {
+        loader.style.display = 'flex';
+        if (hls) { hls.destroy(); hls = null; }
+        try {
+          const p = new URLSearchParams({ep:ep,anilist_id:anilistId,provider:'Naruto'});
+          const resp = await fetch(PARTY_SCRAPER_API + '/stream?' + p);
+          const d = await resp.json();
+          if (!d.success || !d.sources || !d.sources.length) { loader.style.display = 'none'; return; }
+          const src = d.sources[0];
+          let url = src.url;
+          if (src.m3u8Content) url = URL.createObjectURL(new Blob([src.m3u8Content], {type:'application/vnd.apple.mpegurl'}));
+          if (src.format === 'hls' || url.includes('.m3u8')) {
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+              hls = new Hls(); hls.loadSource(url); hls.attachMedia(video);
+              hls.on(Hls.Events.MANIFEST_PARSED, () => loader.style.display = 'none');
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = url; loader.style.display = 'none'; }
+          } else { video.src = url; loader.style.display = 'none'; }
+        } catch(e) { console.warn('Party load error:', e); loader.style.display = 'none'; }
+      }
+
+      function handleAction(p) {
+        syncing = true;
+        const elapsed = (Date.now() - p.ts) / 1000;
+        const pos = Math.min(p.pos + elapsed, video.duration || Infinity);
+        if (Math.abs(video.currentTime - pos) > 1) video.currentTime = pos;
+        if (p.play) video.play().catch(()=>{}); else video.pause();
+        setTimeout(() => syncing = false, 100);
+      }
+
+      function changeVideo(p) {
+        curId = p.anilist_id; curEp = p.episode; curTitle = p.series_title; curTotal = p.total_eps || 12;
+        $('workspaceTitle').textContent = curTitle + ' - Ep ' + curEp;
+        $('workspaceSubtitle').textContent = '';
+        loadEpisode(curId, curEp);
+        renderEpisodes();
+      }
+
+      video.addEventListener('play', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:true,pos:video.currentTime,ts:Date.now()}}); });
+      video.addEventListener('pause', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:false,pos:video.currentTime,ts:Date.now()}}); });
+      video.addEventListener('seeked', () => { if (syncing || !channel) return; channel.send({type:'broadcast',event:'video_action',payload:{u:userId,play:!video.paused,pos:video.currentTime,ts:Date.now()}}); });
+
+      function appendMsg(user, text, sys) {
+        const el = document.createElement('div'); el.className = 'chat-message';
+        if (sys) el.innerHTML = '<span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">' + text + '</span>';
+        else el.innerHTML = '<span class="chat-message-user">' + user + '</span><span class="chat-message-text">' + text + '</span>';
+        chatMsgs.appendChild(el); chatMsgs.scrollTop = chatMsgs.scrollHeight;
+      }
+
+      function renderEpisodes() {
+        const total = curTotal || 12, limit = Math.min(epLimit, total);
+        epGrid.innerHTML = '';
+        for (let i = 1; i <= limit; i++) {
+          const b = document.createElement('button'); b.type = 'button'; b.className = 'ep-btn' + (i === curEp ? ' active' : ''); b.textContent = i;
+          b.addEventListener('click', () => { if (i === curEp || !channel) return; broadcastChange(curId, i, curTitle); });
+          epGrid.appendChild(b);
         }
+        setTimeout(() => { const a = epGrid.querySelector('.ep-btn.active'); if (a) a.scrollIntoView({behavior:'smooth',block:'center'}); }, 80);
+      }
 
-        partyVisibleEpisodesLimit = 100;
-        partyActiveRoom = room;
-        workspaceRoomName.textContent = room.name;
-        workspaceAnimeTitle.textContent = room.animeTitle;
-        workspaceServerInput.value = 'aniplay_mal'; // default
+      function broadcastChange(anilistId, ep, title) {
+        curId = anilistId; curEp = ep; curTitle = title;
+        $('workspaceTitle').textContent = title + ' - Ep ' + ep;
+        loadEpisode(anilistId, ep);
+        renderEpisodes();
+        channel.send({type:'broadcast',event:'video_change',payload:{u:userId,anilist_id:anilistId,episode:ep,series_title:title,total_eps:curTotal}});
+      }
 
-        // Load Player
-        updatePlayer('aniplay_mal', room.animeId, room.episode);
+      // --- UI Events ---
+      $('partyCreateBtn').addEventListener('click', () => {
+        $('partyAnimeSearchInput').value = ''; $('partyAnimeSearchResults').style.display = 'none'; $('partySelectedAnime').style.display = 'none';
+        $('partyAnimeIdInput').value = ''; $('partyAnimeEpisodesInput').value = ''; $('partyEpisodeInput').value = '1';
+        enterScr.style.display = 'none'; createScr.style.display = 'block';
+      });
+      $('partyCreateBackBtn').addEventListener('click', () => { createScr.style.display = 'none'; enterScr.style.display = 'block'; });
+      $('partyJoinBtn').addEventListener('click', () => {
+        const val = $('partyJoinInput').value.trim();
+        if (!val) return;
+        const match = val.match(/[?&]room=([a-f0-9]+)/) || val.match(/^([a-f0-9]{8})$/);
+        if (match) enterRoom(match[1]); else alert('Invalid room link or ID');
+      });
 
-        // Render Episodes List — fetch fresh episode count for ongoing shows
-        (async () => {
-          let epCount = room.episodesCount;
-          if (!epCount || epCount < room.episode) {
-            try {
-              const q = `query($id:Int){Media(id:$id){episodes nextAiringEpisode{episode}}}`;
-              const d = await queryAniList(q, { id: parseInt(room.animeId) || 0 });
-              if (d && d.Media) {
-                epCount = d.Media.episodes || (d.Media.nextAiringEpisode ? d.Media.nextAiringEpisode.episode - 1 : null);
-              }
-            } catch (_) {}
-            epCount = epCount || 9999;
-            room.episodesCount = epCount;
-            const rooms = JSON.parse(localStorage.getItem('babyanime_party_rooms_v2') || '[]');
-            const idx = rooms.findIndex(r => r.id === roomId);
-            if (idx !== -1) { rooms[idx].episodesCount = epCount; localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(rooms)); }
-          }
-          renderEpisodes(room.animeId, room.episode, epCount);
-        })();
-
-        // Populate initial chats
-        chatMessages.innerHTML = `
-          <div class="chat-message">
-            <span class="chat-message-user host-user">🤖 System</span>
-            <span class="chat-message-text" style="color: var(--muted); font-style: italic;">Welcome to "${room.name}"! Share the invite URL to watch together.</span>
-          </div>
-          <div class="chat-message">
-            <span class="chat-message-user host-user">👑 ${room.host}</span>
-            <span class="chat-message-text">Welcome in everyone! Grab some snacks 🍿</span>
-          </div>
-          <div class="chat-message">
-            <span class="chat-message-user">Hina</span>
-            <span class="chat-message-text">Yay! Glad to watch this ep together.</span>
-          </div>
-        `;
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-
-        // Switch screens
-        lobbyScreen.style.display = 'none';
-        createScreen.style.display = 'none';
-        workspaceScreen.style.display = 'block';
-
-        // Update URL
-        const newUrl = `/?tab=party&room=${room.id}`;
-        window.history.pushState({}, '', newUrl);
-
-        // Start chat simulation
-        if (partyChatInterval) clearInterval(partyChatInterval);
-        partyChatInterval = setInterval(() => {
-          if (!partyActiveRoom) return;
-          const user = dummyChatUsers[Math.floor(Math.random() * dummyChatUsers.length)];
-          const text = dummyReplies[Math.floor(Math.random() * dummyReplies.length)];
-          appendMessage(user, text);
-        }, 15000); // Send simulated message every 15 seconds
+      window.enterRoom = async function(rid) {
+        isHost = false; epLimit = 100; curId = null; curEp = 1; curTotal = 12; curTitle = '';
+        await joinChannel(rid);
+        enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
+        $('workspaceTitle').textContent = 'Joining room...'; $('workspaceSubtitle').textContent = '';
+        window.history.pushState({}, '', '/?room=' + rid);
+        chatMsgs.innerHTML = '<div class="chat-message"><span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">Connected! Waiting for host state...</span></div>';
       };
 
-      // Append Chat Message
-      function appendMessage(user, text, isSystem = false) {
-        const msg = document.createElement('div');
-        msg.className = 'chat-message';
-        if (isSystem) {
-          msg.innerHTML = `
-            <span class="chat-message-user host-user">🤖 System</span>
-            <span class="chat-message-text" style="color: var(--muted); font-style: italic;">${text}</span>
-          `;
-        } else {
-          const isHost = partyActiveRoom && user === partyActiveRoom.host;
-          msg.innerHTML = `
-            <span class="chat-message-user ${isHost ? 'host-user' : ''}">${isHost ? '👑 ' : ''}${user}</span>
-            <span class="chat-message-text">${text}</span>
-          `;
-        }
-        chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      }
+      window.createRoom = async function(anilistId, episode, seriesTitle, totalEps) {
+        isHost = true; epLimit = 100; curId = anilistId; curEp = episode; curTotal = totalEps || 12; curTitle = seriesTitle;
+        const rid = genId();
+        await joinChannel(rid);
+        enterScr.style.display = 'none'; createScr.style.display = 'none'; workScr.style.display = 'block';
+        $('workspaceTitle').textContent = seriesTitle + ' - Ep ' + episode;
+        $('workspaceSubtitle').textContent = '';
+        window.history.pushState({}, '', '/?room=' + rid);
+        chatMsgs.innerHTML = '<div class="chat-message"><span class="chat-message-user host-user">🤖 System</span><span class="chat-message-text" style="color:var(--muted);font-style:italic;">Room created! Share the invite link to watch together.</span></div>';
+        loadEpisode(anilistId, episode);
+        renderEpisodes();
+      };
 
-      // Render Episode Buttons with Load More pagination
-      let partyVisibleEpisodesLimit = 100;
-
-      function renderEpisodes(animeId, activeEp, totalEps) {
-        const loadMoreWrap = document.getElementById('partyEpisodesLoadMoreWrap');
-        const loadMoreBtn = document.getElementById('partyEpisodesLoadMoreBtn');
-        const jumpInput = document.getElementById('partyWorkspaceEpJumpInput');
-        
-        jumpInput.value = activeEp;
-
-        if (!totalEps || totalEps < activeEp) {
-          totalEps = Math.max(activeEp, 9999);
-        }
-
-        // Ensure the active episode is within the visible limit initially
-        if (activeEp > partyVisibleEpisodesLimit) {
-          // Round up to the nearest hundred that contains activeEp
-          partyVisibleEpisodesLimit = Math.ceil(activeEp / 100) * 100;
-        }
-
-        // Make sure limit doesn't exceed totalEps
-        const maxToShow = Math.min(partyVisibleEpisodesLimit, totalEps);
-
-        // Hide/Show Load More button
-        if (partyVisibleEpisodesLimit < totalEps) {
-          loadMoreWrap.style.display = 'block';
-        } else {
-          loadMoreWrap.style.display = 'none';
-        }
-
-        // Render episode buttons
-        episodesGrid.innerHTML = '';
-        for (let i = 1; i <= maxToShow; i++) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = `ep-btn ${i === partyActiveRoom.episode ? 'active' : ''}`;
-          btn.textContent = i;
-          btn.addEventListener('click', () => {
-            partyActiveRoom.episode = i;
-            const matched = partyRooms.find(r => r.id === partyActiveRoom.id);
-            if (matched) matched.episode = i;
-            localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
-
-            // Reload player
-            updatePlayer(workspaceServerInput.value, animeId, i);
-            
-            // Highlight active button
-            episodesGrid.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            jumpInput.value = i;
-
-            // Chat log
-            appendMessage('System', `Room updated to Episode ${i}`, true);
-          });
-          episodesGrid.appendChild(btn);
-        }
-
-        // Bind Load More action
-        loadMoreBtn.onclick = () => {
-          partyVisibleEpisodesLimit += 100;
-          renderEpisodes(animeId, partyActiveRoom.episode, totalEps);
-        };
-
-        // Auto-scroll active episode into view
-        setTimeout(() => {
-          const activeBtn = episodesGrid.querySelector('.ep-btn.active');
-          if (activeBtn) {
-            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-          }
-        }, 80);
-      }
-
-      // Format & Load player source URL
-      function updatePlayer(serverId, animeId, episode) {
-        let url = '';
-        switch(serverId) {
-          case 'aniplay_ani':
-            url = `https://animeplay.cfd/stream/ani/${animeId}/${episode}/sub`;
-            break;
-          case 'aniplay_mal':
-            url = `https://animeplay.cfd/stream/mal/${animeId}/${episode}/sub`;
-            break;
-          case 'moviesrc_mal':
-            url = `https://movie-src.xyz/v1/embed/anime/${animeId}/${episode}/sub`;
-            break;
-          case 'vidsrc_cc':
-            url = `https://vidsrc.cc/v2/embed/anime/${animeId}/${episode}/sub`;
-            break;
-          case 'vidsrc_to':
-            url = `https://vidsrc.to/embed/anime/${animeId}/${episode}`;
-            break;
-          case 'arceus':
-            url = `https://animeplay.cfd/stream/mal/${animeId}/${episode}/sub`;
-            break;
-        }
-        playerIframe.src = url;
-      }
-
-      // Create Form Cancel click
-      createCancelBtn.addEventListener('click', () => {
-        createScreen.style.display = 'none';
-        lobbyScreen.style.display = 'block';
-      });
-
-      // Lobby Create Room click
-      lobbyCreateBtn.addEventListener('click', () => {
-        // Clear inputs
-        roomNameInput.value = '';
-        animeTitleInput.value = '';
-        animeIdInput.value = '';
-        episodeInput.value = '1';
-        serverInput.value = 'aniplay_mal';
-
-        lobbyScreen.style.display = 'none';
-        createScreen.style.display = 'block';
-      });
-
-      // Workspace Leave Party
-      workspaceLeaveBtn.addEventListener('click', () => {
-        if (partyChatInterval) clearInterval(partyChatInterval);
-        partyActiveRoom = null;
-        playerIframe.src = '';
-        
-        workspaceScreen.style.display = 'none';
-        lobbyScreen.style.display = 'block';
-
-        // Update URL back to default party tab
-        window.history.pushState({}, '', '/?tab=party');
-        renderLobby();
-      });
-
-      // Jump Episode Button click
-      const epJumpBtn = document.getElementById('partyWorkspaceEpJumpBtn');
-      const epJumpInput = document.getElementById('partyWorkspaceEpJumpInput');
-      
-      epJumpBtn.addEventListener('click', () => {
-        if (!partyActiveRoom) return;
-        const targetEp = parseInt(epJumpInput.value);
-        if (isNaN(targetEp) || targetEp < 1 || targetEp > (partyActiveRoom.episodesCount || 10000)) {
-          alert('Invalid episode number!');
-          return;
-        }
-
-        // Update active episode
-        partyActiveRoom.episode = targetEp;
-        const matched = partyRooms.find(r => r.id === partyActiveRoom.id);
-        if (matched) matched.episode = targetEp;
-        localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
-
-        // Reload player
-        updatePlayer(workspaceServerInput.value, partyActiveRoom.animeId, targetEp);
-
-        // Re-render episodes grid (which automatically switches the select range if needed!)
-        renderEpisodes(partyActiveRoom.animeId, targetEp, partyActiveRoom.episodesCount || 12);
-
-        // System log
-        appendMessage('System', `Room updated to Episode ${targetEp}`, true);
-      });
-
-      // Workspace Copy Invite link
-      workspaceInviteBtn.addEventListener('click', () => {
-        if (!partyActiveRoom) return;
-        const inviteUrl = `${window.location.origin}/?room=${partyActiveRoom.id}`;
-        navigator.clipboard.writeText(inviteUrl).then(() => {
-          toast.classList.add('active');
-          setTimeout(() => {
-            toast.classList.remove('active');
-          }, 2000);
-        });
-      });
-
-      // Chat input submit
-      chatInputForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const text = chatInput.value.trim();
-        if (!text) return;
-        appendMessage('You', text);
-        chatInput.value = '';
-
-        // Simulate helper response after 1.5s
-        setTimeout(() => {
-          if (!partyActiveRoom) return;
-          const user = dummyChatUsers[Math.floor(Math.random() * dummyChatUsers.length)];
-          const textOptions = [
-            "Nice!",
-            "Agreed",
-            "Exactly what I was thinking!",
-            "Wait, really? 😮",
-            "Ahaha yes!",
-            "Same",
-            "Wait, let me watch that part again"
-          ];
-          const response = textOptions[Math.floor(Math.random() * textOptions.length)];
-          appendMessage(user, response);
-        }, 1500);
-      });
-
-      // Sidebar Tab Switching
-      sidebarTabChat.addEventListener('click', () => {
-        sidebarTabChat.classList.add('active');
-        sidebarTabEpisodes.classList.remove('active');
-        chatContent.style.display = 'flex';
-        episodesContent.style.display = 'none';
-      });
-
-      sidebarTabEpisodes.addEventListener('click', () => {
-        sidebarTabEpisodes.classList.add('active');
-        sidebarTabChat.classList.remove('active');
-        chatContent.style.display = 'none';
-        episodesContent.style.display = 'block';
-      });
-
-      // Workspace Server Switch
-      workspaceServerInput.addEventListener('change', () => {
-        if (!partyActiveRoom) return;
-        updatePlayer(workspaceServerInput.value, partyActiveRoom.animeId, partyActiveRoom.episode);
-        appendMessage('System', `Server provider switched to: ${workspaceServerInput.options[workspaceServerInput.selectedIndex].text}`, true);
-      });
-
-      // Create Form Submit
-      createForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const rName = roomNameInput.value.trim() || 'Cozy Lounge';
-        const aTitle = animeTitleInput.value.trim();
-        const rEp = parseInt(episodeInput.value) || 1;
-        const rServer = serverInput.value;
-        let aId = animeIdInput.value;
-        let epCount = 12;
-        let imgUrl = 'https://placehold.co/120x160?text=Anime';
-
-        // Show spinner / loading state
-        const submitBtn = createForm.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Searching AniList...';
-
-        try {
-          if (!aId) {
-            // Search AniList for input title
-            const aniQuery = `
-              query ($search: String) {
-                Page(page: 1, perPage: 1) {
-                  media(search: $search, type: ANIME) {
-                    id
-                    title {
-                      english
-                      romaji
-                      userPreferred
-                    }
-                    coverImage {
-                      large
-                    }
-                    episodes
-                    nextAiringEpisode {
-                      episode
-                    }
-                  }
-                }
-              }
-            `;
-            const data = await queryAniList(aniQuery, { search: aTitle });
-            if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
-              const matched = data.Page.media[0];
-              aId = matched.id;
-              epCount = matched.episodes || (matched.nextAiringEpisode ? matched.nextAiringEpisode.episode - 1 : 9999);
-              imgUrl = matched.coverImage.large;
-            } else {
-              // fallback dummy
-              aId = 'mock-' + Math.floor(Math.random() * 100000);
-            }
-          } else {
-            // we already had ID from watch.html, let's fetch matching epCount and cover image
-            const aniQuery = `
-              query ($id: Int) {
-                Media(id: $id) {
-                  coverImage {
-                    large
-                  }
-                  episodes
-                  nextAiringEpisode {
-                    episode
-                  }
-                }
-              }
-            `;
-            const numericId = parseInt(aId);
-            if (!isNaN(numericId)) {
-              const data = await queryAniList(aniQuery, { id: numericId });
-              if (data && data.Media) {
-                epCount = data.Media.episodes || (data.Media.nextAiringEpisode ? data.Media.nextAiringEpisode.episode - 1 : 9999);
-                imgUrl = data.Media.coverImage.large;
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('Error querying AniList for created room:', err);
-          aId = aId || 'mock-' + Math.floor(Math.random() * 100000);
-        }
-
-        const newRoomId = 'room-' + Date.now();
-        const newRoomObj = {
-          id: newRoomId,
-          name: rName,
-          animeTitle: aTitle,
-          animeId: aId,
-          episode: rEp,
-          host: 'You',
-          watching: 1,
-          episodesCount: epCount,
-          image: imgUrl
-        };
-
-        // Add to array, save in localStorage
-        partyRooms.unshift(newRoomObj);
-        localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
-
-        // Join created room
-        joinRoom(newRoomId);
-
-        // Restore submit button
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Launch Room';
-      });
-
-      // Dynamically fetch fresh cover image URLs to prevent CDN 404s
-      async function fetchFreshMockCovers() {
-        try {
-          const ids = partyRooms.map(r => parseInt(r.animeId)).filter(id => !isNaN(id));
-          if (ids.length === 0) return;
-
-          const query = `
-            query ($ids: [Int]) {
-              Page(page: 1, perPage: 10) {
-                media(id_in: $ids, type: ANIME) {
-                  id
-                  coverImage {
-                    large
-                  }
-                }
-              }
-            }
-          `;
-          const data = await queryAniList(query, { ids });
-          if (data && data.Page && data.Page.media) {
-            data.Page.media.forEach(item => {
-              const matchedRoom = partyRooms.find(r => parseInt(r.animeId) === item.id);
-              if (matchedRoom) {
-                matchedRoom.image = item.coverImage.large;
-              }
+      // Anime search for create form
+      let searchT;
+      $('partyAnimeSearchInput').addEventListener('input', () => {
+        clearTimeout(searchT);
+        const q = $('partyAnimeSearchInput').value.trim();
+        if (!q) { $('partyAnimeSearchResults').style.display = 'none'; return; }
+        searchT = setTimeout(async () => {
+          try {
+            const query = 'query($s:String){Page(page:1,perPage:10){media(search:$s,type:ANIME,isAdult:false){id title{romaji english}coverImage{large}episodes nextAiringEpisode{episode}}}}';
+            const d = await queryAniList(query, {s:q});
+            if (!d || !d.Page || !d.Page.media || !d.Page.media.length) { $('partyAnimeSearchResults').style.display = 'none'; return; }
+            const items = d.Page.media.filter(m => m.id);
+            $('partyAnimeSearchResults').innerHTML = items.map(m => {
+              const t = m.title.english || m.title.romaji || 'Unknown';
+              const ep = m.episodes || (m.nextAiringEpisode ? m.nextAiringEpisode.episode - 1 : '?');
+              return '<div class="party-sr" data-id="' + m.id + '" data-ep="' + ep + '" data-title="' + t.replace(/"/g,'&quot;') + '" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;cursor:pointer;border-bottom:1px dashed var(--line);font-size:0.85rem;font-weight:600;">' +
+                '<img src="' + (m.coverImage?.large||'') + '" style="width:28px;height:40px;object-fit:cover;border-radius:4px;" loading="lazy">' +
+                '<span>' + t + ' (' + ep + ' eps)</span></div>';
+            }).join('');
+            $('partyAnimeSearchResults').style.display = 'block';
+            $('partyAnimeSearchResults').querySelectorAll('.party-sr').forEach(el => {
+              el.addEventListener('click', () => {
+                $('partyAnimeIdInput').value = el.dataset.id;
+                $('partyAnimeEpisodesInput').value = el.dataset.ep;
+                $('partySelectedAnime').innerHTML = '<span style="color:var(--teal);font-weight:800;">✓</span> ' + el.dataset.title + ' (' + el.dataset.ep + ' eps)';
+                $('partySelectedAnime').style.display = 'block';
+                $('partyAnimeSearchResults').style.display = 'none';
+                $('partyAnimeSearchInput').value = el.dataset.title;
+              });
             });
-            localStorage.setItem('babyanime_party_rooms_v2', JSON.stringify(partyRooms));
-            renderLobby();
-          }
-        } catch (err) {
-          console.warn('Failed to fetch fresh mock cover images:', err);
-        }
-      }
+          } catch(e) { console.warn('Party search err:', e); }
+        }, 300);
+      });
 
-      // Initial Render
-      renderLobby();
-      fetchFreshMockCovers();
+      $('partyCreateForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = $('partyAnimeIdInput').value;
+        const ep = parseInt($('partyEpisodeInput').value) || 1;
+        if (!id) { alert('Please select an anime from search results'); return; }
+        const title = $('partyAnimeSearchInput').value.trim() || 'Anime';
+        const total = parseInt($('partyAnimeEpisodesInput').value) || 12;
+        window.createRoom(id, ep, title, total);
+      });
+
+      // Workspace leave
+      $('workspaceLeaveBtn').addEventListener('click', async () => {
+        if (hls) { hls.destroy(); hls = null; }
+        video.src = '';
+        if (channel) await channel.unsubscribe();
+        channel = null; roomId = null; isHost = false;
+        workScr.style.display = 'none'; enterScr.style.display = 'block';
+        window.history.pushState({}, '', '/?tab=party');
+      });
+
+      // Copy invite
+      $('workspaceInviteBtn').addEventListener('click', () => {
+        if (!roomId) return;
+        navigator.clipboard.writeText(window.location.origin + '/?room=' + roomId).then(showToast);
+      });
+
+      // Chat
+      chatForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const t = chatInp.value.trim();
+        if (!t || !channel) return;
+        appendMsg(username, t, false);
+        channel.send({type:'broadcast',event:'chat',payload:{u:userId,username,t}});
+        chatInp.value = '';
+      });
+
+      // Tabs
+      $('partyTabChat').addEventListener('click', () => { $('partyTabChat').classList.add('active'); $('partyTabEpisodes').classList.remove('active'); $('partyChatPanel').style.display = ''; $('partyEpisodesPanel').style.display = 'none'; });
+      $('partyTabEpisodes').addEventListener('click', () => { $('partyTabEpisodes').classList.add('active'); $('partyTabChat').classList.remove('active'); $('partyChatPanel').style.display = 'none'; $('partyEpisodesPanel').style.display = ''; });
+
+      // Episode jump
+      epJumpBtn.addEventListener('click', () => {
+        const t = parseInt(epJumpInp.value);
+        if (isNaN(t) || t < 1 || t > (curTotal || 10000)) { alert('Invalid episode'); return; }
+        if (t === curEp) return;
+        broadcastChange(curId, t, curTitle);
+      });
     }
   </script>
 </body>

@@ -2272,6 +2272,11 @@ footer {
   opacity: 1;
 }
 
+/* Party Search Result Hover */
+.party-sr:hover {
+  background: var(--bg-hover);
+}
+
 /* Hold/Tap-to-Swap Panel Selection */
 .panel-swapping-active, .panel-selected-active {
   transform: scale(1.02) !important;
