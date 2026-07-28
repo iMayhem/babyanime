@@ -643,7 +643,6 @@
             <div class="selector-section">
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
-                <option value="scraper_all" selected>🔍 All Scrapers (Auto)</option>
                 <option value="embed_animecfd" style="font-weight:700;">Geto</option>
               </select>
             </div>
@@ -1552,9 +1551,8 @@
       // Save current selection
       const current = serverSelect.value;
 
-      // Rebuild options: always keep "All" + embeds at top, then one per provider
-      serverSelect.innerHTML = `<option value="scraper_all">🔍 All (${sources.length} sources)</option>`
-        + `<option value="embed_animecfd" style="font-weight:700;">Geto</option>`
+      // Rebuild options: embeds at top, then one per provider
+      serverSelect.innerHTML = `<option value="embed_animecfd" style="font-weight:700;">Geto</option>`
         + providers.map(p => `<option value="scraper_${p}">${p}</option>`).join('');
 
       // Restore selection if still valid
