@@ -1488,7 +1488,7 @@
 
         hls.once(Hls.Events.MANIFEST_PARSED, (event, data) => {
           playerVideo.playbackRate = playbackSpeed;
-          playerVideo.play().catch(() => {});
+          playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); });
           // Populate quality selector
           buildQualityMenu(hls);
         });
@@ -1510,14 +1510,14 @@
         playerVideo.src = proxiedUrl;
         playerVideo.load();
         playerVideo.playbackRate = playbackSpeed;
-        playerVideo.play().catch(e => console.warn('[Player] play() failed:', e));
+        playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); });
         playerVideo.onerror = () => { console.warn('[Player] Video error:', playerVideo.error); tryNextSource(); };
       } else {
         console.log('[Player] Direct video, src:', proxiedUrl.substring(0, 80));
         playerVideo.src = proxiedUrl;
         playerVideo.load();
         playerVideo.playbackRate = playbackSpeed;
-        playerVideo.play().catch(e => console.warn('[Player] play() failed:', e));
+        playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); });
         playerVideo.onerror = () => { console.warn('[Player] Video error:', playerVideo.error); tryNextSource(); };
       }
 

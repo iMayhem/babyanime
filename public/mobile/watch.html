@@ -765,14 +765,14 @@
         window.hlsInstance = hls;
         hls.loadSource(proxiedUrl);
         hls.attachMedia(playerVideo);
-        hls.once(Hls.Events.MANIFEST_PARSED, () => { playerVideo.playbackRate = playbackSpeed; playerVideo.play().catch(() => {}); buildQualityMenu(hls); });
+        hls.once(Hls.Events.MANIFEST_PARSED, () => { playerVideo.playbackRate = playbackSpeed; playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); }); buildQualityMenu(hls); });
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) { hls.destroy(); window.hlsInstance = null; clearQualityMenu(); tryNextSource(); }
         });
       } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
-        playerVideo.src = proxiedUrl; playerVideo.load(); playerVideo.playbackRate = playbackSpeed; playerVideo.play().catch(() => {}); playerVideo.onerror = () => tryNextSource();
+        playerVideo.src = proxiedUrl; playerVideo.load(); playerVideo.playbackRate = playbackSpeed; playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); }); playerVideo.onerror = () => tryNextSource();
       } else {
-        playerVideo.src = proxiedUrl; playerVideo.load(); playerVideo.playbackRate = playbackSpeed; playerVideo.play().catch(() => {}); playerVideo.onerror = () => tryNextSource();
+        playerVideo.src = proxiedUrl; playerVideo.load(); playerVideo.playbackRate = playbackSpeed; playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); }); playerVideo.onerror = () => tryNextSource();
       }
     }
 
