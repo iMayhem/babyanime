@@ -2,10 +2,12 @@ const path = require("path");
 const admin = require("./admin");
 
 const PROVIDERS = [
-  { name: "Naruto", file: "allwish.js" },
-  { name: "Eren", file: "eren.js" },
-  { name: "Luffy", file: "animesdigital.js" },
-  { name: "Goku", file: "animekai.js" },
+  { name: "Naruto",   file: "allwish.js" },
+  { name: "Eren",     file: "eren.js" },
+  { name: "Luffy",    file: "animesdigital.js" },
+  { name: "Goku",     file: "animekai.js" },
+  { name: "VidSrc",   file: "vidsrc.js" },
+  { name: "AnimeCFD", file: "animecfd.js" },
 ];
 
 let loadedProviders = [];
@@ -58,7 +60,7 @@ async function runAll(resolved, audio = "sub", onEvent = null) {
       );
 
       const streams = await Promise.race([
-        provider.getStreams(id, type, season, episode),
+        provider.getStreams(id, type, season, episode, resolved),
         timeout,
       ]);
 
@@ -112,7 +114,7 @@ async function runProvider(providerName, resolved, audio = "sub") {
   let id = tmdbId;
   if (!id) return [];
 
-  const streams = await provider.getStreams(id, type, season, episode);
+  const streams = await provider.getStreams(id, type, season, episode, resolved);
   if (!Array.isArray(streams)) return [];
 
   return streams.map((s) => ({
