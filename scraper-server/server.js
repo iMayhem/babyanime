@@ -16,6 +16,48 @@ providers.loadProviders();
 // Admin SSE clients
 const sseClients = new Set();
 
+// M3U8 cache: pre-fetched shortly after scraper returns URLs (before tokens expire)
+const m3u8Cache = new Map();
+const CACHE_TTL = 120_000; // 2 minutes
+
+async function prefetchM3u8(url, headers) {
+  const key = Buffer.from(url).toString('base64').slice(0, 32);
+  // Already cached
+  if (m3u8Cache.has(key)) return key;
+  try {
+    const resp = await fetch(url, { headers, redirect: 'follow' });
+    if (!resp.ok) return null;
+    const text = await resp.text();
+    if (!text.trim().startsWith('#EXTM3U')) return null;
+
+    const workerBase = 'https://proxy.babyanime.top/stream-proxy?url=';
+    const extraParams = [];
+    if (headers['Referer']) extraParams.push('r=' + encodeURIComponent(headers['Referer']));
+    if (headers['Origin']) extraParams.push('o=' + encodeURIComponent(headers['Origin']));
+    if (headers['User-Agent']) extraParams.push('ua=' + encodeURIComponent(headers['User-Agent']));
+    const extraStr = extraParams.length ? '&' + extraParams.join('&') : '';
+
+    const proxyUrl = (raw) => {
+      if (!raw) return raw;
+      const abs = raw.startsWith('http') ? raw : new URL(raw, url).href;
+      return `${workerBase}${encodeURIComponent(abs)}${extraStr}`;
+    };
+
+    const rewritten = text.split('\n').map(line => {
+      const t = line.trim();
+      if (!t) return line;
+      if (t.startsWith('#')) return t.replace(/URI="([^"]+)"/g, (_, u) => `URI="${proxyUrl(u)}"`);
+      return proxyUrl(t);
+    }).join('\n');
+
+    m3u8Cache.set(key, { content: rewritten, contentType: resp.headers.get('Content-Type') || 'application/vnd.apple.mpegurl', ts: Date.now() });
+    setTimeout(() => m3u8Cache.delete(key), CACHE_TTL);
+    return key;
+  } catch {
+    return null;
+  }
+}
+
 function broadcastScraperUsage(data) {
   const msg = JSON.stringify(data);
   for (const client of sseClients) {
@@ -65,6 +107,14 @@ app.get("/api/stream", async (req, res) => {
     } else {
       sources = await providers.runAll(resolved, audio || "sub", broadcastScraperUsage);
     }
+
+    // Pre-fetch M3U8 immediately while CDN tokens are still valid
+    await Promise.allSettled(sources.map(async (s) => {
+      if (s.format === 'hls' && s.url && !s.url.startsWith('/api/')) {
+        const key = await prefetchM3u8(s.url, s.headers || {});
+        if (key) s.url = `/api/m3u8-cache/${key}`;
+      }
+    }));
 
     res.json({
       success: true,
@@ -370,6 +420,15 @@ async function _serveFreshM3U8(req, res, ep_url, videoUrl, referer, UA) {
   res.send(rewritten);
 }
 
+
+app.get("/api/m3u8-cache/:key", (req, res) => {
+  const entry = m3u8Cache.get(req.params.key);
+  if (!entry) return res.status(404).json({ error: "Cache entry expired or not found" });
+  res.setHeader("Content-Type", entry.contentType);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "no-cache");
+  res.send(entry.content);
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
