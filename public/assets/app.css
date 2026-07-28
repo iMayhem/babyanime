@@ -2168,12 +2168,14 @@ footer {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  max-height: 100%;
   overflow: hidden;
 }
 
 #partyEpisodesPanel {
   flex: 1;
   min-height: 0;
+  max-height: 100%;
 }
 
 .party-chat-messages {
