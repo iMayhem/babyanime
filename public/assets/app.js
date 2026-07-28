@@ -352,7 +352,8 @@ function createAnimeCardHTML(anime) {
 
   const fallbackSvg = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22150%22 viewBox=%220 0 100 150%22><rect width=%22100%22 height=%22150%22 fill=%22%23262e42%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23939db4%22 font-size=%2212%22>No Cover</text></svg>';
   return `
-    <div class="anime-card" onclick="window.location.href='${watchUrl}'">
+    <a href="${watchUrl}" class="anime-card-link">
+    <div class="anime-card">
       <div class="anime-poster-wrap">
         ${scoreBadge}
         ${typeBadge}
@@ -363,6 +364,7 @@ function createAnimeCardHTML(anime) {
         <div class="anime-meta">${metaText}</div>
       </div>
     </div>
+    </a>
   `;
 }
 
@@ -622,8 +624,8 @@ function setupHoldToSwap() {
   function getSwappableItem(target) {
     if (!target) return null;
     const tag = target.tagName.toLowerCase();
-    if (['a', 'input', 'select', 'textarea', 'option'].includes(tag)) return null;
-    if (target.closest('a, input, select, textarea, .clr-dot, .schedule-tab-btn')) return null;
+    if (['input', 'select', 'textarea', 'option'].includes(tag)) return null;
+    if (target.closest('input, select, textarea, .clr-dot, .schedule-tab-btn')) return null;
 
     return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section, .tab-btn, .tt, .player-wrapper, .player-card, #playerContainer');
   }
