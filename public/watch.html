@@ -1133,8 +1133,8 @@
       // Auto-scroll active episode into view
       setTimeout(() => {
         const activeBtn = episodesGrid.querySelector('.ep-btn.active');
-        if (activeBtn) {
-          activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        if (activeBtn && episodesGrid.scrollHeight > episodesGrid.clientHeight) {
+          episodesGrid.scrollTo({ top: activeBtn.offsetTop - episodesGrid.clientHeight / 2, behavior: 'smooth' });
         }
       }, 80);
     }
