@@ -112,7 +112,7 @@ app.get("/api/stream", async (req, res) => {
     await Promise.allSettled(sources.map(async (s) => {
       if (s.format === 'hls' && s.url && !s.url.startsWith('/api/')) {
         const key = await prefetchM3u8(s.url, s.headers || {});
-        if (key) s.url = `${req.protocol}://${req.get('host')}/api/m3u8-cache/${key}`;
+        if (key) s.url = `https://${req.get('host')}/api/m3u8-cache/${key}`;
       }
     }));
 
