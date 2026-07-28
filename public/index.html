@@ -1770,45 +1770,57 @@
             el.addEventListener('click', () => { if (rid) enterRoom(rid); });
           });
 
-          // Auto-fetch missing cover images from AniList for room cards
-          const missingRooms = rooms.filter(r => !r.cover_image && r.anime_id && !isNaN(parseInt(r.anime_id)));
-          if (missingRooms.length > 0) {
-            const ids = Array.from(new Set(missingRooms.map(r => parseInt(r.anime_id))));
-            fetch('https://graphql.anilist.co', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids) { id coverImage { large } } } }`,
-                variables: { ids }
-              })
-            }).then(r => r.json()).then(resData => {
-              const mediaList = resData?.data?.Page?.media || [];
-              const imgMap = {};
-              mediaList.forEach(m => { if (m.id && m.coverImage?.large) imgMap[m.id] = m.coverImage.large; });
-              missingRooms.forEach(r => {
-                const img = imgMap[parseInt(r.anime_id)];
-                if (img) {
-                  const card = list.querySelector(`.room-card[data-rid="${r.id}"]`);
-                  if (card) {
-                    const thumbEl = card.querySelector('.room-card-thumb');
-                    if (thumbEl) {
-                      if (thumbEl.tagName === 'IMG') {
-                        thumbEl.src = img;
-                      } else {
-                        const newImg = document.createElement('img');
-                        newImg.className = 'room-card-thumb';
-                        newImg.src = img;
-                        newImg.alt = r.series_title || '';
-                        newImg.loading = 'lazy';
-                        thumbEl.replaceWith(newImg);
-                      }
+          // Fetch TMDB posters for room cards
+          const TMDB_KEY = "439c478a771f35c05022f9feabcca01c";
+          const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
+          rooms.forEach(async (r) => {
+            let poster = null;
+            if (r.anime_id && !isNaN(parseInt(r.anime_id))) {
+              try {
+                const armRes = await fetch(`https://arm.haglund.dev/api/v2/tmdb?id=${r.anime_id}`);
+                if (armRes.ok) {
+                  const armData = await armRes.json();
+                  const tid = armData?.tmdb_id || (Array.isArray(armData) ? armData[0]?.tmdb_id : null);
+                  if (tid) {
+                    const tmdbRes = await fetch(`https://api.themoviedb.org/3/tv/${tid}?api_key=${TMDB_KEY}`);
+                    if (tmdbRes.ok) {
+                      const tData = await tmdbRes.json();
+                      if (tData?.poster_path) poster = TMDB_IMG + tData.poster_path;
                     }
                   }
-                  if (sb) sb.from('parties').update({ cover_image: img }).eq('id', r.id).then(()=>{}).catch(()=>{});
                 }
-              });
-            }).catch(()=>{});
-          }
+              } catch(e) {}
+            }
+            if (!poster && r.series_title) {
+              try {
+                const sRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(r.series_title)}`);
+                if (sRes.ok) {
+                  const sData = await sRes.json();
+                  if (sData?.results?.[0]?.poster_path) poster = TMDB_IMG + sData.results[0].poster_path;
+                }
+              } catch(e) {}
+            }
+            if (!poster && r.cover_image) poster = r.cover_image;
+            if (poster) {
+              const card = list.querySelector(`.room-card[data-rid="${r.id}"]`);
+              if (card) {
+                const thumbEl = card.querySelector('.room-card-thumb');
+                if (thumbEl) {
+                  if (thumbEl.tagName === 'IMG') {
+                    thumbEl.src = poster;
+                  } else {
+                    const newImg = document.createElement('img');
+                    newImg.className = 'room-card-thumb';
+                    newImg.src = poster;
+                    newImg.alt = r.series_title || '';
+                    newImg.loading = 'lazy';
+                    thumbEl.replaceWith(newImg);
+                  }
+                }
+              }
+              if (sb && r.cover_image !== poster) sb.from('parties').update({ cover_image: poster }).eq('id', r.id).then(()=>{}).catch(()=>{});
+            }
+          });
         } catch(e) { wrap.style.display = 'none'; }
       }
 
