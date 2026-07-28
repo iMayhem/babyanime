@@ -643,6 +643,7 @@
             <div class="selector-section">
               <span class="selector-label">Server:</span>
               <select id="serverSelect" class="select-dropdown">
+                <option value="scraper_Naruto">Naruto</option>
                 <option value="embed_animecfd" style="font-weight:700;">Geto</option>
               </select>
             </div>
@@ -781,7 +782,7 @@
 
     let activeAnime = null;
     let activeEpisode = 1;
-    let activeServer = 'scraper_all';
+    let activeServer = 'scraper_Naruto';
     let activeAudio = 'sub';
     let scraperSources = [];
     let playbackSpeed = parseFloat(localStorage.getItem('speed')) || 1;
@@ -1551,16 +1552,23 @@
       // Save current selection
       const current = serverSelect.value;
 
-      // Rebuild options: embeds at top, then one per provider
-      serverSelect.innerHTML = `<option value="embed_animecfd" style="font-weight:700;">Geto</option>`
-        + providers.map(p => `<option value="scraper_${p}">${p}</option>`).join('');
+      // Ensure providers are listed; don't remove embeds or static options
+      for (const p of providers) {
+        const val = `scraper_${p}`;
+        if (![...serverSelect.options].some(o => o.value === val)) {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = p;
+          serverSelect.appendChild(opt);
+        }
+      }
 
       // Restore selection if still valid
       if ([...serverSelect.options].some(o => o.value === current)) {
         serverSelect.value = current;
       } else {
-        serverSelect.value = 'scraper_all';
-        activeServer = 'scraper_all';
+        serverSelect.value = 'scraper_Naruto';
+        activeServer = 'scraper_Naruto';
       }
     }
 
