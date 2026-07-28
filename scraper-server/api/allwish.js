@@ -105,6 +105,7 @@ function makeStream(name, title, url, quality, headers = {}, subtitles) {
     title: title || "",
     url: url || "",
     quality: quality || "HD",
+    format: "hls",
     headers: __spreadValues({ "User-Agent": HEADERS["User-Agent"] }, headers || {})
   };
   if (subtitles && Array.isArray(subtitles) && subtitles.length > 0) {

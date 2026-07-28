@@ -75,7 +75,7 @@ async function runAll(resolved, audio = "sub", onEvent = null) {
           name: s.name || s.title || `${provider.name}`,
           url: s.url,
           quality: s.quality || "Auto",
-          format: s.url.includes(".m3u8") ? "hls" : "mp4",
+          format: s.format || (s.type === "hls" || s.type === "mp4" ? s.type : null) || (s.url && s.url.includes(".m3u8") ? "hls" : "mp4"),
           headers: s.headers || {},
           subtitles: s.subtitles || [],
         });
@@ -120,7 +120,7 @@ async function runProvider(providerName, resolved, audio = "sub") {
     name: s.name || s.title || `${provider.name}`,
     url: s.url,
     quality: s.quality || "Auto",
-    format: s.url && s.url.includes(".m3u8") ? "hls" : "mp4",
+    format: s.format || (s.type === "hls" || s.type === "mp4" ? s.type : null) || (s.url && s.url.includes(".m3u8") ? "hls" : "mp4"),
     headers: s.headers || {},
     subtitles: s.subtitles || [],
   }));

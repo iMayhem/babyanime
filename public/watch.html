@@ -1305,7 +1305,7 @@
     document.addEventListener('click', () => qualityMenu.classList.remove('open'));
 
     // Clear quality menu when switching sources
-    function playStreamUrl(url, headers, providerName, sourceIdx) {
+    function playStreamUrl(url, headers, providerName, sourceIdx, format) {
       // Destroy any existing HLS instance
       if (window.hlsInstance) {
         try { window.hlsInstance.destroy(); } catch (_) {}
@@ -1336,7 +1336,7 @@
           qualityPills.querySelectorAll('.pill-opt').forEach(b => {
             b.classList.toggle('active', parseInt(b.dataset.idx) === next);
           });
-          playStreamUrl(s.url, s.headers, s.provider, next);
+          playStreamUrl(s.url, s.headers, s.provider, next, s.format);
         } else {
           console.warn('[Player] All sources exhausted.');
           sourceBadge.textContent = '⚠ No working source';
@@ -1344,7 +1344,7 @@
         }
       };
 
-      const isM3u8 = url.includes('.m3u8') || url.includes('/fresh-stream') || proxiedUrl.includes('.m3u8');
+      const isM3u8 = format === 'hls' || url.includes('.m3u8') || url.includes('/fresh-stream') || proxiedUrl.includes('.m3u8');
 
       if (isM3u8 && typeof Hls !== 'undefined' && Hls.isSupported()) {
         const hls = new Hls({
@@ -1410,7 +1410,7 @@
           qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const idx = parseInt(btn.dataset.idx);
-          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx);
+          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx, scraperSources[idx].format);
         });
       });
     }
@@ -1481,7 +1481,7 @@
         }
 
         // Start with the first source
-        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, 0);
+        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, 0, toPlay[0].format);
 
       } catch (err) {
         console.error('Failed to load scraper stream:', err);
