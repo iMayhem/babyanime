@@ -525,12 +525,17 @@ function resolveServers(ids, allowedTypes, showInfo) {
             return [];
           const realUrl = apiRes.result.url;
           const label = s.sectionType === "dub" ? "[Dub]" : s.isHardSub ? "[Hard Sub]" : "[Sub]";
+          const serverName = /megaplay\.buzz/i.test(realUrl) ? 'MegaPlay'
+            : /player\.sgsgsgsr\.site|zencloudz\.cc/i.test(realUrl) ? 'Zen'
+            : /vidwish\.live/i.test(realUrl) ? 'VidWish'
+            : null;
+          const extLabel = serverName ? label + ' ' + serverName : label;
           if (/megaplay\.buzz/i.test(realUrl)) {
-            return extractMegaPlay(realUrl, label, showInfo);
+            return extractMegaPlay(realUrl, extLabel, showInfo);
           } else if (/player\.sgsgsgsr\.site|zencloudz\.cc/i.test(realUrl)) {
-            return extractZen(realUrl, label, showInfo);
+            return extractZen(realUrl, extLabel, showInfo);
           } else if (/vidwish\.live/i.test(realUrl)) {
-            return extractMegaPlay(realUrl, label, showInfo);
+            return extractMegaPlay(realUrl, extLabel, showInfo);
           }
           return [];
         } catch (e) {

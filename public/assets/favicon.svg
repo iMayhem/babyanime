@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7b7b"/>
+      <stop offset="100%" stop-color="#e25c5c"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="120" fill="#1e2530"/>
+  <rect x="20" y="20" width="448" height="448" rx="116" fill="url(#bgGrad)" stroke="#1e2530" stroke-width="20"/>
+  <!-- Anime Sparkle Star -->
+  <path d="M 370 80 C 370 110 390 130 420 130 C 390 130 370 150 370 180 C 370 150 350 130 320 130 C 350 130 370 110 370 80 Z" fill="#ffe66d" stroke="#1e2530" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Play Triangle -->
+  <polygon points="180,140 370,256 180,372" fill="#ffffff" stroke="#1e2530" stroke-width="22" stroke-linejoin="round"/>
+</svg>
