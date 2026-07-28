@@ -68,9 +68,7 @@
         </p>
       </div>
     </div>
-    <div id="authUserBadge" style="display:none;position:fixed;top:0.5rem;right:0.5rem;z-index:9999;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:0.3rem 0.7rem;font-size:0.8rem;font-weight:700;box-shadow:3px 3px 0 var(--shadow);">
-      <span id="authUserEmail"></span>
-    </div>
+    <div id="authUserBadge" style="display:none;"></div>
 
     <main>
 
@@ -613,8 +611,6 @@
     const authModalTitle = document.getElementById('authModalTitle');
     const authToggleBtn = document.getElementById('authToggleBtn');
     const authToggleText = document.getElementById('authToggleText');
-    const authUserBadge = document.getElementById('authUserBadge');
-    const authUserEmail = document.getElementById('authUserEmail');
     let authMode = 'login';
 
     function showAuthError(msg) { authError.textContent = msg; authError.style.display = ''; }
@@ -627,14 +623,11 @@
         authBtn.style.background = 'var(--accent)';
         authBtn.style.color = '#fff';
         authBtn.title = displayName;
-        authUserEmail.textContent = displayName;
-        authUserBadge.style.display = '';
       } else {
         authBtn.textContent = 'Login';
         authBtn.style.background = '';
         authBtn.style.color = '';
         authBtn.title = '';
-        authUserBadge.style.display = 'none';
       }
     }
 
