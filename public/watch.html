@@ -1317,6 +1317,7 @@
     const subtitleBtn   = document.getElementById('subtitleBtn');
     const subtitleMenu  = document.getElementById('subtitleMenu');
     const subtitleLabel = document.getElementById('subtitleLabel');
+    let subtitleBlobUrls = [];
 
     function setupSubtitles(source) {
       clearSubtitles();
@@ -1327,8 +1328,20 @@
       subtitleWrap.style.display = '';
       subtitleLabel.textContent = 'Off';
 
+      // Pre-fetch subtitle VTT content immediately while CDN tokens are valid
+      subtitleBlobUrls = source.subtitles.map(() => null);
+      source.subtitles.forEach((sub, idx) => {
+        const fetchUrl = proxyStreamUrl(sub.url, source.headers);
+        fetch(fetchUrl, { mode: 'cors' }).then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        }).then(text => {
+          const blob = new Blob([text], { type: 'text/vtt' });
+          subtitleBlobUrls[idx] = URL.createObjectURL(blob);
+        }).catch(() => {});
+      });
+
       subtitleMenu.innerHTML = '';
-      // Off option
       const offOpt = document.createElement('div');
       offOpt.className = 'quality-opt active';
       offOpt.innerHTML = '<span class="q-dot"></span>Off';
@@ -1345,6 +1358,8 @@
     }
 
     function clearSubtitles() {
+      subtitleBlobUrls.forEach(url => { if (url) URL.revokeObjectURL(url); });
+      subtitleBlobUrls = [];
       const existingTracks = playerVideo.querySelectorAll('track');
       existingTracks.forEach(t => t.remove());
       subtitleWrap.style.display = 'none';
@@ -1359,15 +1374,13 @@
         subtitleMenu.querySelectorAll('.quality-opt').forEach((o, i) => { o.classList.toggle('active', i === 0); });
         return;
       }
-      const source = scraperSources[activeSourceIndex];
-      if (!source || !source.subtitles || !source.subtitles[idx]) return;
-      const sub = source.subtitles[idx];
-      const proxiedUrl = proxyStreamUrl(sub.url, source.headers);
+      const blobUrl = subtitleBlobUrls[idx];
+      if (!blobUrl) return;
       const track = document.createElement('track');
       track.kind = 'subtitles';
-      track.label = sub.label || 'Subtitles';
+      track.label = 'Subtitles';
       track.srclang = 'en';
-      track.src = proxiedUrl;
+      track.src = blobUrl;
       playerVideo.appendChild(track);
       const enableTrack = () => {
         for (let i = 0; i < playerVideo.textTracks.length; i++) {
@@ -1376,7 +1389,8 @@
       };
       setTimeout(enableTrack, 100);
       track.addEventListener('load', enableTrack);
-      subtitleLabel.textContent = sub.label || 'Track';
+      const label = scraperSources[activeSourceIndex]?.subtitles?.[idx]?.label || 'Track';
+      subtitleLabel.textContent = label;
       subtitleMenu.querySelectorAll('.quality-opt').forEach((o, i) => { o.classList.toggle('active', i === idx + 1); });
     }
 
