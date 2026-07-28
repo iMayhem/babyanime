@@ -1580,6 +1580,7 @@
     }
 
     async function loadScraperStreams() {
+      try {
       const id = activeAnime.id || anilistId;
       const mal_id = activeAnime.idMal || malId;
       const provider = getScraperProvider(activeServer);
@@ -1610,52 +1611,52 @@
         }
       }
 
-        if (!data.success || !data.sources || data.sources.length === 0) {
-          console.warn('[Scraper] No sources found:', data);
-          sourceBadge.textContent = '⚠ No sources found';
-          sourceBadge.style.display = '';
-          return;
-        }
-
-        scraperSources = data.sources;
-        console.log('[Scraper] Got sources:', data.sourceCount, 'first URL:', data.sources[0]?.url?.substring(0, 60), 'provider:', data.sources[0]?.provider);
-        console.log('[Scraper] Proxied first URL:', proxyStreamUrl(data.sources[0]?.url, data.sources[0]?.headers)?.substring(0, 80));
-        activeSourceIndex = 0;
-
-        // Show only providers that actually returned sources in the dropdown
-        populateServerDropdown(scraperSources);
-        renderScraperQualityPills(scraperSources);
-
-        // Filter to selected provider if not "all"
-        let toPlay = scraperSources;
-        if (provider !== 'all') {
-          toPlay = scraperSources.filter(s => s.provider === provider);
-          if (toPlay.length === 0) toPlay = scraperSources; // fallback to all
-        }
-
-        // Start with the first source
-        const firstIdx = scraperSources.indexOf(toPlay[0]);
-        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
-
-        // Preload next episode in background
-        const nextEp = activeEpisode + 1;
-        if (nextEp <= latestEp) {
-          const nextParams = new URLSearchParams({ ep: nextEp, audio: activeAudio });
-          if (anilistId) nextParams.set('anilist_id', anilistId);
-          else if (malId) nextParams.set('mal_id', malId);
-          const nk = `scraper_${nextParams.toString()}`;
-          if (!sessionStorage.getItem(nk)) {
-            fetch(`${SCRAPER_API}/stream?${nextParams}`).then(r => r.json()).then(d => {
-              if (d && d.success) try { sessionStorage.setItem(nk, JSON.stringify({ data: d, ts: Date.now() })); } catch {}
-            }).catch(() => {});
-          }
-        }
-
-      } catch (err) {
-        console.error('Failed to load scraper stream:', err);
-        sourceBadge.textContent = '⚠ Scraper error';
+      if (!data.success || !data.sources || data.sources.length === 0) {
+        console.warn('[Scraper] No sources found:', data);
+        sourceBadge.textContent = '⚠ No sources found';
         sourceBadge.style.display = '';
+        return;
       }
+
+      scraperSources = data.sources;
+      console.log('[Scraper] Got sources:', data.sourceCount, 'first URL:', data.sources[0]?.url?.substring(0, 60), 'provider:', data.sources[0]?.provider);
+      console.log('[Scraper] Proxied first URL:', proxyStreamUrl(data.sources[0]?.url, data.sources[0]?.headers)?.substring(0, 80));
+      activeSourceIndex = 0;
+
+      // Show only providers that actually returned sources in the dropdown
+      populateServerDropdown(scraperSources);
+      renderScraperQualityPills(scraperSources);
+
+      // Filter to selected provider if not "all"
+      let toPlay = scraperSources;
+      if (provider !== 'all') {
+        toPlay = scraperSources.filter(s => s.provider === provider);
+        if (toPlay.length === 0) toPlay = scraperSources;
+      }
+
+      // Start with the first source
+      const firstIdx = scraperSources.indexOf(toPlay[0]);
+      playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
+
+      // Preload next episode in background
+      const nextEp = activeEpisode + 1;
+      if (nextEp <= latestEp) {
+        const nextParams = new URLSearchParams({ ep: nextEp, audio: activeAudio });
+        if (anilistId) nextParams.set('anilist_id', anilistId);
+        else if (malId) nextParams.set('mal_id', malId);
+        const nk = `scraper_${nextParams.toString()}`;
+        if (!sessionStorage.getItem(nk)) {
+          fetch(`${SCRAPER_API}/stream?${nextParams}`).then(r => r.json()).then(d => {
+            if (d && d.success) try { sessionStorage.setItem(nk, JSON.stringify({ data: d, ts: Date.now() })); } catch {}
+          }).catch(() => {});
+        }
+      }
+
+    } catch (err) {
+      console.error('Failed to load scraper stream:', err);
+      sourceBadge.textContent = '⚠ Scraper error';
+      sourceBadge.style.display = '';
+    }
     }
 
     const embedIframe = document.getElementById('embedIframe');
