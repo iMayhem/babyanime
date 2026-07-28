@@ -144,10 +144,14 @@ function resolveMapping(_0x459472, _0x2cc631, _0x460b16) {
     }
   });
 }
+const _malTitleCache = new Map();
 function getMalTitle(_0x30d391) {
   return __async(this, null, function* () {
+    if (_malTitleCache.has(_0x30d391)) {
+      return _malTitleCache.get(_0x30d391);
+    }
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
+    const timer = setTimeout(() => controller.abort(), 3000);
     try {
       const _0x4abe52 = yield fetch("https://api.jikan.moe/v4/anime/" + _0x30d391, { signal: controller.signal });
       clearTimeout(timer);
@@ -155,7 +159,9 @@ function getMalTitle(_0x30d391) {
         return null;
       }
       const _0x238ad3 = yield _0x4abe52.json();
-      return _0x238ad3.data.title;
+      const title = _0x238ad3?.data?.title || null;
+      if (title) _malTitleCache.set(_0x30d391, title);
+      return title;
     } catch (_0x263c9e) {
       clearTimeout(timer);
       return null;
@@ -270,7 +276,7 @@ function getStreams(_0x1a69bb, _0x2befb3, _0x52fcf8, _0xfc825d) {
         }
         _0x18bb35 = _0xd31fc.mal_id;
         _0x2c186e = _0xd31fc.mal_episode || _0xfc825d;
-        _0x581fa6 = yield getMalTitle(_0x18bb35);
+        _0x581fa6 = _0xd31fc.title || _0xd31fc.name || (yield getMalTitle(_0x18bb35));
         if (!_0x581fa6) {
           return [];
         }
