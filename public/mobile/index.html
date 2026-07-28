@@ -1570,6 +1570,44 @@
       list.querySelectorAll('.room-card').forEach(el => {
         el.addEventListener('click', () => enterRoom(el.dataset.id));
       });
+
+      // Auto-fetch missing cover images from AniList for room cards
+      const missingRooms = rooms.filter(r => (!r.cover_image && !r.cover_img) && r.anime_id && !isNaN(parseInt(r.anime_id)));
+      if (missingRooms.length > 0) {
+        const ids = Array.from(new Set(missingRooms.map(r => parseInt(r.anime_id))));
+        fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids) { id coverImage { large } } } }`,
+            variables: { ids }
+          })
+        }).then(r => r.json()).then(resData => {
+          const mediaList = resData?.data?.Page?.media || [];
+          const imgMap = {};
+          mediaList.forEach(m => { if (m.id && m.coverImage?.large) imgMap[m.id] = m.coverImage.large; });
+          missingRooms.forEach(r => {
+            const img = imgMap[parseInt(r.anime_id)];
+            if (img) {
+              const card = list.querySelector(`.room-card[data-id="${r.id}"]`);
+              if (card) {
+                const placeholder = card.querySelector('div[style*="background:var(--line)"], img');
+                if (placeholder) {
+                  const newImg = document.createElement('img');
+                  newImg.src = img;
+                  newImg.alt = '';
+                  newImg.style.cssText = 'width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;';
+                  newImg.loading = 'lazy';
+                  placeholder.replaceWith(newImg);
+                }
+              }
+              const sb = sbClient();
+              if (sb) sb.from('parties').update({ cover_image: img }).eq('id', r.id).then(()=>{}).catch(()=>{});
+            }
+          });
+        }).catch(()=>{});
+      }
+    }
     window._refreshPartyRooms = refreshActiveRooms;
 
     async function enterRoom(roomId, password, localRoomInfo) {

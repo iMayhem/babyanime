@@ -1774,12 +1774,51 @@
               '</div>' +
               '<button type="button" class="btn-primary join-room-btn" style="font-size:0.85rem;padding:0.45rem 0.8rem;margin-top:0.4rem;">Join Room</button>' +
             '</div>';
-          }).join('');
           list.querySelectorAll('.room-card').forEach(el => {
             const rid = el.dataset.rid;
             el.querySelector('.join-room-btn').addEventListener('click', (e) => { e.stopPropagation(); if (rid) enterRoom(rid); });
             el.addEventListener('click', () => { if (rid) enterRoom(rid); });
           });
+
+          // Auto-fetch missing cover images from AniList for room cards
+          const missingRooms = rooms.filter(r => !r.cover_image && r.anime_id && !isNaN(parseInt(r.anime_id)));
+          if (missingRooms.length > 0) {
+            const ids = Array.from(new Set(missingRooms.map(r => parseInt(r.anime_id))));
+            fetch('https://graphql.anilist.co', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) { media(id_in: $ids) { id coverImage { large } } } }`,
+                variables: { ids }
+              })
+            }).then(r => r.json()).then(resData => {
+              const mediaList = resData?.data?.Page?.media || [];
+              const imgMap = {};
+              mediaList.forEach(m => { if (m.id && m.coverImage?.large) imgMap[m.id] = m.coverImage.large; });
+              missingRooms.forEach(r => {
+                const img = imgMap[parseInt(r.anime_id)];
+                if (img) {
+                  const card = list.querySelector(`.room-card[data-rid="${r.id}"]`);
+                  if (card) {
+                    const thumbEl = card.querySelector('.room-card-thumb');
+                    if (thumbEl) {
+                      if (thumbEl.tagName === 'IMG') {
+                        thumbEl.src = img;
+                      } else {
+                        const newImg = document.createElement('img');
+                        newImg.className = 'room-card-thumb';
+                        newImg.src = img;
+                        newImg.alt = r.series_title || '';
+                        newImg.loading = 'lazy';
+                        thumbEl.replaceWith(newImg);
+                      }
+                    }
+                  }
+                  if (sb) sb.from('parties').update({ cover_image: img }).eq('id', r.id).then(()=>{}).catch(()=>{});
+                }
+              });
+            }).catch(()=>{});
+          }
         } catch(e) { wrap.style.display = 'none'; }
       }
 
