@@ -321,17 +321,21 @@ function sbClient() {
 
 function sbReady() { return !!_sb; }
 
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function initAuth() {
   const sb = sbClient();
   if (!sb) { setTimeout(initAuth, 300); return; }
-  const { data } = await sb.auth.getSession();
-  _currentUser = data?.session?.user || null;
+  const stored = localStorage.getItem('ba_user');
+  if (stored) {
+    try { _currentUser = JSON.parse(stored); } catch {}
+  }
   _authReady = true;
-  sb.auth.onAuthStateChange((event, session) => {
-    _currentUser = session?.user || null;
-    if (_currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) syncLocalToRemote();
-    _authCallbacks.forEach(cb => cb(_currentUser, event));
-  });
   _authCallbacks.forEach(cb => cb(_currentUser, 'INIT'));
 }
 
@@ -341,19 +345,46 @@ function getCurrentUser() { return _currentUser; }
 
 async function signUp(username, password) {
   const sb = sbClient(); if (!sb) return { error: 'Supabase not ready' };
-  const email = username + '@ba';
-  return await sb.auth.signUp({ email, password, options: { data: { username } } });
+  if (password.length < 6) return { error: { message: 'Password must be at least 6 characters' } };
+  if (username.length < 3) return { error: { message: 'Username must be at least 3 characters' } };
+  const password_hash = await hashPassword(password);
+  try {
+    const { data, error } = await sb.from('users').insert({ username, password_hash }).select('id, username, created_at').single();
+    if (error) {
+      if (error.code === '23505') return { error: { message: 'Username already taken' } };
+      return { error: { message: error.message } };
+    }
+    _currentUser = data;
+    localStorage.setItem('ba_user', JSON.stringify(data));
+    _authCallbacks.forEach(cb => cb(_currentUser, 'SIGNED_IN'));
+    syncLocalToRemote();
+    return { data: { user: data, session: true } };
+  } catch (err) {
+    return { error: { message: 'Something went wrong' } };
+  }
 }
 
 async function signIn(username, password) {
   const sb = sbClient(); if (!sb) return { error: 'Supabase not ready' };
-  const email = username + '@ba';
-  return await sb.auth.signInWithPassword({ email, password });
+  const password_hash = await hashPassword(password);
+  try {
+    const { data, error } = await sb.from('users').select('id, username, created_at').eq('username', username).eq('password_hash', password_hash).maybeSingle();
+    if (error) return { error: { message: error.message } };
+    if (!data) return { error: { message: 'Invalid username or password' } };
+    _currentUser = data;
+    localStorage.setItem('ba_user', JSON.stringify(data));
+    _authCallbacks.forEach(cb => cb(_currentUser, 'SIGNED_IN'));
+    syncLocalToRemote();
+    return { data: { user: data, session: true } };
+  } catch (err) {
+    return { error: { message: 'Something went wrong' } };
+  }
 }
 
 async function signOut() {
-  const sb = sbClient(); if (!sb) return;
-  await sb.auth.signOut();
+  _currentUser = null;
+  localStorage.removeItem('ba_user');
+  _authCallbacks.forEach(cb => cb(null, 'SIGNED_OUT'));
 }
 
 async function syncLocalToRemote() {

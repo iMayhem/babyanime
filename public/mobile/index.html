@@ -624,7 +624,7 @@
 
     function updateAuthUI(user) {
       if (user) {
-        const displayName = user.user_metadata?.username || user.email?.replace(/@ba$/,'') || user.email?.charAt(0).toUpperCase() || 'U';
+        const displayName = user.username || user.user_metadata?.username || user.email?.split('@')[0] || user.email?.charAt(0).toUpperCase() || 'U';
         authBtn.textContent = displayName.charAt(0).toUpperCase();
         authBtn.style.background = 'var(--accent)';
         authBtn.style.color = '#fff';
@@ -1584,7 +1584,7 @@
       
       try {
         const user = getCurrentUser();
-        const body = { userId: user?.id || 'anon-'+Date.now(), userName: user?.user_metadata?.username || user?.email?.replace(/@ba$/,'') || 'Guest' };
+        const body = { userId: user?.id || 'anon-'+Date.now(), userName: user?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'Guest' };
         const res = await fetch(`${PARTY_SCRAPER_API}/party/rooms/${roomId}/join`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
@@ -1709,7 +1709,7 @@
           document.getElementById('partyConnectionStatus').style.color = 'var(--teal)';
           await channel.track({
             userId: _partyState.userId,
-            userName: (getCurrentUser()?.user_metadata?.username || getCurrentUser()?.email?.replace(/@ba$/,'') || 'Guest'),
+            userName: (getCurrentUser()?.username || getCurrentUser()?.user_metadata?.username || getCurrentUser()?.email?.split('@')[0] || 'Guest'),
             onlineAt: new Date().toISOString()
           });
         } else if (status === 'CHANNEL_ERROR') {
@@ -1723,7 +1723,7 @@
 
     function sendPartyMessage(text) {
       if (!_partyState.supabaseChannel) return;
-      const userName = getCurrentUser()?.user_metadata?.username || getCurrentUser()?.email?.replace(/@ba$/,'') || 'Guest';
+      const userName = getCurrentUser()?.username || getCurrentUser()?.user_metadata?.username || getCurrentUser()?.email?.split('@')[0] || 'Guest';
       _partyState.supabaseChannel.send({
         type: 'broadcast', event: 'chat',
         payload: { message: text, userName, userId: _partyState.userId }

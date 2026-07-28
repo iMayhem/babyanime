@@ -651,7 +651,7 @@
 
     function updateAuthUI(user) {
       if (user) {
-        const displayName = user.user_metadata?.username || user.email?.replace(/@ba$/,'') || user.email?.charAt(0).toUpperCase() || 'U';
+        const displayName = user.username || user.user_metadata?.username || user.email?.split('@')[0] || user.email?.charAt(0).toUpperCase() || 'U';
         authBtn.textContent = displayName.charAt(0).toUpperCase();
         authBtn.style.background = 'var(--accent)';
         authBtn.style.color = '#fff';
