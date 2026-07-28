@@ -1572,6 +1572,7 @@
       let isHost = false;
       let curId = null, curEp = 1, curTotal = 12, curTitle = '';
       let epLimit = 3000;
+      let epPageOffset = 0;
       let syncing = false;
       let userMap = {};
       let partySources = [];
@@ -1696,6 +1697,7 @@
         loader.style.display = 'flex';
         bufSpinner.classList.add('visible');
         if (hls) { hls.destroy(); hls = null; }
+        epPageOffset = 0;
         partySources = [];
         partySourceIdx = 0;
         partySourceBadge.style.display = 'none';
@@ -1736,12 +1738,23 @@
       }
 
       function renderEpisodes() {
-        const maxEp = 3000;
+        const chunk = 200;
+        const start = 1;
+        const end = Math.min((epPageOffset + 1) * chunk, 3000);
         epGrid.innerHTML = '';
-        for (let i = 1; i <= maxEp; i++) {
+        for (let i = start; i <= end; i++) {
           const b = document.createElement('button'); b.type = 'button'; b.className = 'ep-btn' + (i === curEp ? ' active' : ''); b.textContent = i;
           b.addEventListener('click', () => { if (i === curEp || !channel) return; broadcastChange(curId, i, curTitle); });
           epGrid.appendChild(b);
+        }
+        if (end < 3000) {
+          const loadMore = document.createElement('button');
+          loadMore.type = 'button';
+          loadMore.className = 'ep-btn load-more-btn';
+          loadMore.textContent = 'Show next ' + Math.min(chunk, 3000 - end) + ' (' + (end + 1) + '-' + Math.min(end + chunk, 3000) + ')';
+          loadMore.style.cssText = 'grid-column:1/-1;padding:0.6rem;font-size:0.85rem;font-weight:800;color:var(--accent);background:var(--bg);border:2px dashed var(--line);border-radius:12px;cursor:pointer;';
+          loadMore.addEventListener('click', () => { epPageOffset++; renderEpisodes(); });
+          epGrid.appendChild(loadMore);
         }
         setTimeout(() => { const a = epGrid.querySelector('.ep-btn.active'); if (a) a.scrollIntoView({behavior:'smooth',block:'center'}); }, 80);
       }
