@@ -337,7 +337,15 @@
       <!-- WATCH TOGETHER - SUPABASE REALTIME -->
       <div id="partyView" style="display: none; margin-bottom: 3rem;">
 
-        <!-- ENTER SCREEN -->
+        <!-- MOBILE LOCK SCREEN -->
+        <div id="partyMobileLock" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem;gap:1.5rem;">
+          <div style="font-size:3.5rem;">🖥️</div>
+          <div>
+            <h2 style="margin:0 0 0.5rem;font-size:1.4rem;font-weight:900;">Desktop Only</h2>
+            <p style="margin:0;color:var(--muted);font-size:0.95rem;max-width:280px;">Watch Together is optimised for desktop. Open babyanime on a PC or laptop to host or join a watch party.</p>
+          </div>
+        </div>
+
         <div id="partyEnterScreen">
           <div class="party-lobby-header">
             <div class="party-lobby-title">
@@ -611,7 +619,13 @@
       homeView.style.display = 'none';
       browseView.style.display = 'none';
       partyView.style.display = 'block';
-      setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
+      // Lock party on mobile
+      const isMobile = window.innerWidth <= 768;
+      document.getElementById('partyMobileLock').style.display = isMobile ? 'flex' : 'none';
+      document.getElementById('partyEnterScreen').style.display = isMobile ? 'none' : 'block';
+      document.getElementById('partyCreateScreen').style.display = 'none';
+      document.getElementById('partyWorkspaceScreen').style.display = 'none';
+      if (!isMobile) setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
     });
 
     // === Auth UI ===
