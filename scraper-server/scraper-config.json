@@ -1,9 +1,0 @@
-{
-  "scrapers": [
-    {
-      "name": "Eren",
-      "enabled": true,
-      "order": 0
-    }
-  ]
-}

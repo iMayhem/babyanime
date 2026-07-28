@@ -4,7 +4,8 @@ const path = require('path');
 const CONFIG_PATH = path.join(__dirname, 'scraper-config.json');
 
 const DEFAULT_PROVIDERS = [
-  'Eren'
+  'AllAnime', 'AniDB', 'AnikoTV', 'AnimeKai', 'AnimePahe', 'AnimeSalt',
+  'Animetsu', 'AnimeWorld', 'Eren', 'AnimeSama', 'KissKH',
 ];
 
 function loadConfig() {
@@ -67,7 +68,7 @@ function reorderScrapers(newOrderNames) {
 }
 
 function getEnabledProviders() {
-  return ['Eren'];
+  return getScrapers().filter(s => s.enabled).map(s => s.name);
 }
 
 module.exports = {
