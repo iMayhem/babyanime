@@ -1201,9 +1201,9 @@
     if (currentScheduleDay < 0) currentScheduleDay = 0;
 
     function setupAiringSchedule() {
-      const scheduleContainer = document.getElementById('airingScheduleList');
+      const scheduleContainer = document.getElementById('scheduleList');
       if (!scheduleContainer) return;
-      const dayTabs = document.querySelectorAll('.schedule-day-tab');
+      const dayTabs = document.querySelectorAll('.schedule-tab-btn');
       dayTabs.forEach((tab, idx) => {
         tab.addEventListener('click', () => {
           dayTabs.forEach(t => t.classList.remove('active'));
@@ -1219,7 +1219,7 @@
 
     let scheduleAbortController = null;
     async function loadDaySchedule(dayIndex) {
-      const container = document.getElementById('airingScheduleList');
+      const container = document.getElementById('scheduleList');
       if (!container) return;
       if (scheduleAbortController) scheduleAbortController.abort();
       scheduleAbortController = new AbortController();
@@ -1258,7 +1258,7 @@
             const d = new Date(s.airingAt * 1000);
             const timeStr = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
             const cover = m.coverImage?.large || '';
-            return `<a href="/watch.html?id=${m.id}&ep=${s.episode}" class="schedule-item" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem;border-radius:8px;text-decoration:none;color:var(--text);transition:background 0.15s;">
+            return `<a href="watch.html?id=${m.id}&ep=${s.episode}" class="schedule-item" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem;border-radius:8px;text-decoration:none;color:var(--text);transition:background 0.15s;">
               ${cover ? `<img src="${cover}" alt="" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:36px;height:50px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
               <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.7rem;color:var(--muted);">Ep ${s.episode} · ${timeStr}</div></div>
             </a>`;
@@ -1274,7 +1274,7 @@
 
     // === TOP AIRING SIDEBAR ===
     async function loadTopAiringSidebar() {
-      const container = document.getElementById('topAiringList');
+      const container = document.getElementById('topAiringSidebarList');
       if (!container) return;
       container.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
       const q = `query{Page(page:1,perPage:10){media(sort:POPULARITY_DESC,status:RELEASING,type:ANIME,isAdult:false){id title{romaji english}coverImage{large}episodes nextAiringEpisode{episode}averageScore popularity format}}}`;
@@ -1285,7 +1285,7 @@
           container.innerHTML = items.map(m => {
             const t = m.title.english || m.title.romaji || 'Unknown';
             const cover = m.coverImage?.large || '';
-            return `<a href="/watch.html?id=${m.id}&ep=1" class="sched-sidebar-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line);">
+            return `<a href="watch.html?id=${m.id}&ep=1" class="sched-sidebar-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line);">
               ${cover ? `<img src="${cover}" alt="" style="width:28px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:28px;height:40px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
               <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.65rem;color:var(--muted);">${m.averageScore ? `${m.averageScore}%` : 'N/A'} · ${m.episodes ? `${m.episodes} eps` : '?'}</div></div>
             </a>`;
@@ -1296,7 +1296,7 @@
 
     // === UPCOMING SIDEBAR ===
     async function loadUpcomingSidebar() {
-      const container = document.getElementById('upcomingList');
+      const container = document.getElementById('upcomingSidebarList');
       if (!container) return;
       container.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
       const q = `query($page:Int){Page(page:$page,perPage:10){media(sort:POPULARITY_DESC,status:NOT_YET_RELEASED,type:ANIME,isAdult:false){id title{romaji english}coverImage{large}format episodes averageScore popularity seasonYear season}}}`;
@@ -1308,7 +1308,7 @@
             const t = m.title.english || m.title.romaji || 'Unknown';
             const cover = m.coverImage?.large || '';
             const seasonStr = m.season && m.seasonYear ? `${m.season} ${m.seasonYear}` : 'TBA';
-            return `<a href="/watch.html?id=${m.id}&ep=1" class="sched-sidebar-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line);">
+            return `<a href="watch.html?id=${m.id}&ep=1" class="sched-sidebar-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line);">
               ${cover ? `<img src="${cover}" alt="" style="width:28px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:28px;height:40px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
               <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.65rem;color:var(--muted);">${seasonStr}</div></div>
             </a>`;
