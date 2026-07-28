@@ -830,16 +830,23 @@
         let toPlay = scraperSources;
         if (provider !== 'all') { toPlay = scraperSources.filter(s => s.provider === provider); if (toPlay.length === 0) toPlay = scraperSources; }
         const firstIdx = scraperSources.indexOf(toPlay[0]);
-        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
-        const nextEp = activeEpisode + 1;
-        if (nextEp <= (activeAnime.episodes || 9999)) {
-          const nextParams = new URLSearchParams({ ep: nextEp, audio: activeAudio });
-          if (anilistId) nextParams.set('anilist_id', anilistId);
-          else if (malId) nextParams.set('mal_id', malId);
-          const nk = `scraper_${nextParams.toString()}`;
-          if (!sessionStorage.getItem(nk)) { fetch(`${SCRAPER_API}/stream?${nextParams}`).then(r => r.json()).then(d => { if (d && d.success) try { sessionStorage.setItem(nk, JSON.stringify({ data: d, ts: Date.now() })); } catch {} }).catch(() => {}); }
+        try {
+          const nextEp = activeEpisode + 1;
+          const totalEps = (typeof activeAnime !== 'undefined' && activeAnime ? (activeAnime.episodes || 9999) : 9999);
+          if (nextEp <= totalEps) {
+            const nextParams = new URLSearchParams({ ep: nextEp, audio: activeAudio });
+            if (id) nextParams.set('anilist_id', id);
+            else if (mal_id) nextParams.set('mal_id', mal_id);
+            const nk = `scraper_${nextParams.toString()}`;
+            if (!sessionStorage.getItem(nk)) { fetch(`${SCRAPER_API}/stream?${nextParams}`).then(r => r.json()).then(d => { if (d && d.success) try { sessionStorage.setItem(nk, JSON.stringify({ data: d, ts: Date.now() })); } catch {} }).catch(() => {}); }
+          }
+        } catch (e) { console.warn('[Scraper] Preload skipped:', e); }
+      } catch (err) {
+        if (!scraperSources || scraperSources.length === 0) {
+          sourceBadge.textContent = '⚠ Scraper error';
+          sourceBadge.style.display = '';
         }
-      } catch (err) { sourceBadge.textContent = '⚠ Scraper error'; sourceBadge.style.display = ''; }
+      }
     }
 
     const embedIframe = document.getElementById('embedIframe');
