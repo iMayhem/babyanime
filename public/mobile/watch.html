@@ -269,11 +269,12 @@
                   </button>
                   <div class="quality-menu" id="subtitleMenu"></div>
                 </div>
-                <div class="speed-pills" id="speedPills">
-                  <button class="pill-opt speed-opt" data-speed="0.5">0.5×</button>
-                  <button class="pill-opt speed-opt active" data-speed="1">1×</button>
-                  <button class="pill-opt speed-opt" data-speed="1.5">1.5×</button>
-                  <button class="pill-opt speed-opt" data-speed="2">2×</button>
+                <div class="quality-wrap" id="speedWrap">
+                  <button class="quality-btn" id="speedBtn">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span id="speedLabel">1×</span>
+                  </button>
+                  <div class="quality-menu" id="speedMenu"></div>
                 </div>
                 <button class="ctrl-btn vol-btn" id="volBtn" aria-label="Volume">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
@@ -454,7 +455,10 @@
     const volBar = document.getElementById('volBar');
     const pipBtn = document.getElementById('pipBtn');
     const fsBtn = document.getElementById('fsBtn');
-    const speedPills = document.getElementById('speedPills');
+    const speedWrap = document.getElementById('speedWrap');
+    const speedBtn = document.getElementById('speedBtn');
+    const speedLabel = document.getElementById('speedLabel');
+    const speedMenu = document.getElementById('speedMenu');
     const qualityPills = document.getElementById('qualityPills');
 
     const sourceBadge = document.getElementById('sourceBadge');
@@ -1380,13 +1384,22 @@
         updateVolBtn();
       });
 
-      speedPills.querySelectorAll('.speed-opt').forEach(btn => {
-        btn.addEventListener('click', () => {
-          speedPills.querySelectorAll('.speed-opt').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          playbackSpeed = parseFloat(btn.dataset.speed);
+      // Speed dropdown
+      const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+      speedMenu.innerHTML = speeds.map(s => {
+        const active = s === playbackSpeed;
+        return `<div class="quality-opt${active ? ' active' : ''}" data-speed="${s}"><span class="q-dot"></span>${s}×</div>`;
+      }).join('');
+      speedBtn.addEventListener('click', (e) => { e.stopPropagation(); speedMenu.classList.toggle('open'); });
+      speedMenu.querySelectorAll('.quality-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          speedMenu.querySelectorAll('.quality-opt').forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          playbackSpeed = parseFloat(opt.dataset.speed);
           playerVideo.playbackRate = playbackSpeed;
+          speedLabel.textContent = playbackSpeed + '×';
           localStorage.setItem('speed', playbackSpeed);
+          speedMenu.classList.remove('open');
         });
       });
 
@@ -1442,8 +1455,9 @@
     }
 
     function matchActiveSpeedPill() {
-      speedPills.querySelectorAll('.speed-opt').forEach(b => {
-        b.classList.toggle('active', parseFloat(b.dataset.speed) === playbackSpeed);
+      speedLabel.textContent = playbackSpeed + '×';
+      speedMenu.querySelectorAll('.quality-opt').forEach(o => {
+        o.classList.toggle('active', parseFloat(o.dataset.speed) === playbackSpeed);
       });
     }
 
