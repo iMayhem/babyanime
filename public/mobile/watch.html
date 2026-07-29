@@ -704,6 +704,7 @@
 
     // Helper to immediately halt any playing video/audio and reset player state
     function stopCurrentVideo() {
+      activePlayerToken++;
       if (window.hlsInstance) {
         try { window.hlsInstance.destroy(); } catch (_) {}
         window.hlsInstance = null;
@@ -720,8 +721,9 @@
         playerVideo.load();
       }
       if (embedIframe) {
+        embedIframe.src = 'about:blank';
         embedIframe.style.display = 'none';
-        embedIframe.src = '';
+        embedIframe.style.zIndex = '';
       }
       const bufSpinner = document.getElementById('bufSpinner');
       if (bufSpinner) bufSpinner.classList.add('visible');
@@ -835,8 +837,8 @@
 
       // Server select
       serverSelect.addEventListener('change', () => {
+        stopCurrentVideo();
         activeServer = serverSelect.value;
-
         updatePlayer();
       });
 

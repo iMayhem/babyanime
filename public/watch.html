@@ -1299,10 +1299,12 @@
 
       qualityPills.querySelectorAll('.pill-opt').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (btn.classList.contains('active')) return;
+          stopCurrentVideo();
           qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const idx = parseInt(btn.dataset.idx);
-          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx, scraperSources[idx].format);
+          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx, scraperSources[idx].format, activePlayerToken);
         });
       });
     }
@@ -1343,6 +1345,8 @@
 
         serverSelect.querySelectorAll('.server-pill').forEach(btn => {
           btn.addEventListener('click', () => {
+            if (btn.classList.contains('active')) return;
+            stopCurrentVideo(); // INSTANT MILLISECOND HALT
             serverSelect.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             activeServer = btn.dataset.value;
@@ -1493,7 +1497,8 @@
       // Server pills
       serverSelect.addEventListener('click', (e) => {
         const btn = e.target.closest('.server-pill');
-        if (!btn) return;
+        if (!btn || btn.classList.contains('active')) return;
+        stopCurrentVideo();
         serverSelect.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeServer = btn.dataset.value;
