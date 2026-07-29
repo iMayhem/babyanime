@@ -692,26 +692,56 @@ header {
   border-color: var(--accent);
 }
 
-/* Caption settings (inside player overlay, match dark theme) */
+/* Caption settings (page-level theme variables) */
 .cc-opt {
   flex: 1;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: transparent;
-  color: rgba(255,255,255,0.75);
+  border: 2px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
   font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.3rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.3rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition: all 0.15s;
   outline: none;
   text-align: center;
 }
-.cc-opt:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.cc-opt:hover { background: var(--line); }
 .cc-opt.active {
-  color: var(--accent,#e25c5c);
-  border-color: var(--accent,#e25c5c);
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.cc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  outline: none;
+  cursor: pointer;
+}
+.cc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+.cc-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  cursor: pointer;
 }
 
 /* Episodes Panel */

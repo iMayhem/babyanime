@@ -1382,31 +1382,32 @@
     const originalCueTimes = new WeakMap();
     let activeCcSync = 0;
 
-    let ccSettings = { position: 'bottom', bg: 0.5, sync: 0 };
+    let ccSettings = { position: 50, bg: 0.5, size: 100, sync: 0 };
     try { const s = JSON.parse(localStorage.getItem('ccSettings')); if (s) Object.assign(ccSettings, s); } catch {}
 
     function buildCcMenu() {
       ccMenu.innerHTML = `
         <div style="font-weight:700;font-size:0.75rem;margin-bottom:0.5rem;color:var(--muted);text-align:center;">Caption Settings</div>
-        <div style="margin-bottom:0.6rem;">
-          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.25rem;">Position</div>
-          <div style="display:flex;gap:0.3rem;">
-            <button type="button" class="cc-opt${ccSettings.position==='bottom'?' active':''}" data-cc="position" data-val="bottom">Bottom</button>
-            <button type="button" class="cc-opt${ccSettings.position==='top'?' active':''}" data-cc="position" data-val="top">Top</button>
-          </div>
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.15rem;">Position <span id="ccPosVal">${ccSettings.position}%</span></div>
+          <input type="range" class="cc-range" id="ccPosRange" min="0" max="100" value="${ccSettings.position}">
         </div>
-        <div style="margin-bottom:0.6rem;">
-          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.25rem;">Background</div>
-          <div style="display:flex;gap:0.3rem;">
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.15rem;">Background</div>
+          <div style="display:flex;gap:0.25rem;">
             <button type="button" class="cc-opt${ccSettings.bg===0?' active':''}" data-cc="bg" data-val="0">None</button>
             <button type="button" class="cc-opt${ccSettings.bg===0.35?' active':''}" data-cc="bg" data-val="0.35">Light</button>
             <button type="button" class="cc-opt${ccSettings.bg===0.5?' active':''}" data-cc="bg" data-val="0.5">Medium</button>
             <button type="button" class="cc-opt${ccSettings.bg===1?' active':''}" data-cc="bg" data-val="1">Solid</button>
           </div>
         </div>
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.15rem;">Size <span id="ccSizeVal">${ccSettings.size}%</span></div>
+          <input type="range" class="cc-range" id="ccSizeRange" min="60" max="200" value="${ccSettings.size}">
+        </div>
         <div>
-          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.25rem;">Sync <span id="ccSyncVal">${ccSettings.sync > 0 ? '+' : ''}${ccSettings.sync}s</span></div>
-          <input type="range" id="ccSyncRange" min="-5" max="5" step="0.5" value="${ccSettings.sync}" style="width:100%;accent-color:var(--accent);">
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.15rem;">Sync <span id="ccSyncVal">${ccSettings.sync > 0 ? '+' : ''}${ccSettings.sync}s</span></div>
+          <input type="range" class="cc-range" id="ccSyncRange" min="-5" max="5" step="0.5" value="${ccSettings.sync}">
           <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:var(--muted);"><span>-5s</span><span>0</span><span>+5s</span></div>
         </div>`;
 
@@ -1415,21 +1416,24 @@
           e.stopPropagation();
           const setting = btn.dataset.cc;
           const val = btn.dataset.val;
-          ccSettings[setting] = setting === 'bg' ? parseFloat(val) : val;
+          ccSettings[setting] = parseFloat(val);
           ccMenu.querySelectorAll(`.cc-opt[data-cc="${setting}"]`).forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           applyCcSettings();
         });
       });
 
-      const range = ccMenu.querySelector('#ccSyncRange');
-      if (range) {
-        range.addEventListener('input', () => {
-          ccSettings.sync = parseFloat(range.value);
-          document.getElementById('ccSyncVal').textContent = (ccSettings.sync > 0 ? '+' : '') + ccSettings.sync + 's';
+      ['ccPosRange', 'ccSizeRange', 'ccSyncRange'].forEach(id => {
+        const el = ccMenu.querySelector('#' + id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+          const val = parseFloat(el.value);
+          if (id === 'ccPosRange') { ccSettings.position = val; document.getElementById('ccPosVal').textContent = val + '%'; }
+          else if (id === 'ccSizeRange') { ccSettings.size = val; document.getElementById('ccSizeVal').textContent = val + '%'; }
+          else if (id === 'ccSyncRange') { ccSettings.sync = val; document.getElementById('ccSyncVal').textContent = (val > 0 ? '+' : '') + val + 's'; }
           applyCcSettings();
         });
-      }
+      });
     }
 
     function applyCcSettings() {
@@ -1438,8 +1442,12 @@
         ccStyleEl.id = 'cc-custom-style';
         document.head.appendChild(ccStyleEl);
       }
+      const pos = ccSettings.position;
+      const bottomPct = 2 + (pos / 100) * 78;
+      const sizeScale = ccSettings.size / 100;
       let css = 'video::cue {';
-      css += ccSettings.position === 'top' ? ' top: 8%; bottom: auto;' : ' bottom: 6%; top: auto;';
+      css += ` bottom: ${bottomPct}%; top: auto;`;
+      css += ` font-size: ${0.9 * sizeScale}rem;`;
       css += ` background: rgba(0,0,0,${ccSettings.bg});`;
       css += ' }';
       ccStyleEl.textContent = css;
