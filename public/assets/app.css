@@ -692,26 +692,26 @@ header {
   border-color: var(--accent);
 }
 
-/* Caption settings */
+/* Caption settings (inside player overlay, match dark theme) */
 .cc-opt {
   flex: 1;
-  border: 1.5px solid var(--ink);
-  background: var(--card);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 700;
-  font-size: 0.7rem;
-  padding: 0.25rem 0.3rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.4rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.1s, color 0.1s;
   outline: none;
+  text-align: center;
 }
-.cc-opt:hover { background: var(--line); }
+.cc-opt:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .cc-opt.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  color: var(--accent,#e25c5c);
+  border-color: var(--accent,#e25c5c);
 }
 
 /* Episodes Panel */
