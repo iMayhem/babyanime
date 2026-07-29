@@ -1140,6 +1140,19 @@
     const searchResultsGrid = document.getElementById('searchResultsGrid');
     let searchTimeout = null;
 
+    function triggerSearchNow() {
+      clearTimeout(searchTimeout);
+      const queryText = searchInput.value.trim();
+      if (!queryText) {
+        searchResultsSection.style.display = 'none';
+        return;
+      }
+      if (homeView.style.display === 'none') {
+        tabHome.click();
+      }
+      performSearch(queryText);
+    }
+
     searchInput.addEventListener('input', () => {
       clearTimeout(searchTimeout);
       const queryText = searchInput.value.trim();
@@ -1157,6 +1170,18 @@
       searchTimeout = setTimeout(() => {
         performSearch(queryText);
       }, 300);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        triggerSearchNow();
+      }
+    });
+
+    document.querySelectorAll('.search-icon-svg').forEach(icon => {
+      icon.style.cursor = 'pointer';
+      icon.addEventListener('click', triggerSearchNow);
     });
 
     const searchCache = new Map();

@@ -1106,6 +1106,16 @@
     const searchResultsGrid = document.getElementById('searchResultsGrid');
     let searchTimeout = null;
 
+    function triggerSearchNow() {
+      clearTimeout(searchTimeout);
+      const queryText = searchInput.value.trim();
+      if (!queryText) {
+        searchResultsSection.style.display = 'none';
+        return;
+      }
+      performSearch(queryText);
+    }
+
     searchInput.addEventListener('input', () => {
       clearTimeout(searchTimeout);
       const queryText = searchInput.value.trim();
@@ -1117,7 +1127,19 @@
       
       searchTimeout = setTimeout(() => {
         performSearch(queryText);
-      }, 500);
+      }, 300);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        triggerSearchNow();
+      }
+    });
+
+    document.querySelectorAll('.search-icon-svg').forEach(icon => {
+      icon.style.cursor = 'pointer';
+      icon.addEventListener('click', triggerSearchNow);
     });
 
     async function performSearch(titleQuery) {

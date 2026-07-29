@@ -865,16 +865,22 @@
         updateBookmarkBtnState();
       });
 
-      // Search input enter redirect to home with query
+      // Search input enter or icon click redirect to home with query
       const searchInput = document.getElementById('searchInput');
       if (searchInput) {
+        const doSearchRedirect = () => {
+          const q = searchInput.value.trim();
+          if (q) window.location.href = `/?search=${encodeURIComponent(q)}`;
+        };
         searchInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
-            const q = searchInput.value.trim();
-            if (q) {
-              window.location.href = `/?search=${encodeURIComponent(q)}`;
-            }
+            e.preventDefault();
+            doSearchRedirect();
           }
+        });
+        document.querySelectorAll('.search-icon-svg').forEach(icon => {
+          icon.style.cursor = 'pointer';
+          icon.addEventListener('click', doSearchRedirect);
         });
       }
     }
