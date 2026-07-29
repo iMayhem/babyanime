@@ -267,28 +267,38 @@ function getStreams(_0x1a69bb, _0x2befb3, _0x52fcf8, _0xfc825d) {
       let _0x18bb35 = null;
       if (_0x2befb3 === "tv") {
         const _0x324a65 = yield getImdbId(_0x1a69bb, _0x2befb3);
-        if (!_0x324a65) {
-          return [];
+        const _0xd31fc = _0x324a65 ? (yield resolveMapping(_0x324a65, _0x52fcf8, _0xfc825d)) : null;
+        if (_0xd31fc && _0xd31fc.mal_id) {
+          _0x18bb35 = _0xd31fc.mal_id;
+          _0x2c186e = _0xd31fc.mal_episode || _0xfc825d;
+          _0x581fa6 = _0xd31fc.title || _0xd31fc.name || (yield getMalTitle(_0x18bb35));
         }
-        const _0xd31fc = yield resolveMapping(_0x324a65, _0x52fcf8, _0xfc825d);
-        if (!_0xd31fc || !_0xd31fc.mal_id) {
-          return [];
+        if (!_0x581fa6) {
+          try {
+            const tmdbRes = yield fetch("https://api.themoviedb.org/3/tv/" + _0x1a69bb + "?api_key=1865f43a0549ca50d341dd9ab8b29f49");
+            if (tmdbRes.ok) {
+              const tmdbData = yield tmdbRes.json();
+              _0x581fa6 = tmdbData.name || tmdbData.original_name;
+            }
+          } catch (_) {}
         }
-        _0x18bb35 = _0xd31fc.mal_id;
-        _0x2c186e = _0xd31fc.mal_episode || _0xfc825d;
-        _0x581fa6 = _0xd31fc.title || _0xd31fc.name || (yield getMalTitle(_0x18bb35));
         if (!_0x581fa6) {
           return [];
         }
         const _0x4cf3da = yield searchAnime(_0x581fa6);
-        if (_0x4cf3da.data && _0x4cf3da.data.length > 0) {
-          for (let _0x22ea5c = 0; _0x22ea5c < Math.min(_0x4cf3da.data.length, 3); _0x22ea5c++) {
-            const _0x481763 = _0x4cf3da.data[_0x22ea5c];
-            const _0x1a4687 = yield fetchText("/anime/" + _0x481763.session);
-            if (_0x1a4687.includes("myanimelist.net/anime/" + _0x18bb35)) {
-              _0x5e5e45 = _0x481763.session;
-              break;
+        if (_0x4cf3da && _0x4cf3da.data && _0x4cf3da.data.length > 0) {
+          if (_0x18bb35) {
+            for (let _0x22ea5c = 0; _0x22ea5c < Math.min(_0x4cf3da.data.length, 3); _0x22ea5c++) {
+              const _0x481763 = _0x4cf3da.data[_0x22ea5c];
+              const _0x1a4687 = yield fetchText("/anime/" + _0x481763.session);
+              if (_0x1a4687.includes("myanimelist.net/anime/" + _0x18bb35)) {
+                _0x5e5e45 = _0x481763.session;
+                break;
+              }
             }
+          }
+          if (!_0x5e5e45) {
+            _0x5e5e45 = _0x4cf3da.data[0].session;
           }
         }
       } else {

@@ -910,6 +910,11 @@
         }
       `;
 
+      if (!anilistId && !malId) {
+        showError('No anime ID specified in URL.');
+        return;
+      }
+
       const variables = {};
       if (anilistId) variables.id = parseInt(anilistId);
       if (malId) variables.idMal = parseInt(malId);
@@ -945,11 +950,10 @@
           throw new Error('Not found on AniList');
         }
       } catch (err) {
-        console.warn('AniList fetch failed, attempting MAL Jikan API fallback:', err);
-        const fallbackMalId = malId || anilistId;
-        if (fallbackMalId) {
+        console.warn('AniList fetch failed:', err);
+        if (malId) {
           try {
-            const malData = await fetchMALMetadata(parseInt(fallbackMalId));
+            const malData = await fetchMALMetadata(parseInt(malId));
             if (malData) {
               activeAnime = {
                 id: null,
@@ -961,33 +965,24 @@
                 },
                 description: malData.synopsis || 'No description available.',
                 coverImage: {
-                  large: malData.images.jpg.large_image_url || malData.images.jpg.image_url
+                  large: malData.images?.jpg?.large_image_url || malData.images?.jpg?.image_url || ''
                 },
                 episodes: malData.episodes,
                 format: malData.type,
                 status: malData.status,
                 season: malData.season,
                 seasonYear: malData.year,
-                averageScore: malData.score ? malData.score * 10 : null,
+                averageScore: malData.score ? Math.round(malData.score * 10) : null,
                 genres: malData.genres ? malData.genres.map(g => g.name) : [],
-                studios: {
-                  nodes: malData.studios && malData.studios[0] ? [{ name: malData.studios[0].name }] : []
-                },
+                studios: { nodes: malData.studios ? malData.studios.map(s => ({ name: s.name })) : [] },
                 type: 'mal'
               };
-              
               renderMetadata();
               renderEpisodes();
               updatePlayer();
               updateBookmarkBtnState();
-              
               loadingScreen.style.display = 'none';
               watchLayout.style.display = 'grid';
-            } else {
-              showError('Could not fetch metadata from backup MAL API.');
-            }
-          } catch (fallbackErr) {
-            showError('Failed to fetch anime metadata from both AniList and Jikan backup API.');
           }
         } else {
           showError('Failed to find anime on AniList.');
