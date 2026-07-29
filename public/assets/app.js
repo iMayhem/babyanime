@@ -668,9 +668,9 @@ function setupHoldToSwap() {
     if (!target) return null;
     const tag = target.tagName.toLowerCase();
     if (['input', 'select', 'textarea', 'option'].includes(tag)) return null;
-    if (target.closest('input, select, textarea, .clr-dot, .schedule-tab-btn')) return null;
+    if (target.closest('input, select, textarea, .clr-dot, .schedule-tab-btn, .ep-btn')) return null;
 
-    return target.closest('.card, .anime-card, .shelf-item, .ep-btn, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section, .tab-btn, .tt, .player-wrapper, .player-card, #playerContainer');
+    return target.closest('.card, .anime-card, .shelf-item, .pill-opt, .genre-tag, .room-card, .airing-card, .player-column, .sidebar-column, .airing-sidebar, .details-box, .episodes-panel, .selector-section, .tab-btn, .tt, .player-wrapper, .player-card, #playerContainer');
   }
 
   function clearSelection() {

@@ -698,7 +698,10 @@
           <div class="card episodes-panel">
             <div class="episodes-header">
               <span>Episodes</span>
-              <span id="episodesCountText" class="episodes-count">- / -</span>
+              <div style="display:flex;align-items:center;gap:0.4rem;">
+                <button type="button" id="epSortBtn" class="tt" style="font-size:0.75rem;padding:0.2rem 0.5rem;font-weight:800;cursor:pointer;" title="Toggle Episode Order (Ascending / Descending)">1 → N ⇅</button>
+                <span id="episodesCountText" class="episodes-count">- / -</span>
+              </div>
             </div>
             
             <div class="ep-grid-container">
@@ -1048,6 +1051,40 @@
       detailsGenres.innerHTML = activeAnime.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('');
     }
 
+    let epSortOrder = localStorage.getItem('babyanime_ep_sort') || 'asc';
+
+    // Helper to immediately halt any playing video/audio and reset player state
+    function stopCurrentVideo() {
+      if (window.hlsInstance) {
+        try { window.hlsInstance.destroy(); } catch (_) {}
+        window.hlsInstance = null;
+      }
+      if (activeM3u8BlobUrl) {
+        URL.revokeObjectURL(activeM3u8BlobUrl);
+        activeM3u8BlobUrl = null;
+      }
+      if (typeof clearQualityMenu === 'function') clearQualityMenu();
+      if (typeof clearSubtitles === 'function') clearSubtitles();
+      if (playerVideo) {
+        playerVideo.pause();
+        playerVideo.removeAttribute('src');
+        playerVideo.load();
+      }
+      if (embedIframe) {
+        embedIframe.style.display = 'none';
+        embedIframe.src = '';
+      }
+      const bufSpinner = document.getElementById('bufSpinner');
+      if (bufSpinner) bufSpinner.classList.add('visible');
+      const bigPlayOverlay = document.getElementById('bigPlayOverlay');
+      if (bigPlayOverlay) bigPlayOverlay.classList.add('hidden');
+      const sourceBadge = document.getElementById('sourceBadge');
+      if (sourceBadge) {
+        sourceBadge.textContent = `Loading Ep ${activeEpisode}...`;
+        sourceBadge.style.display = '';
+      }
+    }
+
     // Render episodes grid
     function renderEpisodes() {
       const maxEpisodes = activeAnime.episodes || (activeAnime.nextAiringEpisode?.episode ? activeAnime.nextAiringEpisode.episode - 1 : 9999);
@@ -1060,8 +1097,16 @@
       const end = Math.min(epPage * EPISODES_PER_PAGE, maxEpisodes);
 
       const nextAiringEp = activeAnime.nextAiringEpisode?.episode;
-      let html = '';
+      let epList = [];
       for (let i = start; i <= end; i++) {
+        epList.push(i);
+      }
+      if (epSortOrder === 'desc') {
+        epList.reverse();
+      }
+
+      let html = '';
+      for (const i of epList) {
         const isActive = i === activeEpisode;
         const isUnaired = nextAiringEp && i >= nextAiringEp;
         const cls = `ep-btn${isActive ? ' active' : ''}${isUnaired ? ' unaired' : ''}`;
@@ -1071,6 +1116,11 @@
 
       episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
       epJumpInput.value = activeEpisode;
+
+      const epSortBtn = document.getElementById('epSortBtn');
+      if (epSortBtn) {
+        epSortBtn.textContent = epSortOrder === 'asc' ? '1 → N ⇅' : 'N → 1 ⇅';
+      }
 
       document.querySelectorAll('.ep-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1115,6 +1165,7 @@
     // Handle episode change
     function changeEpisode(epNum) {
       activeEpisode = epNum;
+      stopCurrentVideo(); // HALT previous video & audio immediately
       epPage = Math.floor((activeEpisode - 1) / EPISODES_PER_PAGE) + 1;
       renderEpisodes();
       updatePlayer();
@@ -1132,6 +1183,16 @@
         activeServer = btn.dataset.value;
         updatePlayer();
       });
+
+      // Episode Sort Toggle (Ascending / Descending)
+      const epSortBtn = document.getElementById('epSortBtn');
+      if (epSortBtn) {
+        epSortBtn.addEventListener('click', () => {
+          epSortOrder = (epSortOrder === 'asc' ? 'desc' : 'asc');
+          localStorage.setItem('babyanime_ep_sort', epSortOrder);
+          renderEpisodes();
+        });
+      }
 
       // Episode Jump
       epJumpBtn.addEventListener('click', () => {
