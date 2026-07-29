@@ -478,38 +478,14 @@
           
           const hasExplicitEp = urlParams.has('ep');
 
-          // Check for latest season (SEQUEL relation edge)
-          const sequelEdge = activeAnime.relations?.edges?.find(e => 
-            e.relationType === 'SEQUEL' && 
-            ['TV', 'TV_SHORT', 'ONA', 'MOVIE'].includes(e.node?.format) &&
-            e.node?.status !== 'NOT_YET_RELEASED'
-          );
-
-          if (!hasExplicitEp && sequelEdge && sequelEdge.node) {
-            const sequelId = sequelEdge.node.id || sequelEdge.node.idMal;
-            if (sequelId && sequelId !== activeAnime.id) {
-              const targetParam = sequelEdge.node.id ? `id=${sequelEdge.node.id}` : `mal_id=${sequelEdge.node.idMal}`;
-              window.location.replace(`/watch.html?${targetParam}`);
-              return;
-            }
-          }
-
           if (!activeAnime.episodes && activeAnime.nextAiringEpisode) {
             activeAnime.episodes = activeAnime.nextAiringEpisode.episode - 1;
           }
           activeAnime.type = anilistId ? 'anilist' : 'mal'; // Store lookup context
 
-          // Default to latest episode of latest season if not explicitly passed in URL
-          let latestEp = 1;
-          if (activeAnime.nextAiringEpisode && activeAnime.nextAiringEpisode.episode) {
-            latestEp = Math.max(1, activeAnime.nextAiringEpisode.episode - 1);
-          } else if (activeAnime.episodes) {
-            latestEp = activeAnime.episodes;
-          }
-
           if (!hasExplicitEp) {
-            activeEpisode = Math.max(1, latestEp);
-            epPage = Math.floor((activeEpisode - 1) / EPISODES_PER_PAGE) + 1;
+            activeEpisode = 1;
+            epPage = 1;
           }
 
           renderMetadata();

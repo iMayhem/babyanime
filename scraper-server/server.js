@@ -353,6 +353,32 @@ app.get("/api/stream-proxy", async (req, res) => {
   }
 });
 
+app.post("/api/anilist", async (req, res) => {
+  try {
+    const { query, variables } = req.body;
+    if (!query) return res.status(400).json({ error: "Missing query" });
+    const resp = await fetch("https://graphql.anilist.co", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ query, variables }),
+    });
+    const data = await resp.json();
+    res.status(resp.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/jikan/:malId", async (req, res) => {
+  try {
+    const resp = await fetch(`https://api.jikan.moe/v4/anime/${req.params.malId}`);
+    const data = await resp.json();
+    res.status(resp.status).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/tmdb-proxy", async (req, res) => {
   try {
     const { path: tmdbPath } = req.query;

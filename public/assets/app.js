@@ -1,8 +1,13 @@
 // Theme Switcher
 (function () {
   const root = document.documentElement;
-  root.setAttribute('data-theme', 'light');
-  localStorage.setItem('theme', 'light');
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    root.setAttribute('data-theme', savedTheme);
+  } else {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  }
   const savedClr = localStorage.getItem('clr');
   if (savedClr) root.setAttribute('data-clr', savedClr);
 })();
@@ -174,6 +179,8 @@ function setupMascot() {
 // GraphQL Query Helper for AniList
 const aniListCache = new Map();
 const aniListInFlight = new Map();
+const ANILIST_PROXY = 'https://proxy.babyanime.top/api/anilist';
+const JIKAN_PROXY = 'https://proxy.babyanime.top/api/jikan';
 
 function hashStr(s) {
   let h = 0;
@@ -185,11 +192,9 @@ async function queryAniList(query, variables) {
   const cacheKey = JSON.stringify({ query: hashStr(query), variables });
   const cacheVal = JSON.stringify({ query, variables });
 
-  // L1: in-memory cache (10 min)
   const mem = aniListCache.get(cacheKey);
   if (mem && Date.now() - mem.ts < 600000) return mem.data;
 
-  // L2: localStorage cache (24h)
   try {
     const raw = localStorage.getItem(cacheKey);
     if (raw) {
@@ -202,10 +207,26 @@ async function queryAniList(query, variables) {
     }
   } catch (_) {}
 
-  // Dedup in-flight requests
   if (aniListInFlight.has(cacheKey)) return aniListInFlight.get(cacheKey);
 
   const promise = (async () => {
+    try {
+      const proxyResp = await fetch(ANILIST_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: cacheVal,
+      });
+      if (proxyResp.ok) {
+        const result = await proxyResp.json();
+        if (!result.errors) {
+          const entry = { data: result.data, ts: Date.now() };
+          aniListCache.set(cacheKey, entry);
+          try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
+          return result.data;
+        }
+      }
+    } catch (_) {}
+
     let lastErr;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -236,10 +257,18 @@ async function queryAniList(query, variables) {
   return promise;
 }
 
-// Fetch metadata from MAL (Jikan API v4) as a secondary fallback
 async function fetchMALMetadata(malId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const proxyResp = await fetch(`${JIKAN_PROXY}/${malId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (proxyResp.ok) {
+      const result = await proxyResp.json();
+      return result.data;
+    }
+  } catch (_) { clearTimeout(timeoutId); }
+
   try {
     const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, { signal: controller.signal });
     clearTimeout(timeoutId);
