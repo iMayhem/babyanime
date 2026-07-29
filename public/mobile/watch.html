@@ -133,6 +133,60 @@
       cursor: not-allowed;
       pointer-events: none;
     }
+
+    .quality-wrap { position: relative; }
+    .quality-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .quality-btn:hover { background: rgba(255,255,255,0.2); }
+    .quality-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      background: rgba(15,15,20,0.97);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 6px 0;
+      min-width: 110px;
+      z-index: 20;
+      display: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+    }
+    .quality-menu.open { display: block; }
+    .quality-opt {
+      padding: 7px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quality-opt:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .quality-opt.active { color: var(--accent,#e25c5c); }
+    .quality-opt .q-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent,#e25c5c);
+      opacity: 0;
+      flex-shrink: 0;
+    }
+    .quality-opt.active .q-dot { opacity: 1; }
   </style>
 </head>
 <body>
