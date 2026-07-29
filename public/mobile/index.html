@@ -562,13 +562,9 @@
     function switchMobileTab(tab) {
       const homeView = document.getElementById('homeView');
       const browseView = document.getElementById('browseView');
-      const partyView = document.getElementById('partyView');
       const tabHome = document.getElementById('tabHome');
       const tabBrowse = document.getElementById('tabBrowse');
       const tabParty = document.getElementById('tabParty');
-      const btnNavHome = document.getElementById('btnNavHome');
-      const btnNavBrowse = document.getElementById('btnNavBrowse');
-      const btnNavSearch = document.getElementById('btnNavSearch');
 
       if (tab === 'home') {
         if (homeView) homeView.style.display = 'block';
@@ -577,9 +573,6 @@
         if (tabHome) tabHome.classList.add('active');
         if (tabBrowse) tabBrowse.classList.remove('active');
         if (tabParty) tabParty.classList.remove('active');
-        if (btnNavHome) btnNavHome.classList.add('active');
-        if (btnNavBrowse) btnNavBrowse.classList.remove('active');
-        if (btnNavSearch) btnNavSearch.classList.remove('active');
       } else if (tab === 'browse') {
         if (homeView) homeView.style.display = 'none';
         if (browseView) browseView.style.display = 'block';
@@ -587,9 +580,6 @@
         if (tabHome) tabHome.classList.remove('active');
         if (tabBrowse) tabBrowse.classList.add('active');
         if (tabParty) tabParty.classList.remove('active');
-        if (btnNavHome) btnNavHome.classList.remove('active');
-        if (btnNavBrowse) btnNavBrowse.classList.add('active');
-        if (btnNavSearch) btnNavSearch.classList.remove('active');
         if (typeof loadBrowseResults === 'function') loadBrowseResults(false);
       } else if (tab === 'party') {
         if (homeView) homeView.style.display = 'none';
@@ -598,9 +588,6 @@
         if (tabHome) tabHome.classList.remove('active');
         if (tabBrowse) tabBrowse.classList.remove('active');
         if (tabParty) tabParty.classList.add('active');
-        if (btnNavHome) btnNavHome.classList.remove('active');
-        if (btnNavBrowse) btnNavBrowse.classList.remove('active');
-        if (btnNavSearch) btnNavSearch.classList.remove('active');
         setTimeout(() => { if (typeof _refreshPartyRooms !== 'undefined') _refreshPartyRooms(); }, 100);
       }
     }
@@ -2021,51 +2008,9 @@
       }
     }
 
-    // Bottom nav and URL param routing (merged into root listener above)
-    (function setupBottomNav() {
-      const btnNavHome = document.getElementById('btnNavHome');
-      const btnNavBrowse = document.getElementById('btnNavBrowse');
-      const btnNavSearch = document.getElementById('btnNavSearch');
-      if (!btnNavHome || !btnNavBrowse || !btnNavSearch) return;
 
-      btnNavHome.addEventListener('click', () => {
-        if (typeof switchMobileTab === 'function') switchMobileTab('home');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-
-      btnNavBrowse.addEventListener('click', () => {
-        if (typeof switchMobileTab === 'function') switchMobileTab('browse');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-
-      btnNavSearch.addEventListener('click', () => {
-        btnNavHome.classList.remove('active');
-        btnNavBrowse.classList.remove('active');
-        btnNavSearch.classList.add('active');
-        const input = document.getElementById('searchInput') || document.getElementById('searchInputHeader');
-        if (input) {
-          input.style.display = 'block';
-          input.focus();
-          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      });
-    })();
   </script>
 
-  <!-- Bottom Navigation Bar for Mobile -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" id="btnNavHome">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span>Home</span>
-    </button>
-    <button class="nav-item" id="btnNavBrowse">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-      <span>Browse</span>
-    </button>
-    <button class="nav-item" id="btnNavSearch">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span>Search</span>
-    </button>
-  </nav>
+
 </body>
 </html>
