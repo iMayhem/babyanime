@@ -293,6 +293,7 @@
                 <option value="scraper_Naruto" selected>Naruto</option>
                 <option value="embed_animecfd" style="font-weight:700;">Geto</option>
                 <option value="embed_babastream" style="font-weight:700;">Eren</option>
+                <option value="embed_megaplay_embed" style="font-weight:700;">Lelouch</option>
               </select>
             </div>
 
@@ -1332,6 +1333,35 @@
         const mid = activeAnime?.idMal || malId;
         if (mid) {
           embedIframe.src = `https://babastream.top/embed/${mid}/${ep}/sub`;
+          embedIframe.style.display = 'block';
+          const hideSpinner = () => bufSpinner.classList.remove('visible');
+          embedIframe.addEventListener('load', hideSpinner, { once: true });
+          setTimeout(hideSpinner, 3000);
+        } else {
+          bufSpinner.classList.remove('visible');
+          sourceBadge.textContent = '⚠ No MAL ID';
+          sourceBadge.style.display = '';
+        }
+        return;
+      }
+
+      if (val === 'embed_megaplay_embed') {
+        if (window.hlsInstance) { try { window.hlsInstance.destroy(); } catch (_) {} window.hlsInstance = null; }
+        if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
+        clearSubtitles();
+        playerVideo.src = '';
+        playerVideo.load();
+        playerVideo.style.display = 'none';
+        ctrlBar.style.display = 'none';
+        sourceBadge.style.display = 'none';
+        bigPlayOverlay.style.display = 'none';
+        bufSpinner.classList.add('visible');
+        embedIframe.style.display = 'none';
+        embedIframe.src = '';
+        const ep = activeEpisode;
+        const mid = activeAnime?.idMal || malId;
+        if (mid) {
+          embedIframe.src = `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub`;
           embedIframe.style.display = 'block';
           const hideSpinner = () => bufSpinner.classList.remove('visible');
           embedIframe.addEventListener('load', hideSpinner, { once: true });
