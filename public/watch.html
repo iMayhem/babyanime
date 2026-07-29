@@ -595,6 +595,12 @@
                   </button>
                   <div class="quality-menu" id="subtitleMenu"></div>
                 </div>
+                <div class="quality-wrap" id="ccWrap" style="display:none">
+                  <button class="quality-btn" id="ccBtn" title="Caption Settings">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                  </button>
+                  <div class="quality-menu" id="ccMenu" style="width:210px;padding:0.6rem;"></div>
+                </div>
                 <div class="quality-wrap" id="speedWrap">
                   <button class="quality-btn" id="speedBtn">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1367,6 +1373,106 @@
     }
 
     subtitleBtn.addEventListener('click', (e) => { e.stopPropagation(); subtitleMenu.classList.toggle('open'); });
+
+    // ── Caption Settings (position, background, sync) ──
+    const ccWrap = document.getElementById('ccWrap');
+    const ccBtn = document.getElementById('ccBtn');
+    const ccMenu = document.getElementById('ccMenu');
+    let ccStyleEl = null;
+    const originalCueTimes = new WeakMap();
+    let activeCcSync = 0;
+
+    let ccSettings = { position: 'bottom', bg: 0.5, sync: 0 };
+    try { const s = JSON.parse(localStorage.getItem('ccSettings')); if (s) Object.assign(ccSettings, s); } catch {}
+
+    function buildCcMenu() {
+      ccMenu.innerHTML = `
+        <div style="font-weight:700;font-size:0.75rem;margin-bottom:0.5rem;color:var(--muted);text-align:center;">Caption Settings</div>
+        <div style="margin-bottom:0.6rem;">
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.25rem;">Position</div>
+          <div style="display:flex;gap:0.3rem;">
+            <button type="button" class="cc-opt${ccSettings.position==='bottom'?' active':''}" data-cc="position" data-val="bottom">Bottom</button>
+            <button type="button" class="cc-opt${ccSettings.position==='top'?' active':''}" data-cc="position" data-val="top">Top</button>
+          </div>
+        </div>
+        <div style="margin-bottom:0.6rem;">
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.25rem;">Background</div>
+          <div style="display:flex;gap:0.3rem;">
+            <button type="button" class="cc-opt${ccSettings.bg===0?' active':''}" data-cc="bg" data-val="0">None</button>
+            <button type="button" class="cc-opt${ccSettings.bg===0.35?' active':''}" data-cc="bg" data-val="0.35">Light</button>
+            <button type="button" class="cc-opt${ccSettings.bg===0.5?' active':''}" data-cc="bg" data-val="0.5">Medium</button>
+            <button type="button" class="cc-opt${ccSettings.bg===1?' active':''}" data-cc="bg" data-val="1">Solid</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.25rem;">Sync <span id="ccSyncVal">${ccSettings.sync > 0 ? '+' : ''}${ccSettings.sync}s</span></div>
+          <input type="range" id="ccSyncRange" min="-5" max="5" step="0.5" value="${ccSettings.sync}" style="width:100%;accent-color:var(--accent);">
+          <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:var(--muted);"><span>-5s</span><span>0</span><span>+5s</span></div>
+        </div>`;
+
+      ccMenu.querySelectorAll('.cc-opt').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const setting = btn.dataset.cc;
+          const val = btn.dataset.val;
+          ccSettings[setting] = setting === 'bg' ? parseFloat(val) : val;
+          ccMenu.querySelectorAll(`.cc-opt[data-cc="${setting}"]`).forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          applyCcSettings();
+        });
+      });
+
+      const range = ccMenu.querySelector('#ccSyncRange');
+      if (range) {
+        range.addEventListener('input', () => {
+          ccSettings.sync = parseFloat(range.value);
+          document.getElementById('ccSyncVal').textContent = (ccSettings.sync > 0 ? '+' : '') + ccSettings.sync + 's';
+          applyCcSettings();
+        });
+      }
+    }
+
+    function applyCcSettings() {
+      if (!ccStyleEl) {
+        ccStyleEl = document.createElement('style');
+        ccStyleEl.id = 'cc-custom-style';
+        document.head.appendChild(ccStyleEl);
+      }
+      let css = 'video::cue {';
+      css += ccSettings.position === 'top' ? ' top: 8%; bottom: auto;' : ' bottom: 6%; top: auto;';
+      css += ` background: rgba(0,0,0,${ccSettings.bg});`;
+      css += ' }';
+      ccStyleEl.textContent = css;
+
+      // Apply sync offset to all tracks
+      for (let i = 0; i < playerVideo.textTracks.length; i++) {
+        const tt = playerVideo.textTracks[i];
+        if (tt.cues) {
+          for (let j = 0; j < tt.cues.length; j++) {
+            const cue = tt.cues[j];
+            if (!originalCueTimes.has(cue)) {
+              originalCueTimes.set(cue, { start: cue.startTime, end: cue.endTime });
+            }
+            const orig = originalCueTimes.get(cue);
+            cue.startTime = Math.max(0, orig.start + ccSettings.sync);
+            cue.endTime = Math.max(0, orig.end + ccSettings.sync);
+          }
+        }
+      }
+
+      localStorage.setItem('ccSettings', JSON.stringify(ccSettings));
+    }
+
+    ccBtn.addEventListener('click', (e) => { e.stopPropagation(); ccMenu.classList.toggle('open'); });
+    buildCcMenu();
+    applyCcSettings();
+
+    // Show CC settings button whenever subtitles are available
+    const origSetupSubtitles = setupSubtitles;
+    setupSubtitles = function(source) {
+      origSetupSubtitles(source);
+      ccWrap.style.display = (source && source.subtitles && source.subtitles.length > 0) ? '' : 'none';
+    };
 
     // Clear quality menu when switching sources
     let activeM3u8BlobUrl = null;
