@@ -1221,6 +1221,77 @@
       }
     }
 
+    function renderScraperQualityPills(sources) {
+      const qualityPills = document.getElementById('qualityPills');
+      if (!qualityPills || !sources || sources.length === 0) return;
+      qualityPills.innerHTML = sources.map((s, i) => {
+        const label = `${s.provider} · ${s.quality || 'Auto'}`;
+        return `<button type="button" class="pill-opt${i === 0 ? ' active' : ''}" data-idx="${i}" style="padding: 0.25rem 0.6rem; font-size: 0.8em;">${label}</button>`;
+      }).join('');
+
+      qualityPills.querySelectorAll('.pill-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const idx = parseInt(btn.dataset.idx);
+          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx, scraperSources[idx].format);
+        });
+      });
+    }
+
+    function populateServerDropdown(sources) {
+      if (!serverSelect) return;
+      const seen = new Set();
+      const providers = [];
+      for (const s of sources) {
+        if (s.provider && !seen.has(s.provider)) {
+          seen.add(s.provider);
+          providers.push(s.provider);
+        }
+      }
+
+      if (serverSelect.tagName === 'SELECT') {
+        const current = serverSelect.value;
+        let html = '<option value="scraper_all">All Servers</option>';
+        providers.forEach(p => {
+          html += `<option value="scraper_${p}">${p}</option>`;
+        });
+        html += `
+          <option value="embed_animecfd">Geto</option>
+          <option value="embed_babastream">Eren</option>
+          <option value="embed_megaplay_embed">Lelouch</option>
+        `;
+        serverSelect.innerHTML = html;
+        if (Array.from(serverSelect.options).some(o => o.value === current)) {
+          serverSelect.value = current;
+        } else {
+          serverSelect.value = 'scraper_all';
+          activeServer = 'scraper_all';
+        }
+      } else {
+        const active = serverSelect.querySelector('.server-pill.active');
+        const current = active ? active.dataset.value : 'scraper_Naruto';
+
+        for (const p of providers) {
+          const val = `scraper_${p}`;
+          if (!serverSelect.querySelector(`[data-value="${val}"]`)) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'server-pill';
+            btn.dataset.value = val;
+            btn.textContent = p;
+            btn.addEventListener('click', () => {
+              serverSelect.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              activeServer = val;
+              updatePlayer();
+            });
+            serverSelect.appendChild(btn);
+          }
+        }
+      }
+    }
+
     async function loadScraperStreams(currentToken) {
       if (currentToken !== undefined && currentToken !== activePlayerToken) return;
       try {
