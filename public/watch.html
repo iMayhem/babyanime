@@ -1006,11 +1006,6 @@
       const rawPoster = activeAnime.coverImage ? (activeAnime.coverImage.large || activeAnime.coverImage.medium || '') : '';
       detailsPoster.src = (typeof proxyImageUrl !== 'undefined' ? proxyImageUrl(rawPoster) : rawPoster);
       detailsPoster.alt = titleEng;
-      if (typeof getTmdbPoster !== 'undefined') {
-        getTmdbPoster(titleEng, activeAnime.id).then(tmdbImg => {
-          if (tmdbImg) detailsPoster.src = proxyImageUrl(tmdbImg);
-        }).catch(() => {});
-      }
       detailsTitleRomaji.textContent = titleRomaji;
       detailsTitleEnglish.textContent = activeAnime.title.english ? activeAnime.title.english : '';
       
