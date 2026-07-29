@@ -1203,47 +1203,42 @@
       loadDaySchedule(currentScheduleDay);
     }
 
-    let scheduleAbortController = null;
     async function loadDaySchedule(dayIndex) {
       const container = document.getElementById('scheduleList');
       if (!container) return;
-      if (scheduleAbortController) scheduleAbortController.abort();
-      scheduleAbortController = new AbortController();
       container.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
-      const dayNames = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+
+      const now = new Date();
+      const currentDay = now.getDay();
+      const dayOffset = currentDay === 0 ? 6 : currentDay - 1;
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - dayOffset + dayIndex);
+      targetDate.setHours(0, 0, 0, 0);
+      const startTimestamp = Math.floor(targetDate.getTime() / 1000);
+      const endTimestamp = startTimestamp + 86400;
+
       const query = `
-        query ($day: StartOfDay, $week: StartOfWeek) {
-          Page(page:1, perPage:20) {
-            airingSchedules(notYetAired:true, sort:TIME_DESC, airingAt_greater: 0) {
-              media {
-                id title { romaji english } coverImage { large } format episodes nextAiringEpisode { episode airingAt }
+        query($airingAt_greater:Int,$airingAt_lesser:Int){
+          Page(page:1,perPage:40){
+            airingSchedules(airingAt_greater:$airingAt_greater,airingAt_lesser:$airingAt_lesser,sort:TIME){
+              id episode airingAt media{
+                id idMal title{romaji english native userPreferred} coverImage{large}
               }
-              episode airingAt
             }
           }
         }`;
+
       try {
-        // We'll fetch by date range instead
-        const now = Math.floor(Date.now() / 1000);
-        const daySeconds = 86400;
-        const dayOffset = dayIndex - new Date().getDay();
-        let startOfDay = now + (dayOffset * daySeconds);
-        // Adjust to start of that day
-        const d = new Date((startOfDay) * 1000);
-        d.setHours(0,0,0,0);
-        startOfDay = Math.floor(d.getTime() / 1000);
-        const endOfDay = startOfDay + daySeconds;
-        const q2 = `query($start:Int,$end:Int){Page(page:1,perPage:30){airingSchedules(airingAt_greater:$start,airingAt_lesser:$end,sort:TIME){media{id title{romaji english}coverImage{large}format episodes}episode airingAt}}}}`;
-        const data = await queryAniList(q2, { start: startOfDay, end: endOfDay }, scheduleAbortController.signal);
+        const data = await queryAniList(query, { airingAt_greater: startTimestamp, airingAt_lesser: endTimestamp });
         if (data && data.Page && data.Page.airingSchedules) {
-          const sorted = data.Page.airingSchedules.sort((a,b) => a.airingAt - b.airingAt);
-          if (sorted.length === 0) { container.innerHTML = '<div class="empty-state">No scheduled releases today</div>'; return; }
-          container.innerHTML = sorted.map(s => {
+          const schedules = data.Page.airingSchedules.filter(s => s.media && s.media.coverImage?.large);
+          if (schedules.length === 0) { container.innerHTML = '<div class="empty-state">No scheduled releases today</div>'; return; }
+          container.innerHTML = schedules.map(s => {
             const m = s.media;
             const t = m.title.english || m.title.romaji || 'Unknown';
             const d = new Date(s.airingAt * 1000);
             const timeStr = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-            const cover = m.coverImage?.large || '';
+            const cover = m.coverImage.large;
             return `<a href="watch.html?id=${m.id}&ep=${s.episode}" class="schedule-item" style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem;border-radius:8px;text-decoration:none;color:var(--text);transition:background 0.15s;">
               ${cover ? `<img src="${cover}" alt="" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0;" loading="lazy">` : '<div style="width:36px;height:50px;border-radius:4px;background:var(--line);flex-shrink:0;"></div>'}
               <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t}</div><div style="font-size:0.7rem;color:var(--muted);">Ep ${s.episode} · ${timeStr}</div></div>
@@ -1253,7 +1248,6 @@
           container.innerHTML = '<div class="empty-state">No schedule data</div>';
         }
       } catch(err) {
-        if (err.name === 'AbortError') return;
         container.innerHTML = '<div class="empty-state">Failed to load schedule</div>';
       }
     }

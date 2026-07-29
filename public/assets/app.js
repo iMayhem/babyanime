@@ -179,7 +179,7 @@ function setupMascot() {
 // GraphQL Query Helper for AniList
 const aniListCache = new Map();
 const aniListInFlight = new Map();
-const ANILIST_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/api/anilist';
+const ANILIST_PROXY = 'https://proxy.babyanime.top/api/anilist';
 const JIKAN_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/api/jikan';
 
 function hashStr(s) {
