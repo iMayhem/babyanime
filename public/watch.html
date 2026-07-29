@@ -555,7 +555,7 @@
           <div class="player-wrapper" id="playerWrapper">
             <div class="scraper-status" id="scraperStatus"></div>
             <video id="playerVideo" class="player-iframe" playsinline></video>
-            <iframe id="embedIframe" class="player-iframe" style="display:none;" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+            <iframe id="embedIframe" class="player-iframe" style="display:none;" allow="autoplay; fullscreen; picture-in-picture"></iframe>
             <!-- Loading spinner -->
             <div class="buf-spinner" id="bufSpinner">
               <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -983,10 +983,11 @@
               updateBookmarkBtnState();
               loadingScreen.style.display = 'none';
               watchLayout.style.display = 'grid';
-          }
-        } else {
-          showError('Failed to find anime on AniList.');
+              return;
+            }
+          } catch (e) {}
         }
+        showError('Error loading anime details.');
       }
     }
 
