@@ -1047,10 +1047,11 @@
       detailsGenres.innerHTML = activeAnime.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('');
     }
 
-    let epSortOrder = localStorage.getItem('babyanime_ep_sort') || 'asc';
+    let activePlayerToken = 0;
 
     // Helper to immediately halt any playing video/audio and reset player state
     function stopCurrentVideo() {
+      activePlayerToken++;
       if (window.hlsInstance) {
         try { window.hlsInstance.destroy(); } catch (_) {}
         window.hlsInstance = null;
@@ -1067,8 +1068,8 @@
         playerVideo.load();
       }
       if (embedIframe) {
+        embedIframe.src = 'about:blank';
         embedIframe.style.display = 'none';
-        embedIframe.src = '';
       }
       const bufSpinner = document.getElementById('bufSpinner');
       if (bufSpinner) bufSpinner.classList.add('visible');
@@ -1081,90 +1082,299 @@
       }
     }
 
-    // Render episodes grid
-    function renderEpisodes() {
-      const maxEpisodes = activeAnime.episodes || (activeAnime.nextAiringEpisode?.episode ? activeAnime.nextAiringEpisode.episode - 1 : 9999);
-      const totalPages = Math.ceil(maxEpisodes / EPISODES_PER_PAGE);
-      
-      if (epPage < 1) epPage = 1;
-      if (epPage > totalPages) epPage = totalPages;
+    // Clear quality menu when switching sources
+    let activeM3u8BlobUrl = null;
 
-      const start = (epPage - 1) * EPISODES_PER_PAGE + 1;
-      const end = Math.min(epPage * EPISODES_PER_PAGE, maxEpisodes);
+    function playStreamUrl(url, headers, providerName, sourceIdx, format, currentToken) {
+      if (currentToken !== undefined && currentToken !== activePlayerToken) return;
 
-      const nextAiringEp = activeAnime.nextAiringEpisode?.episode;
-      let epList = [];
-      for (let i = start; i <= end; i++) {
-        epList.push(i);
+      if (window.hlsInstance) {
+        try { window.hlsInstance.destroy(); } catch (_) {}
+        window.hlsInstance = null;
       }
-      if (epSortOrder === 'desc') {
-        epList.reverse();
-      }
+      if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
+      clearQualityMenu();
+      clearSubtitles();
+      playerVideo.src = '';
+      playerVideo.load();
 
-      let html = '';
-      for (const i of epList) {
-        const isActive = i === activeEpisode;
-        const isUnaired = nextAiringEp && i >= nextAiringEp;
-        const cls = `ep-btn${isActive ? ' active' : ''}${isUnaired ? ' unaired' : ''}`;
-        html += `<button type="button" class="${cls}" data-ep="${i}"${isUnaired ? ' disabled' : ''}>${i}</button>`;
-      }
-      episodesGrid.innerHTML = html;
+      // Restore & sync volume state
+      const savedVol = parseFloat(localStorage.getItem('volume')) || (volBar ? parseFloat(volBar.value) : 1);
+      playerVideo.volume = isNaN(savedVol) ? 1 : savedVol;
+      playerVideo.muted = (playerVideo.volume === 0);
+      if (volBar) volBar.value = playerVideo.volume;
 
-      episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
-      epJumpInput.value = activeEpisode;
-
-      const epSortBtn = document.getElementById('epSortBtn');
-      if (epSortBtn) {
-        epSortBtn.textContent = epSortOrder === 'asc' ? '1 → N ⇅' : 'N → 1 ⇅';
+      if (sourceIdx !== undefined) activeSourceIndex = sourceIdx;
+      let source = null;
+      if (scraperSources && scraperSources[activeSourceIndex]) {
+        source = scraperSources[activeSourceIndex];
+        setupSubtitles(source);
       }
 
-      document.querySelectorAll('.ep-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const ep = parseInt(btn.getAttribute('data-ep'));
-          changeEpisode(ep);
-        });
-      });
-
-      // Pagination controls
-      const prevBtn = document.getElementById('epPrevBtn');
-      const nextBtn = document.getElementById('epNextBtn');
-      const pageInfo = document.getElementById('epPageInfo');
-      if (prevBtn && nextBtn && pageInfo) {
-        prevBtn.disabled = epPage <= 1;
-        nextBtn.disabled = epPage >= totalPages;
-        pageInfo.textContent = `${start}–${end}`;
-        prevBtn.onclick = () => { epPage--; renderEpisodes(); };
-        nextBtn.onclick = () => { epPage++; renderEpisodes(); };
+      if (source && source.m3u8Content) {
+        const blob = new Blob([source.m3u8Content], { type: 'application/vnd.apple.mpegurl' });
+        activeM3u8BlobUrl = URL.createObjectURL(blob);
+        url = activeM3u8BlobUrl;
+        headers = null;
       }
 
-      // Auto-scroll active episode into view
-      setTimeout(() => {
-        const activeBtn = episodesGrid.querySelector('.ep-btn.active');
-        if (activeBtn && episodesGrid.scrollHeight > episodesGrid.clientHeight) {
-          episodesGrid.scrollTo({ top: activeBtn.offsetTop - episodesGrid.clientHeight / 2, behavior: 'smooth' });
-        }
-      }, 80);
-    }
+      const proxiedUrl = proxyStreamUrl(url, headers);
+      console.log('[Player] Loading source', activeSourceIndex, providerName, proxiedUrl ? proxiedUrl.substring(0, 80) : '(inline M3U8)');
 
-    // Update bookmark button look
-    function updateBookmarkBtnState() {
-      const isFav = isBookmarked(activeAnime.id || activeAnime.idMal, activeAnime.type);
-      if (isFav) {
-        bookmarkBtn.classList.add('active');
-        bookmarkText.textContent = 'Bookmarked';
+      if (providerName) {
+        sourceBadge.textContent = providerName;
+        sourceBadge.style.display = '';
       } else {
-        bookmarkBtn.classList.remove('active');
-        bookmarkText.textContent = 'Watchlist';
+        sourceBadge.style.display = 'none';
+      }
+
+      const tryNextSource = () => {
+        if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+        const next = activeSourceIndex + 1;
+        if (next < scraperSources.length) {
+          console.log('[Player] Source failed, trying next:', next);
+          const s = scraperSources[next];
+          qualityPills.querySelectorAll('.pill-opt').forEach(b => {
+            b.classList.toggle('active', parseInt(b.dataset.idx) === next);
+          });
+          playStreamUrl(s.url, s.headers, s.provider, next, s.format, currentToken);
+        } else {
+          console.warn('[Player] All sources exhausted.');
+          sourceBadge.textContent = '⚠ No working source';
+          sourceBadge.style.display = '';
+          if (bufSpinner) bufSpinner.classList.remove('visible');
+        }
+      };
+
+      const isM3u8 = format === 'hls' || url.includes('.m3u8') || url.includes('/fresh-stream') || proxiedUrl.includes('.m3u8');
+
+      if (isM3u8 && typeof Hls !== 'undefined' && Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90,
+        });
+        window.hlsInstance = hls;
+
+        hls.loadSource(proxiedUrl);
+        hls.attachMedia(playerVideo);
+
+        hls.once(Hls.Events.MANIFEST_PARSED, (event, data) => {
+          if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+          playerVideo.playbackRate = playbackSpeed;
+          playerVideo.play().then(() => {
+            if (bigPlayOverlay) bigPlayOverlay.classList.add('hidden');
+            if (volBtn) updateVolBtn();
+          }).catch(() => {
+            if (bigPlayOverlay) bigPlayOverlay.classList.remove('hidden');
+            playerVideo.muted = true;
+            playerVideo.play().catch(() => {});
+            if (volBtn) updateVolBtn();
+          });
+          buildQualityMenu(hls);
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+          console.log('[HLS] Error event:', data.type, data.details, data.response ? data.response.code + ' ' + data.response.text : '');
+          if (data.fatal) {
+            console.warn('[HLS] Fatal error:', data.type, data.details, data.response ? data.response.url : '');
+            hls.destroy();
+            window.hlsInstance = null;
+            clearQualityMenu();
+            tryNextSource();
+          }
+        });
+      } else {
+        playerVideo.src = proxiedUrl;
+        playerVideo.play().then(() => {
+          if (bigPlayOverlay) bigPlayOverlay.classList.add('hidden');
+          if (volBtn) updateVolBtn();
+        }).catch(() => {
+          if (bigPlayOverlay) bigPlayOverlay.classList.remove('hidden');
+          playerVideo.muted = true;
+          playerVideo.play().catch(() => {});
+          if (volBtn) updateVolBtn();
+        });
+        playerVideo.onerror = tryNextSource;
       }
     }
 
-    // Handle episode change
-    function changeEpisode(epNum) {
-      activeEpisode = epNum;
-      stopCurrentVideo(); // HALT previous video & audio immediately
-      epPage = Math.floor((activeEpisode - 1) / EPISODES_PER_PAGE) + 1;
-      renderEpisodes();
-      updatePlayer();
+    async function loadScraperStreams(currentToken) {
+      if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+      try {
+        const id = activeAnime.id || anilistId;
+        const mal_id = activeAnime.idMal || malId;
+        const provider = getScraperProvider(activeServer);
+
+        const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
+        if (id) params.set('anilist_id', id);
+        else if (mal_id) params.set('mal_id', mal_id);
+        if (provider !== 'all') params.set('provider', provider);
+
+        const cacheKey = `scraper_${params.toString()}`;
+        let data = null;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          try { const parsed = JSON.parse(cached); if (Date.now() - parsed.ts < 300000) data = parsed.data; } catch {}
+        }
+        if (!data) {
+          try {
+            const resp = await fetch(`${SCRAPER_API}/stream?${params}`);
+            data = await resp.json();
+            if (data && data.success) {
+              try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })); } catch {}
+            }
+          } catch (err) {
+            if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+            console.warn('[Scraper] Fetch error:', err);
+            sourceBadge.textContent = '⚠ Scraper error';
+            sourceBadge.style.display = '';
+            const bufSpinner = document.getElementById('bufSpinner');
+            if (bufSpinner) bufSpinner.classList.remove('visible');
+            return;
+          }
+        }
+
+        if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+
+        if (!data || !data.success || !data.sources || data.sources.length === 0) {
+          console.warn('[Scraper] No sources found:', data);
+          sourceBadge.textContent = '⚠ No sources found';
+          sourceBadge.style.display = '';
+          const bufSpinner = document.getElementById('bufSpinner');
+          if (bufSpinner) bufSpinner.classList.remove('visible');
+          return;
+        }
+
+        scraperSources = data.sources;
+        activeSourceIndex = 0;
+
+        populateServerDropdown(scraperSources);
+        renderScraperQualityPills(scraperSources);
+
+        let toPlay = scraperSources;
+        if (provider !== 'all') {
+          toPlay = scraperSources.filter(s => s.provider === provider);
+          if (toPlay.length === 0) toPlay = scraperSources;
+        }
+
+        const firstIdx = scraperSources.indexOf(toPlay[0]);
+        playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format, currentToken);
+
+      } catch (err) {
+        if (currentToken !== undefined && currentToken !== activePlayerToken) return;
+        console.error('Failed to load scraper stream:', err);
+        sourceBadge.textContent = '⚠ Scraper error';
+        sourceBadge.style.display = '';
+        const bufSpinner = document.getElementById('bufSpinner');
+        if (bufSpinner) bufSpinner.classList.remove('visible');
+      }
+    }
+
+    const embedIframe = document.getElementById('embedIframe');
+    let embedMapped = null;
+
+    async function ensureEmbedMapped() {
+      if (embedMapped) return embedMapped;
+      const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
+      if (anilistId) params.set('anilist_id', anilistId);
+      else if (malId) params.set('mal_id', malId);
+      try {
+        const resp = await fetch(`${SCRAPER_API}/map?${params}`);
+        const data = await resp.json();
+        if (data.success) {
+          embedMapped = { tmdbId: data.tmdbId, anilistId: data.anilistId, season: data.season || 1, type: data.type || 'tv' };
+        }
+      } catch {}
+      return embedMapped;
+    }
+
+    function updatePlayer() {
+      stopCurrentVideo();
+      const thisToken = activePlayerToken;
+
+      const activeBtn = serverSelect ? serverSelect.querySelector('.server-pill.active') : null;
+      const val = activeBtn ? activeBtn.dataset.value : (serverSelect ? serverSelect.value : 'scraper_Naruto');
+
+      if (val === 'embed_animecfd') {
+        playerVideo.style.display = 'none';
+        ctrlBar.style.display = 'none';
+        sourceBadge.style.display = 'none';
+        bigPlayOverlay.style.display = 'none';
+        bufSpinner.classList.add('visible');
+        ensureEmbedMapped().then(mapped => {
+          if (thisToken !== activePlayerToken) return;
+          const ep = activeEpisode;
+          const audio = 'sub';
+          const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
+          const embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}` : null;
+          if (embedUrl) {
+            embedIframe.src = embedUrl;
+            embedIframe.style.display = 'block';
+            const hideSpinner = () => { if (thisToken === activePlayerToken) bufSpinner.classList.remove('visible'); };
+            embedIframe.addEventListener('load', hideSpinner, { once: true });
+            setTimeout(hideSpinner, 3000);
+          } else {
+            bufSpinner.classList.remove('visible');
+            sourceBadge.textContent = '⚠ Embed unavailable';
+            sourceBadge.style.display = '';
+          }
+        });
+        return;
+      }
+
+      if (val === 'embed_babastream') {
+        playerVideo.style.display = 'none';
+        ctrlBar.style.display = 'none';
+        sourceBadge.style.display = 'none';
+        bigPlayOverlay.style.display = 'none';
+        bufSpinner.classList.add('visible');
+        const ep = activeEpisode;
+        const mid = activeAnime?.idMal || malId;
+        if (mid) {
+          embedIframe.src = `https://babastream.top/embed/${mid}/${ep}/sub`;
+          embedIframe.style.display = 'block';
+          const hideSpinner = () => { if (thisToken === activePlayerToken) bufSpinner.classList.remove('visible'); };
+          embedIframe.addEventListener('load', hideSpinner, { once: true });
+          setTimeout(hideSpinner, 3000);
+        } else {
+          bufSpinner.classList.remove('visible');
+          sourceBadge.textContent = '⚠ No MAL ID';
+          sourceBadge.style.display = '';
+        }
+        return;
+      }
+
+      if (val === 'embed_megaplay_embed') {
+        playerVideo.style.display = 'none';
+        ctrlBar.style.display = 'none';
+        sourceBadge.style.display = 'none';
+        bigPlayOverlay.style.display = 'none';
+        bufSpinner.classList.add('visible');
+        const ep = activeEpisode;
+        const mid = activeAnime?.idMal || malId;
+        if (mid) {
+          embedIframe.src = `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub`;
+          embedIframe.style.display = 'block';
+          const hideSpinner = () => { if (thisToken === activePlayerToken) bufSpinner.classList.remove('visible'); };
+          embedIframe.addEventListener('load', hideSpinner, { once: true });
+          setTimeout(hideSpinner, 3000);
+        } else {
+          bufSpinner.classList.remove('visible');
+          sourceBadge.textContent = '⚠ No MAL ID';
+          sourceBadge.style.display = '';
+        }
+        return;
+      }
+
+      // Scraper mode
+      ctrlBar.style.display = '';
+      embedIframe.style.display = 'none';
+      embedIframe.src = 'about:blank';
+      playerVideo.style.display = 'block';
+
+      loadScraperStreams(thisToken);
       addToHistory(activeAnime, activeEpisode);
     }
 
@@ -1539,383 +1749,6 @@
       origSetupSubtitles(source);
       ccWrap.style.display = (source && source.subtitles && source.subtitles.length > 0) ? '' : 'none';
     };
-
-    // Clear quality menu when switching sources
-    let activeM3u8BlobUrl = null;
-
-    function playStreamUrl(url, headers, providerName, sourceIdx, format) {
-      // Destroy any existing HLS instance
-      if (window.hlsInstance) {
-        try { window.hlsInstance.destroy(); } catch (_) {}
-        window.hlsInstance = null;
-      }
-      // Revoke previous M3U8 blob URL
-      if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
-      clearQualityMenu();
-      clearSubtitles();
-      playerVideo.src = '';
-      playerVideo.load();
-
-      if (sourceIdx !== undefined) activeSourceIndex = sourceIdx;
-      // Set up subtitles from the source being played
-      let source = null;
-      if (scraperSources && scraperSources[activeSourceIndex]) {
-        source = scraperSources[activeSourceIndex];
-        setupSubtitles(source);
-      }
-
-      // Use inline M3U8 content if available (avoids cache expiry issues)
-      if (source && source.m3u8Content) {
-        const blob = new Blob([source.m3u8Content], { type: 'application/vnd.apple.mpegurl' });
-        activeM3u8BlobUrl = URL.createObjectURL(blob);
-        url = activeM3u8BlobUrl;
-        headers = null;
-      }
-
-      const proxiedUrl = proxyStreamUrl(url, headers);
-      console.log('[Player] Loading source', activeSourceIndex, providerName, proxiedUrl ? proxiedUrl.substring(0, 80) : '(inline M3U8)');
-
-      if (providerName) {
-        sourceBadge.textContent = providerName;
-        sourceBadge.style.display = '';
-      } else {
-        sourceBadge.style.display = 'none';
-      }
-
-      const tryNextSource = () => {
-        const next = activeSourceIndex + 1;
-        if (next < scraperSources.length) {
-          console.log('[Player] Source failed, trying next:', next);
-          const s = scraperSources[next];
-          // update quality pill selection
-          qualityPills.querySelectorAll('.pill-opt').forEach(b => {
-            b.classList.toggle('active', parseInt(b.dataset.idx) === next);
-          });
-          playStreamUrl(s.url, s.headers, s.provider, next, s.format);
-        } else {
-          console.warn('[Player] All sources exhausted.');
-          sourceBadge.textContent = '⚠ No working source';
-          sourceBadge.style.display = '';
-        }
-      };
-
-      const isM3u8 = format === 'hls' || url.includes('.m3u8') || url.includes('/fresh-stream') || proxiedUrl.includes('.m3u8');
-
-      if (isM3u8 && typeof Hls !== 'undefined' && Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: false,
-          backBufferLength: 90,
-        });
-        window.hlsInstance = hls;
-
-        hls.loadSource(proxiedUrl);
-        hls.attachMedia(playerVideo);
-
-        hls.once(Hls.Events.MANIFEST_PARSED, (event, data) => {
-          playerVideo.playbackRate = playbackSpeed;
-          playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); });
-          // Populate quality selector
-          buildQualityMenu(hls);
-        });
-
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          console.log('[HLS] Error event:', data.type, data.details, data.response ? data.response.code + ' ' + data.response.text : '');
-          if (data.fatal) {
-            console.warn('[HLS] Fatal error:', data.type, data.details, data.response ? data.response.url : '');
-            hls.destroy();
-            window.hlsInstance = null;
-            clearQualityMenu();
-            tryNextSource();
-          }
-        });
-
-      } else if (playerVideo.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari native HLS
-        console.log('[Player] Native HLS, src:', proxiedUrl.substring(0, 80));
-        playerVideo.src = proxiedUrl;
-        playerVideo.load();
-        playerVideo.playbackRate = playbackSpeed;
-        playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); });
-        playerVideo.onerror = () => { console.warn('[Player] Video error:', playerVideo.error); tryNextSource(); };
-      } else {
-        console.log('[Player] Direct video, src:', proxiedUrl.substring(0, 80));
-        playerVideo.src = proxiedUrl;
-        playerVideo.load();
-        playerVideo.playbackRate = playbackSpeed;
-        playerVideo.play().catch(() => { playerVideo.muted = true; playerVideo.play().catch(() => {}); });
-        playerVideo.onerror = () => { console.warn('[Player] Video error:', playerVideo.error); tryNextSource(); };
-      }
-
-      // Debug: listen for all video events
-      ['loadstart', 'progress', 'suspend', 'abort', 'error', 'emptied', 'stalled', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'seeking', 'seeked', 'ended', 'durationchange', 'timeupdate', 'play', 'pause', 'ratechange'].forEach(evt => {
-        playerVideo.addEventListener(evt, () => {}, { once: true });
-      });
-    }
-
-    function renderScraperQualityPills(sources) {
-      if (!qualityPills || !sources || sources.length === 0) return;
-      qualityPills.innerHTML = sources.map((s, i) => {
-        const label = `${s.provider} · ${s.quality || 'Auto'}`;
-        return `<button type="button" class="pill-opt${i === 0 ? ' active' : ''}" data-idx="${i}" style="padding: 0.25rem 0.6rem; font-size: 0.8em;">${label}</button>`;
-      }).join('');
-
-      qualityPills.querySelectorAll('.pill-opt').forEach(btn => {
-        btn.addEventListener('click', () => {
-          qualityPills.querySelectorAll('.pill-opt').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const idx = parseInt(btn.dataset.idx);
-          if (scraperSources[idx]) playStreamUrl(scraperSources[idx].url, scraperSources[idx].headers, scraperSources[idx].provider, idx, scraperSources[idx].format);
-        });
-      });
-    }
-
-    // Dynamically rebuild the server pills to show only providers that have sources
-    function populateServerDropdown(sources) {
-      const seen = new Set();
-      const providers = [];
-      for (const s of sources) {
-        if (!seen.has(s.provider)) {
-          seen.add(s.provider);
-          providers.push(s.provider);
-        }
-      }
-
-      const active = serverSelect.querySelector('.server-pill.active');
-      const current = active ? active.dataset.value : 'scraper_Naruto';
-
-      for (const p of providers) {
-        const val = `scraper_${p}`;
-        if (!serverSelect.querySelector(`[data-value="${val}"]`)) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'server-pill';
-          btn.dataset.value = val;
-          btn.textContent = p;
-          btn.addEventListener('click', () => {
-            serverSelect.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeServer = val;
-            updatePlayer();
-          });
-          serverSelect.appendChild(btn);
-        }
-      }
-
-      const toActivate = serverSelect.querySelector(`[data-value="${current}"]`);
-      if (toActivate) {
-        toActivate.classList.add('active');
-      } else {
-        const fallback = serverSelect.querySelector('[data-value="scraper_Naruto"]');
-        if (fallback) fallback.classList.add('active');
-        activeServer = 'scraper_Naruto';
-      }
-    }
-
-    async function loadScraperStreams() {
-      try {
-      const id = activeAnime.id || anilistId;
-      const mal_id = activeAnime.idMal || malId;
-      const provider = getScraperProvider(activeServer);
-
-      const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
-      if (id) params.set('anilist_id', id);
-      else if (mal_id) params.set('mal_id', mal_id);
-      if (provider !== 'all') params.set('provider', provider);
-
-      const cacheKey = `scraper_${params.toString()}`;
-      let data = null;
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        try { const parsed = JSON.parse(cached); if (Date.now() - parsed.ts < 300000) data = parsed.data; } catch {}
-      }
-      if (!data) {
-        try {
-          const resp = await fetch(`${SCRAPER_API}/stream?${params}`);
-          data = await resp.json();
-          if (data && data.success) {
-            try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })); } catch {}
-          }
-        } catch (err) {
-          console.warn('[Scraper] Fetch error:', err);
-          sourceBadge.textContent = '⚠ Scraper error';
-          sourceBadge.style.display = '';
-          return;
-        }
-      }
-
-      if (!data.success || !data.sources || data.sources.length === 0) {
-        console.warn('[Scraper] No sources found:', data);
-        sourceBadge.textContent = '⚠ No sources found';
-        sourceBadge.style.display = '';
-        return;
-      }
-
-      scraperSources = data.sources;
-      console.log('[Scraper] Got sources:', data.sourceCount, 'first URL:', data.sources[0]?.url?.substring(0, 60), 'provider:', data.sources[0]?.provider);
-      console.log('[Scraper] Proxied first URL:', proxyStreamUrl(data.sources[0]?.url, data.sources[0]?.headers)?.substring(0, 80));
-      activeSourceIndex = 0;
-
-      // Show only providers that actually returned sources in the dropdown
-      populateServerDropdown(scraperSources);
-      renderScraperQualityPills(scraperSources);
-
-      // Filter to selected provider if not "all"
-      let toPlay = scraperSources;
-      if (provider !== 'all') {
-        toPlay = scraperSources.filter(s => s.provider === provider);
-        if (toPlay.length === 0) toPlay = scraperSources;
-      }
-
-      // Start with the first source
-      const firstIdx = scraperSources.indexOf(toPlay[0]);
-      playStreamUrl(toPlay[0].url, toPlay[0].headers, toPlay[0].provider, firstIdx >= 0 ? firstIdx : 0, toPlay[0].format);
-
-      // Preload next episode in background
-      try {
-        const nextEp = activeEpisode + 1;
-        const totalEps = (typeof activeAnime !== 'undefined' && activeAnime ? (activeAnime.episodes || 9999) : 9999);
-        if (nextEp <= totalEps) {
-          const nextParams = new URLSearchParams({ ep: nextEp, audio: 'sub' });
-          if (typeof id !== 'undefined' && id) nextParams.set('anilist_id', id);
-          else if (typeof mal_id !== 'undefined' && mal_id) nextParams.set('mal_id', mal_id);
-          const nk = `scraper_${nextParams.toString()}`;
-          if (!sessionStorage.getItem(nk)) {
-            fetch(`${SCRAPER_API}/stream?${nextParams}`).then(r => r.json()).then(d => {
-              if (d && d.success) try { sessionStorage.setItem(nk, JSON.stringify({ data: d, ts: Date.now() })); } catch {}
-            }).catch(() => {});
-          }
-        }
-      } catch (e) {
-        console.warn('[Scraper] Preload skipped:', e);
-      }
-
-    } catch (err) {
-      console.error('Failed to load scraper stream:', err);
-      if (!scraperSources || scraperSources.length === 0) {
-        sourceBadge.textContent = '⚠ Scraper error';
-        sourceBadge.style.display = '';
-      }
-    }
-    }
-
-    const embedIframe = document.getElementById('embedIframe');
-    let embedMapped = null;
-
-    async function ensureEmbedMapped() {
-      if (embedMapped) return embedMapped;
-      const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
-      if (anilistId) params.set('anilist_id', anilistId);
-      else if (malId) params.set('mal_id', malId);
-      try {
-        const resp = await fetch(`${SCRAPER_API}/map?${params}`);
-        const data = await resp.json();
-        if (data.success) {
-          embedMapped = { tmdbId: data.tmdbId, anilistId: data.anilistId, season: data.season || 1, type: data.type || 'tv' };
-        }
-      } catch {}
-      return embedMapped;
-    }
-
-    function updatePlayer() {
-      const activeBtn = serverSelect.querySelector('.server-pill.active');
-      const val = activeBtn ? activeBtn.dataset.value : 'scraper_Naruto';
-      // Embed mode
-      if (val === 'embed_animecfd') {
-        // Clean up any running video
-        if (window.hlsInstance) { try { window.hlsInstance.destroy(); } catch (_) {} window.hlsInstance = null; }
-        if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
-        clearSubtitles();
-        playerVideo.src = '';
-        playerVideo.load();
-        playerVideo.style.display = 'none';
-        ctrlBar.style.display = 'none';
-        sourceBadge.style.display = 'none';
-        bigPlayOverlay.style.display = 'none';
-        bufSpinner.classList.add('visible');
-        embedIframe.style.display = 'none';
-        embedIframe.src = '';
-        ensureEmbedMapped().then(mapped => {
-          const ep = activeEpisode;
-          const audio = 'sub';
-          const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
-          const embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}` : null;
-          embedIframe.src = embedUrl || '';
-          embedIframe.style.display = 'block';
-          const hideSpinner = () => bufSpinner.classList.remove('visible');
-          embedIframe.addEventListener('load', hideSpinner, { once: true });
-          setTimeout(hideSpinner, 3000);
-        });
-        return;
-      }
-
-      if (val === 'embed_babastream') {
-        if (window.hlsInstance) { try { window.hlsInstance.destroy(); } catch (_) {} window.hlsInstance = null; }
-        if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
-        clearSubtitles();
-        playerVideo.src = '';
-        playerVideo.load();
-        playerVideo.style.display = 'none';
-        ctrlBar.style.display = 'none';
-        sourceBadge.style.display = 'none';
-        bigPlayOverlay.style.display = 'none';
-        bufSpinner.classList.add('visible');
-        embedIframe.style.display = 'none';
-        embedIframe.src = '';
-        const ep = activeEpisode;
-        const mid = activeAnime?.idMal || malId;
-        if (mid) {
-          embedIframe.src = `https://babastream.top/embed/${mid}/${ep}/sub`;
-          embedIframe.style.display = 'block';
-          const hideSpinner = () => bufSpinner.classList.remove('visible');
-          embedIframe.addEventListener('load', hideSpinner, { once: true });
-          setTimeout(hideSpinner, 3000);
-        } else {
-          bufSpinner.classList.remove('visible');
-          sourceBadge.textContent = '⚠ No MAL ID';
-          sourceBadge.style.display = '';
-        }
-        return;
-      }
-
-      if (val === 'embed_megaplay_embed') {
-        if (window.hlsInstance) { try { window.hlsInstance.destroy(); } catch (_) {} window.hlsInstance = null; }
-        if (activeM3u8BlobUrl) { URL.revokeObjectURL(activeM3u8BlobUrl); activeM3u8BlobUrl = null; }
-        clearSubtitles();
-        playerVideo.src = '';
-        playerVideo.load();
-        playerVideo.style.display = 'none';
-        ctrlBar.style.display = 'none';
-        sourceBadge.style.display = 'none';
-        bigPlayOverlay.style.display = 'none';
-        bufSpinner.classList.add('visible');
-        embedIframe.style.display = 'none';
-        embedIframe.src = '';
-        const ep = activeEpisode;
-        const mid = activeAnime?.idMal || malId;
-        if (mid) {
-          embedIframe.src = `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub`;
-          embedIframe.style.display = 'block';
-          const hideSpinner = () => bufSpinner.classList.remove('visible');
-          embedIframe.addEventListener('load', hideSpinner, { once: true });
-          setTimeout(hideSpinner, 3000);
-        } else {
-          bufSpinner.classList.remove('visible');
-          sourceBadge.textContent = '⚠ No MAL ID';
-          sourceBadge.style.display = '';
-        }
-        return;
-      }
-
-      // Scraper mode
-      ctrlBar.style.display = '';
-      embedIframe.style.display = 'none';
-      embedIframe.src = '';
-      playerVideo.style.display = 'block';
-
-      loadScraperStreams();
-      addToHistory(activeAnime, activeEpisode);
-    }
 
     // ── Custom Player Controls ──
     function setupPlayerControls() {
