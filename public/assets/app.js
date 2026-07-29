@@ -210,23 +210,6 @@ async function queryAniList(query, variables) {
   if (aniListInFlight.has(cacheKey)) return aniListInFlight.get(cacheKey);
 
   const promise = (async () => {
-    try {
-      const proxyResp = await fetch(ANILIST_PROXY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: cacheVal,
-      });
-      if (proxyResp.ok) {
-        const result = await proxyResp.json();
-        if (!result.errors) {
-          const entry = { data: result.data, ts: Date.now() };
-          aniListCache.set(cacheKey, entry);
-          try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
-          return result.data;
-        }
-      }
-    } catch (_) {}
-
     let lastErr;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -260,15 +243,6 @@ async function queryAniList(query, variables) {
 async function fetchMALMetadata(malId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
-  try {
-    const proxyResp = await fetch(`${JIKAN_PROXY}/${malId}`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (proxyResp.ok) {
-      const result = await proxyResp.json();
-      return result.data;
-    }
-  } catch (_) { clearTimeout(timeoutId); }
-
   try {
     const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, { signal: controller.signal });
     clearTimeout(timeoutId);
