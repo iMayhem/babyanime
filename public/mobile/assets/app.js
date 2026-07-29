@@ -179,8 +179,8 @@ function setupMascot() {
 // GraphQL Query Helper for AniList
 const aniListCache = new Map();
 const aniListInFlight = new Map();
-const ANILIST_PROXY = 'https://proxy.babyanime.top/api/anilist';
-const JIKAN_PROXY = 'https://proxy.babyanime.top/api/jikan';
+const ANILIST_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/api/anilist';
+const JIKAN_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/api/jikan';
 
 function hashStr(s) {
   let h = 0;
@@ -210,6 +210,26 @@ async function queryAniList(query, variables, signal) {
   }
 
   const runner = async () => {
+    try {
+      const proxyResp = await fetch(ANILIST_PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: cacheVal,
+        signal,
+      });
+      if (proxyResp.ok) {
+        const result = await proxyResp.json();
+        if (!result.errors) {
+          if (!signal) {
+            const entry = { data: result.data, ts: Date.now() };
+            aniListCache.set(cacheKey, entry);
+            try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
+          }
+          return result.data;
+        }
+      }
+    } catch (_) {}
+
     let lastErr;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -250,6 +270,14 @@ async function queryAniList(query, variables, signal) {
 async function fetchMALMetadata(malId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const proxyResp = await fetch(`${JIKAN_PROXY}/${malId}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (proxyResp.ok) {
+      const result = await proxyResp.json();
+      return result.data;
+    }
+  } catch (_) { clearTimeout(timeoutId); }
   try {
     const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, { signal: controller.signal });
     clearTimeout(timeoutId);
