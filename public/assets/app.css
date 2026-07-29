@@ -662,20 +662,33 @@ header {
   color: var(--muted);
 }
 
-.select-dropdown {
+.server-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.server-pill {
   border: 2px solid var(--ink);
   background: var(--card);
   color: var(--ink);
   font: inherit;
   font-weight: 700;
-  font-size: 0.85em;
-  padding: 0.4rem 0.7rem;
+  font-size: 0.8em;
+  padding: 0.35rem 0.65rem;
   border-radius: 8px;
   cursor: pointer;
+  transition: all 0.15s;
   outline: none;
 }
 
-.select-dropdown:focus {
+.server-pill:hover {
+  background: var(--line);
+}
+
+.server-pill.active {
+  background: var(--accent);
+  color: #fff;
   border-color: var(--accent);
 }
 

@@ -620,12 +620,12 @@
           <div class="card selector-row">
             <div class="selector-section">
               <span class="selector-label">Server:</span>
-              <select id="serverSelect" class="select-dropdown">
-                <option value="scraper_Naruto">Naruto</option>
-                <option value="embed_animecfd" style="font-weight:700;">Geto</option>
-                <option value="embed_babastream" style="font-weight:700;">Eren</option>
-                <option value="embed_megaplay_embed" style="font-weight:700;">Lelouch</option>
-              </select>
+              <div id="serverSelect" class="server-pills">
+                <button type="button" class="server-pill active" data-value="scraper_Naruto">Naruto</button>
+                <button type="button" class="server-pill" data-value="embed_animecfd">Geto</button>
+                <button type="button" class="server-pill" data-value="embed_babastream">Eren</button>
+                <button type="button" class="server-pill" data-value="embed_megaplay_embed">Lelouch</button>
+              </div>
             </div>
 
           </div>
@@ -1122,10 +1122,13 @@
 
     // Setup player and selectors
     function setupControls() {
-      // Server select
-      serverSelect.addEventListener('change', () => {
-        activeServer = serverSelect.value;
-
+      // Server pills
+      serverSelect.addEventListener('click', (e) => {
+        const btn = e.target.closest('.server-pill');
+        if (!btn) return;
+        serverSelect.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeServer = btn.dataset.value;
         updatePlayer();
       });
 
@@ -1495,9 +1498,8 @@
       });
     }
 
-    // Dynamically rebuild the server dropdown to show only providers that have sources
+    // Dynamically rebuild the server pills to show only providers that have sources
     function populateServerDropdown(sources) {
-      // Collect unique providers from results
       const seen = new Set();
       const providers = [];
       for (const s of sources) {
@@ -1507,25 +1509,33 @@
         }
       }
 
-      // Save current selection
-      const current = serverSelect.value;
+      const active = serverSelect.querySelector('.server-pill.active');
+      const current = active ? active.dataset.value : 'scraper_Naruto';
 
-      // Ensure providers are listed; don't remove embeds or static options
       for (const p of providers) {
         const val = `scraper_${p}`;
-        if (![...serverSelect.options].some(o => o.value === val)) {
-          const opt = document.createElement('option');
-          opt.value = val;
-          opt.textContent = p;
-          serverSelect.appendChild(opt);
+        if (!serverSelect.querySelector(`[data-value="${val}"]`)) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'server-pill';
+          btn.dataset.value = val;
+          btn.textContent = p;
+          btn.addEventListener('click', () => {
+            serverSelect.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeServer = val;
+            updatePlayer();
+          });
+          serverSelect.appendChild(btn);
         }
       }
 
-      // Restore selection if still valid
-      if ([...serverSelect.options].some(o => o.value === current)) {
-        serverSelect.value = current;
+      const toActivate = serverSelect.querySelector(`[data-value="${current}"]`);
+      if (toActivate) {
+        toActivate.classList.add('active');
       } else {
-        serverSelect.value = 'scraper_Naruto';
+        const fallback = serverSelect.querySelector('[data-value="scraper_Naruto"]');
+        if (fallback) fallback.classList.add('active');
         activeServer = 'scraper_Naruto';
       }
     }
@@ -1636,7 +1646,8 @@
     }
 
     function updatePlayer() {
-      const val = serverSelect.value;
+      const activeBtn = serverSelect.querySelector('.server-pill.active');
+      const val = activeBtn ? activeBtn.dataset.value : 'scraper_Naruto';
       // Embed mode
       if (val === 'embed_animecfd') {
         // Clean up any running video
