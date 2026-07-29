@@ -832,6 +832,21 @@
     });
 
     // Fetch details from AniList (with MAL fallback)
+    // Fire-and-forget prefetch: populates sessionStorage so loadScraperStreams finds a cache hit
+    function prefetchScraperStreams() {
+      const provider = getScraperProvider(activeServer);
+      if (!provider) return;
+      const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
+      if (anilistId) params.set('anilist_id', anilistId);
+      else if (malId) params.set('mal_id', malId);
+      if (provider !== 'all') params.set('provider', provider);
+      const key = `scraper_${params.toString()}`;
+      if (sessionStorage.getItem(key)) return;
+      fetch(`${SCRAPER_API}/stream?${params}`).then(r => r.json()).then(d => {
+        if (d && d.success) { try { sessionStorage.setItem(key, JSON.stringify({ data: d, ts: Date.now() })); } catch {} }
+      }).catch(() => {});
+    }
+
     async function loadAnimeDetails() {
       const query = `
         query ($id: Int, $idMal: Int) {
@@ -887,6 +902,9 @@
       const variables = {};
       if (anilistId) variables.id = parseInt(anilistId);
       if (malId) variables.idMal = parseInt(malId);
+
+      // Kick off scraper prefetch in parallel with AniList metadata fetch
+      prefetchScraperStreams();
 
       try {
         const data = await queryAniList(query, variables);

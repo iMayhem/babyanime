@@ -19,6 +19,10 @@ const sseClients = new Set();
 // M3U8 cache: pre-fetched shortly after scraper returns URLs (before tokens expire)
 const m3u8Cache = new Map();
 const CACHE_TTL = 120_000; // 2 minutes
+
+// Stream result cache: avoids re-scraping the same episode within the TTL
+const streamCache = new Map();
+const STREAM_CACHE_TTL = 120_000; // 2 minutes
 const WORKER_BASE = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';
 
 function rewriteM3u8Urls(m3u8Text, baseUrl, referer, origin, ua) {
@@ -126,27 +130,19 @@ app.get("/api/stream", async (req, res) => {
       });
     }
 
+    // Check stream cache
+    const cacheKey = `${resolved.anilistId || resolved.malId || ''}:${resolved.episode}:${provider || 'all'}`;
+    const cached = streamCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < STREAM_CACHE_TTL) {
+      return res.json(cached.data);
+    }
+
     let sources;
     if (provider && provider !== "all") {
       sources = await providers.runProvider(provider, resolved, audio || "sub");
     } else {
       sources = await providers.runAll(resolved, audio || "sub", broadcastScraperUsage);
     }
-
-    // Fetch M3U8 content inline: use scraper-pre-fetched or fetch now
-    await Promise.allSettled(sources.map(async (s) => {
-      if (s.format === 'hls' && s.url && !s.url.startsWith('/api/') && !s.m3u8Content) {
-        const m3u8Resp = await fetch(s.url, { headers: s.headers || {}, redirect: 'follow' });
-        if (m3u8Resp.ok) {
-          let m3u8Text = await m3u8Resp.text();
-          if (m3u8Text.trim().startsWith('#EXTM3U')) {
-            const wh = s.headers || {};
-            s.m3u8Content = rewriteM3u8Urls(m3u8Text, s.url, wh['Referer'] || wh['referer'] || '', wh['Origin'] || wh['origin'] || '', wh['User-Agent'] || wh['user-agent'] || '');
-          }
-        }
-      }
-      if (s.m3u8Content) s.url = '';
-    }));
 
     // Rewrite subtitle URLs through the Worker proxy
     for (const s of sources) {
@@ -160,7 +156,7 @@ app.get("/api/stream", async (req, res) => {
       }
     }
 
-    res.json({
+    const result = {
       success: true,
       anime: {
         title: resolved.title,
@@ -173,7 +169,13 @@ app.get("/api/stream", async (req, res) => {
       },
       sources,
       sourceCount: sources.length,
-    });
+    };
+
+    // Cache the result
+    streamCache.set(cacheKey, { data: result, ts: Date.now() });
+    setTimeout(() => streamCache.delete(cacheKey), STREAM_CACHE_TTL);
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
