@@ -205,7 +205,6 @@
       <div class="toggles">
         <a href="index.html" class="tt" style="font-weight:800; text-decoration:none;">Home</a>
         <a href="index.html?tab=browse" class="tt" style="font-weight:800; text-decoration:none;">Browse</a>
-        <a href="index.html?tab=party" class="tt" style="font-weight:800; text-decoration:none;">Party</a>
         <button type="button" class="tt" id="themeBtn" aria-label="Toggle Theme">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -381,10 +380,6 @@
               <button type="button" class="bookmark-btn" id="bookmarkBtn" style="flex:1;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 <span id="bookmarkText">Watchlist</span>
-              </button>
-              <button type="button" class="bookmark-btn" id="partyBtn" style="flex:1;background:var(--accent);color:#fff;border-color:var(--ink);">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                <span>Party</span>
               </button>
             </div>
           </div>
@@ -793,17 +788,6 @@
         const isFav = toggleBookmark(activeAnime);
         updateBookmarkBtnState();
       });
-
-      // Watch Together Button click
-      const partyBtn = document.getElementById('partyBtn');
-      if (partyBtn) {
-        partyBtn.addEventListener('click', () => {
-          const title = activeAnime.title.english || activeAnime.title.romaji || 'Anime';
-          const epStr = activeEpisode ? `_ep${activeEpisode}` : '';
-          const catalogId = `${activeAnime.id || activeAnime.idMal}${epStr}`;
-          window.location.href = `/?tab=party&media=${encodeURIComponent(catalogId)}&title=${encodeURIComponent(title)}`;
-        });
-      }
 
       // Search input enter redirect to home with query
       const searchInput = document.getElementById('searchInput');
