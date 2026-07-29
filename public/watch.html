@@ -1047,6 +1047,95 @@
       detailsGenres.innerHTML = activeAnime.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('');
     }
 
+    let epSortOrder = localStorage.getItem('babyanime_ep_sort') || 'asc';
+
+    // Render episodes grid
+    function renderEpisodes() {
+      const maxEpisodes = activeAnime.episodes || (activeAnime.nextAiringEpisode?.episode ? activeAnime.nextAiringEpisode.episode - 1 : 9999);
+      const totalPages = Math.ceil(maxEpisodes / EPISODES_PER_PAGE);
+      
+      if (epPage < 1) epPage = 1;
+      if (epPage > totalPages) epPage = totalPages;
+
+      const start = (epPage - 1) * EPISODES_PER_PAGE + 1;
+      const end = Math.min(epPage * EPISODES_PER_PAGE, maxEpisodes);
+
+      const nextAiringEp = activeAnime.nextAiringEpisode?.episode;
+      let epList = [];
+      for (let i = start; i <= end; i++) {
+        epList.push(i);
+      }
+      if (epSortOrder === 'desc') {
+        epList.reverse();
+      }
+
+      let html = '';
+      for (const i of epList) {
+        const isActive = i === activeEpisode;
+        const isUnaired = nextAiringEp && i >= nextAiringEp;
+        const cls = `ep-btn${isActive ? ' active' : ''}${isUnaired ? ' unaired' : ''}`;
+        html += `<button type="button" class="${cls}" data-ep="${i}"${isUnaired ? ' disabled' : ''}>${i}</button>`;
+      }
+      episodesGrid.innerHTML = html;
+
+      episodesCountText.textContent = `Ep ${activeEpisode} / ${activeAnime.episodes || 'Ongoing'}`;
+      epJumpInput.value = activeEpisode;
+
+      const epSortBtn = document.getElementById('epSortBtn');
+      if (epSortBtn) {
+        epSortBtn.textContent = epSortOrder === 'asc' ? '1 → N ⇅' : 'N → 1 ⇅';
+      }
+
+      document.querySelectorAll('.ep-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ep = parseInt(btn.getAttribute('data-ep'));
+          changeEpisode(ep);
+        });
+      });
+
+      // Pagination controls
+      const prevBtn = document.getElementById('epPrevBtn');
+      const nextBtn = document.getElementById('epNextBtn');
+      const pageInfo = document.getElementById('epPageInfo');
+      if (prevBtn && nextBtn && pageInfo) {
+        prevBtn.disabled = epPage <= 1;
+        nextBtn.disabled = epPage >= totalPages;
+        pageInfo.textContent = `${start}–${end}`;
+        prevBtn.onclick = () => { epPage--; renderEpisodes(); };
+        nextBtn.onclick = () => { epPage++; renderEpisodes(); };
+      }
+
+      // Auto-scroll active episode into view
+      setTimeout(() => {
+        const activeBtn = episodesGrid.querySelector('.ep-btn.active');
+        if (activeBtn && episodesGrid.scrollHeight > episodesGrid.clientHeight) {
+          episodesGrid.scrollTo({ top: activeBtn.offsetTop - episodesGrid.clientHeight / 2, behavior: 'smooth' });
+        }
+      }, 80);
+    }
+
+    // Update bookmark button look
+    function updateBookmarkBtnState() {
+      const isFav = isBookmarked(activeAnime.id || activeAnime.idMal, activeAnime.type);
+      if (isFav) {
+        bookmarkBtn.classList.add('active');
+        bookmarkText.textContent = 'Bookmarked';
+      } else {
+        bookmarkBtn.classList.remove('active');
+        bookmarkText.textContent = 'Watchlist';
+      }
+    }
+
+    // Handle episode change
+    function changeEpisode(epNum) {
+      activeEpisode = epNum;
+      stopCurrentVideo(); // HALT previous video & audio immediately
+      epPage = Math.floor((activeEpisode - 1) / EPISODES_PER_PAGE) + 1;
+      renderEpisodes();
+      updatePlayer();
+      addToHistory(activeAnime, activeEpisode);
+    }
+
     let activePlayerToken = 0;
 
     // Helper to immediately halt any playing video/audio and reset player state
