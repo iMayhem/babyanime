@@ -299,14 +299,6 @@
               </select>
             </div>
 
-              <div class="selector-section" id="audioSection">
-                <span class="selector-label">Language:</span>
-                <div class="pills-group" style="padding: 0.15rem;">
-                  <button type="button" class="pill-opt active" id="audioSub" data-audio="sub" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">Sub</button>
-                  <button type="button" class="pill-opt" id="audioDub" data-audio="dub" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">Dub</button>
-              </div>
-            </div>
-
         </div>
 
           <!-- Anime Metadata Details -->
@@ -429,7 +421,6 @@
     let activeAnime = null;
     let activeEpisode = 1;
     let activeServer = 'scraper_Naruto';
-    let activeAudio = 'sub';
     let scraperSources = [];
     let playbackSpeed = parseFloat(localStorage.getItem('speed')) || 1;
     let hideControlsTimer = null;
@@ -453,8 +444,7 @@
     const playerWrapper = document.getElementById('playerWrapper');
     const ctrlBar = document.getElementById('ctrlBar');
     const serverSelect = document.getElementById('serverSelect');
-    const audioSub = document.getElementById('audioSub');
-    const audioDub = document.getElementById('audioDub');
+
     
     const playBtn = document.getElementById('playBtn');
     const seekBar = document.getElementById('seekBar');
@@ -786,20 +776,6 @@
       });
 
       // Audio buttons
-      audioSub.addEventListener('click', () => {
-        audioSub.classList.add('active');
-        audioDub.classList.remove('active');
-        activeAudio = 'sub';
-        updatePlayer();
-      });
-
-      audioDub.addEventListener('click', () => {
-        audioDub.classList.add('active');
-        audioSub.classList.remove('active');
-        activeAudio = 'dub';
-        updatePlayer();
-      });
-
       // Episode Jump
       epJumpBtn.addEventListener('click', () => {
         const ep = parseInt(epJumpInput.value);
@@ -1207,7 +1183,7 @@
       const mal_id = activeAnime.idMal || malId;
       const provider = getScraperProvider(activeServer);
 
-      const params = new URLSearchParams({ ep: activeEpisode, audio: activeAudio });
+      const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
       if (id) params.set('anilist_id', id);
       else if (mal_id) params.set('mal_id', mal_id);
       if (provider !== 'all') params.set('provider', provider);
@@ -1265,7 +1241,7 @@
         const nextEp = activeEpisode + 1;
         const totalEps = (typeof activeAnime !== 'undefined' && activeAnime ? (activeAnime.episodes || 9999) : 9999);
         if (nextEp <= totalEps) {
-          const nextParams = new URLSearchParams({ ep: nextEp, audio: activeAudio });
+          const nextParams = new URLSearchParams({ ep: nextEp, audio: 'sub' });
           if (typeof id !== 'undefined' && id) nextParams.set('anilist_id', id);
           else if (typeof mal_id !== 'undefined' && mal_id) nextParams.set('mal_id', mal_id);
           const nk = `scraper_${nextParams.toString()}`;
@@ -1293,7 +1269,8 @@
 
     async function ensureEmbedMapped() {
       if (embedMapped) return embedMapped;
-      const params = new URLSearchParams({ ep: activeEpisode, audio: activeAudio || 'sub' });
+      const params = new URLSearchParams({ ep: activeEpisode, audio: 'sub' });
+      const nextParams = new URLSearchParams({ ep: nextEp, audio: 'sub' });
       if (anilistId) params.set('anilist_id', anilistId);
       else if (malId) params.set('mal_id', malId);
       try {
@@ -1325,7 +1302,7 @@
         embedIframe.src = '';
         ensureEmbedMapped().then(mapped => {
           const ep = activeEpisode;
-          const audio = activeAudio || 'sub';
+          const audio = 'sub';
           const aid = activeAnime?.id || anilistId || (mapped ? mapped.anilistId : '');
           const embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/${audio}` : null;
           embedIframe.src = embedUrl || '';
