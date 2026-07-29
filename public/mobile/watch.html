@@ -1241,46 +1241,37 @@
 
     function populateServerDropdown(sources) {
       if (!serverSelect) return;
-      const seen = new Set();
-      const providers = [];
-      for (const s of sources) {
-        if (s.provider && !seen.has(s.provider)) {
-          seen.add(s.provider);
-          providers.push(s.provider);
-        }
-      }
 
       if (serverSelect.tagName === 'SELECT') {
-        const current = serverSelect.value;
-        let html = '<option value="scraper_all">All Servers</option>';
-        providers.forEach(p => {
-          html += `<option value="scraper_${p}">${p}</option>`;
-        });
-        html += `
-          <option value="embed_animeplay">AnimePlay</option>
-          <option value="embed_megaplay">MegaPlay</option>
-        `;
-        serverSelect.innerHTML = html;
+        const current = serverSelect.value || 'scraper_Naruto';
+        const servers = [
+          { label: 'Naruto', val: 'scraper_Naruto' },
+          { label: 'Geto', val: 'embed_animecfd' },
+          { label: 'Eren', val: 'embed_babastream' },
+          { label: 'Lelouch', val: 'embed_megaplay_embed' }
+        ];
+        serverSelect.innerHTML = servers.map(s => `<option value="${s.val}"${current === s.val ? ' selected' : ''}>${s.label}</option>`).join('');
         if (Array.from(serverSelect.options).some(o => o.value === current)) {
           serverSelect.value = current;
         } else {
-          serverSelect.value = 'scraper_all';
-          activeServer = 'scraper_all';
+          serverSelect.value = 'scraper_Naruto';
+          activeServer = 'scraper_Naruto';
         }
       } else {
         const active = serverSelect.querySelector('.server-pill.active');
         const current = active ? active.dataset.value : 'scraper_Naruto';
 
-        let html = `<button type="button" class="server-pill${current === 'scraper_Naruto' ? ' active' : ''}" data-value="scraper_Naruto">Naruto</button>`;
-        providers.forEach(p => {
-          const val = `scraper_${p}`;
-          html += `<button type="button" class="server-pill${current === val ? ' active' : ''}" data-value="${val}">${p}</button>`;
-        });
-        html += `
-          <button type="button" class="server-pill${current === 'embed_animeplay' ? ' active' : ''}" data-value="embed_animeplay">AnimePlay</button>
-          <button type="button" class="server-pill${current === 'embed_megaplay' ? ' active' : ''}" data-value="embed_megaplay">MegaPlay</button>
-        `;
-        serverSelect.innerHTML = html;
+        const servers = [
+          { label: 'Naruto', val: 'scraper_Naruto' },
+          { label: 'Geto', val: 'embed_animecfd' },
+          { label: 'Eren', val: 'embed_babastream' },
+          { label: 'Lelouch', val: 'embed_megaplay_embed' }
+        ];
+
+        serverSelect.innerHTML = servers.map(s => {
+          const isActive = current === s.val;
+          return `<button type="button" class="server-pill${isActive ? ' active' : ''}" data-value="${s.val}">${s.label}</button>`;
+        }).join('');
 
         serverSelect.querySelectorAll('.server-pill').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -1373,7 +1364,7 @@
 
       const val = serverSelect ? serverSelect.value : 'scraper_Naruto';
 
-      if (val === 'embed_animeplay' || val === 'embed_megaplay') {
+      if (val === 'embed_animecfd' || val === 'embed_babastream' || val === 'embed_megaplay_embed') {
         playerVideo.style.display = 'none';
         ctrlBar.style.display = 'none';
         sourceBadge.style.display = 'none';
@@ -1387,10 +1378,12 @@
         const mid = activeAnime?.idMal || malId;
 
         let embedUrl = null;
-        if (val === 'embed_animeplay') {
+        if (val === 'embed_animecfd') {
           embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/sub` : (mid ? `https://animeplay.cfd/stream/mal/${mid}/${ep}/sub` : null);
-        } else {
-          embedUrl = aid ? `https://megaplay.buzz/stream/ani/${aid}/${ep}/sub` : (mid ? `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub` : null);
+        } else if (val === 'embed_babastream') {
+          embedUrl = mid ? `https://babastream.top/embed/${mid}/${ep}/sub` : (aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/sub` : null);
+        } else if (val === 'embed_megaplay_embed') {
+          embedUrl = mid ? `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub` : (aid ? `https://megaplay.buzz/stream/ani/${aid}/${ep}/sub` : null);
         }
 
         if (embedUrl) {
