@@ -1392,9 +1392,9 @@
         if (val === 'embed_animecfd') {
           embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/sub` : (mid ? `https://animeplay.cfd/stream/mal/${mid}/${ep}/sub` : null);
         } else if (val === 'embed_babastream') {
-          embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/sub` : (mid ? `https://animeplay.cfd/stream/mal/${mid}/${ep}/sub` : null);
+          embedUrl = mid ? `https://babastream.top/embed/${mid}/${ep}/sub` : (aid ? `https://babastream.top/embed/${aid}/${ep}/sub` : null);
         } else if (val === 'embed_megaplay_embed') {
-          embedUrl = aid ? `https://animeplay.cfd/stream/ani/${aid}/${ep}/sub` : (mid ? `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub` : null);
+          embedUrl = mid ? `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub` : (aid ? `https://megaplay.buzz/stream/ani/${aid}/${ep}/sub` : null);
         }
 
         if (embedUrl) {
