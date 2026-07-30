@@ -2091,24 +2091,6 @@ header {
   display: flex !important;
 }
 
-/* Hold/Tap-to-Swap Panel Selection */
-.panel-swapping-active, .panel-selected-active {
-  transform: scale(1.02) !important;
-  box-shadow: 0 0 20px var(--accent, rgba(232,58,96,0.5)) !important;
-  outline: 3px solid var(--accent, #e83a60) !important;
-  outline-offset: 3px !important;
-  z-index: 1000 !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-  cursor: pointer !important;
-  user-select: none !important;
-  animation: pulseSwapSelection 1.2s infinite alternate ease-in-out;
-}
-
-@keyframes pulseSwapSelection {
-  0% { transform: scale(1.01); }
-  100% { transform: scale(1.03); }
-}
-
 /* Global Lock on Text Selection & Image Dragging */
 body, 
 .card, 
