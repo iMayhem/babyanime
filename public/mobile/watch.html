@@ -5,9 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Watch Anime - babyanime</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-  <link rel="stylesheet" href="assets/app.css">
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <link rel="preconnect" href="https://graphql.anilist.co">
+  <link rel="dns-prefetch" href="https://graphql.anilist.co">
+  <link rel="preconnect" href="https://proxy.babyanime.top">
+  <link rel="dns-prefetch" href="https://proxy.babyanime.top">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://babyanime-stream-proxy.sujeetunbeatable.workers.dev">
+  <link rel="dns-prefetch" href="https://babyanime-stream-proxy.sujeetunbeatable.workers.dev">
+  <link rel="preconnect" href="https://animeplay.cfd">
+  <link rel="preconnect" href="https://babastream.top">
+  <link rel="preconnect" href="https://megaplay.buzz">
+  <link rel="stylesheet" href="assets/app.css">
   <script>
     window.op=window.op||function(){var n=[];return new Proxy(function(){arguments.length&&n.push([].slice.call(arguments))},{get:function(t,r){return"q"===r?n:function(){n.push([r].concat([].slice.call(arguments)))}} ,has:function(t,r){return"q"===r}}) }();
     window.op('init', {
@@ -418,8 +427,8 @@
   </div>
 
   <!-- Core Scripts -->
-  <script src="assets/app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="assets/app.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" defer></script>
   <script>
     const SCRAPER_API = 'https://proxy.babyanime.top/api';
     const STREAM_PROXY = 'https://babyanime-stream-proxy.sujeetunbeatable.workers.dev/stream-proxy?url=';

@@ -601,7 +601,7 @@ function createAnimeCardHTML(anime) {
       <div class="anime-poster-wrap">
         ${scoreBadge}
         ${typeBadge}
-        <img id="${cardImgId}" class="anime-poster" src="${proxiedCover}" alt="${titleText}" loading="lazy" onerror="this.src='${fallbackSvg}'">
+        <img id="${cardImgId}" class="anime-poster" src="${proxiedCover}" alt="${titleText}" loading="lazy" decoding="async" onerror="this.src='${fallbackSvg}'">
       </div>
       <div class="anime-info">
         <h3 class="anime-title" title="${titleText}">${titleText}</h3>
