@@ -640,10 +640,10 @@
             <div class="selector-section">
               <span class="selector-label">Server:</span>
               <div id="serverSelect" class="server-pills">
-                <button type="button" class="server-pill active" data-value="scraper_Naruto">Naruto</button>
+                <button type="button" class="server-pill active" data-value="embed_megaplay_embed">Lelouch</button>
                 <button type="button" class="server-pill" data-value="embed_animecfd">Geto</button>
                 <button type="button" class="server-pill" data-value="embed_babastream">Eren</button>
-                <button type="button" class="server-pill" data-value="embed_megaplay_embed">Lelouch</button>
+                <button type="button" class="server-pill" data-value="scraper_Naruto">Naruto</button>
               </div>
             </div>
 
@@ -776,7 +776,7 @@
 
     let activeAnime = null;
     let activeEpisode = 1;
-    let activeServer = 'scraper_Naruto';
+    let activeServer = 'embed_megaplay_embed';
     let scraperSources = [];
     let playbackSpeed = parseFloat(localStorage.getItem('speed')) || 1;
     let hideControlsTimer = null;
@@ -1326,7 +1326,7 @@
       if (!serverSelect) return;
 
       if (serverSelect.tagName === 'SELECT') {
-        const current = serverSelect.value || 'scraper_Naruto';
+        const current = serverSelect.value || 'embed_megaplay_embed';
         const servers = [
           { label: 'Naruto', val: 'scraper_Naruto' },
           { label: 'Geto', val: 'embed_animecfd' },
@@ -1337,12 +1337,12 @@
         if (Array.from(serverSelect.options).some(o => o.value === current)) {
           serverSelect.value = current;
         } else {
-          serverSelect.value = 'scraper_Naruto';
-          activeServer = 'scraper_Naruto';
+          serverSelect.value = 'embed_megaplay_embed';
+          activeServer = 'embed_megaplay_embed';
         }
       } else {
         const active = serverSelect.querySelector('.server-pill.active');
-        const current = active ? active.dataset.value : 'scraper_Naruto';
+        const current = active ? active.dataset.value : 'embed_megaplay_embed';
 
         const servers = [
           { label: 'Naruto', val: 'scraper_Naruto' },
@@ -1448,7 +1448,7 @@
       const thisToken = activePlayerToken;
 
       const activeBtn = serverSelect ? (serverSelect.tagName === 'SELECT' ? null : serverSelect.querySelector('.server-pill.active')) : null;
-      const val = activeBtn ? activeBtn.dataset.value : (serverSelect ? serverSelect.value : 'scraper_Naruto');
+      const val = activeBtn ? activeBtn.dataset.value : (serverSelect ? serverSelect.value : 'embed_megaplay_embed');
 
       if (val === 'embed_animecfd' || val === 'embed_babastream' || val === 'embed_megaplay_embed') {
         playerVideo.style.display = 'none';
