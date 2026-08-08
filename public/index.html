@@ -880,7 +880,7 @@
       }
       
       section.style.display = 'block';
-      grid.innerHTML = watchlist.map(item => {
+      grid.innerHTML = watchlist.map((item, idx) => {
         const anime = {
           id: item.type === 'anilist' ? item.id : undefined,
           idMal: item.type === 'mal' ? item.id : undefined,
@@ -888,7 +888,7 @@
           coverImage: item.coverImage,
           episodes: item.episodes
         };
-        return createAnimeCardHTML(anime);
+        return createAnimeCardHTML(anime, idx);
       }).join('');
     }
 
@@ -941,7 +941,7 @@
         if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
           const processed = cleanAndSortMediaList(data.Page.media).slice(0, 12);
           if (processed.length > 0) {
-            container.innerHTML = processed.map(anime => createAnimeCardHTML(anime)).join('');
+            container.innerHTML = processed.map((anime, idx) => createAnimeCardHTML(anime, idx)).join('');
           } else {
             container.innerHTML = '<div class="empty-state">No content found.</div>';
           }
@@ -1102,7 +1102,7 @@
         if (data && data.Page && data.Page.media && data.Page.media.length > 0) {
           const processed = cleanAndSortMediaList(data.Page.media, true); // preserveOrder = true, groups dead shows last
           if (processed.length > 0) {
-            const html = processed.map(anime => createAnimeCardHTML(anime)).join('');
+            const html = processed.map((anime, idx) => createAnimeCardHTML(anime, idx)).join('');
             if (append) {
               grid.insertAdjacentHTML('beforeend', html);
             } else {
@@ -1246,7 +1246,7 @@
 
     function renderSearchResults(results) {
       searchResultsGrid.innerHTML = results.length > 0
-        ? results.map(anime => createAnimeCardHTML(anime)).join('')
+        ? results.map((anime, idx) => createAnimeCardHTML(anime, idx)).join('')
         : '<div class="empty-state">No matching anime found.</div>';
     }
 

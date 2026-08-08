@@ -1378,6 +1378,26 @@
 
     const embedIframe = document.getElementById('embedIframe');
 
+    async function checkEmbed404(url) {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        const resp = await fetch(`${STREAM_PROXY}${encodeURIComponent(url)}`, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (resp.status === 404) return true;
+        const text = await resp.text();
+        return text.includes('404') || text.includes("doesn't exist") || text.includes('Oops! Something went wrong') || text.includes('not found');
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function fallbackToNaruto() {
+      if (serverSelect) serverSelect.value = 'scraper_Naruto';
+      activeServer = 'scraper_Naruto';
+      updatePlayer();
+    }
+
     function updatePlayer() {
       stopCurrentVideo();
       const thisToken = activePlayerToken;
@@ -1403,7 +1423,56 @@
         } else if (val === 'embed_babastream') {
           embedUrl = mid ? `https://babastream.top/embed/${mid}/${ep}/sub` : (aid ? `https://babastream.top/embed/${aid}/${ep}/sub` : null);
         } else if (val === 'embed_megaplay_embed') {
-          embedUrl = mid ? `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub` : (aid ? `https://megaplay.buzz/stream/ani/${aid}/${ep}/sub` : null);
+          const malUrl = mid ? `https://megaplay.buzz/stream/mal/${mid}/${ep}/sub` : null;
+          const aniUrl = aid ? `https://megaplay.buzz/stream/ani/${aid}/${ep}/sub` : null;
+          embedUrl = malUrl || aniUrl;
+          if (embedUrl) {
+            const candidates = [malUrl, aniUrl].filter(Boolean);
+            checkEmbed404(candidates[0]).then(is404 => {
+              if (thisToken !== activePlayerToken) return;
+              if (!is404) {
+                embedIframe.src = candidates[0];
+                embedIframe.style.display = 'block';
+                embedIframe.style.zIndex = '10';
+                const hideSpinner = () => {
+                  if (thisToken === activePlayerToken && bufSpinner) bufSpinner.classList.remove('visible');
+                };
+                embedIframe.addEventListener('load', hideSpinner, { once: true });
+                setTimeout(hideSpinner, 1200);
+                return;
+              }
+              if (candidates.length < 2) {
+                if (activeServer === 'embed_megaplay_embed') {
+                  sourceBadge.textContent = '⚠ Embed 404 — switched to Naruto';
+                  sourceBadge.style.display = '';
+                  fallbackToNaruto();
+                }
+                return;
+              }
+              checkEmbed404(candidates[1]).then(is404b => {
+                if (thisToken !== activePlayerToken) return;
+                if (!is404b) {
+                  embedIframe.src = candidates[1];
+                  embedIframe.style.display = 'block';
+                  embedIframe.style.zIndex = '10';
+                  const hideSpinner = () => {
+                    if (thisToken === activePlayerToken && bufSpinner) bufSpinner.classList.remove('visible');
+                  };
+                  embedIframe.addEventListener('load', hideSpinner, { once: true });
+                  setTimeout(hideSpinner, 1200);
+                } else if (activeServer === 'embed_megaplay_embed') {
+                  sourceBadge.textContent = '⚠ Embed 404 — switched to Naruto';
+                  sourceBadge.style.display = '';
+                  fallbackToNaruto();
+                }
+              });
+            });
+            return;
+          }
+          if (bufSpinner) bufSpinner.classList.remove('visible');
+          sourceBadge.textContent = '⚠ Embed unavailable';
+          sourceBadge.style.display = '';
+          return;
         }
 
         if (embedUrl) {

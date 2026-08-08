@@ -1,13 +1,8 @@
 // Theme Switcher
 (function () {
   const root = document.documentElement;
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme) {
-    root.setAttribute('data-theme', savedTheme);
-  } else {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-  }
+  const savedTheme = localStorage.getItem('ba_theme');
+  root.setAttribute('data-theme', savedTheme || 'light');
   const savedClr = localStorage.getItem('clr');
   if (savedClr) root.setAttribute('data-clr', savedClr);
 })();
@@ -26,7 +21,7 @@ function setupTheme() {
   themeBtn.addEventListener('click', () => {
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+    localStorage.setItem('ba_theme', next);
   });
 }
 
@@ -577,12 +572,12 @@ function proxyImageUrl(url) {
 
 
 // UI render helpers
-function createAnimeCardHTML(anime) {
+function createAnimeCardHTML(anime, idx) {
   const id = anime.id || anime.idMal;
   const isMal = !!anime.idMal && !anime.id;
   const watchUrl = `watch.html?${isMal ? 'mal_id' : 'id'}=${id}`;
   const titleText = typeof anime.title === 'string' ? anime.title : (anime.title?.english || anime.title?.romaji || anime.title?.userPreferred || 'Unknown Title');
-  const rawCover = typeof anime.coverImage === 'string' ? anime.coverImage : (anime.coverImage?.large || anime.coverImage?.medium || '');
+  const rawCover = typeof anime.coverImage === 'string' ? anime.coverImage : (anime.coverImage?.medium || anime.coverImage?.large || '');
   const proxiedCover = proxyImageUrl(rawCover);
   
   const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : (anime.score ? anime.score.toFixed(1) : null);
@@ -601,7 +596,7 @@ function createAnimeCardHTML(anime) {
       <div class="anime-poster-wrap">
         ${scoreBadge}
         ${typeBadge}
-        <img id="${cardImgId}" class="anime-poster" src="${proxiedCover}" alt="${titleText}" loading="lazy" decoding="async" onerror="this.src='${fallbackSvg}'">
+        <img id="${cardImgId}" class="anime-poster" src="${proxiedCover}" alt="${titleText}" loading="lazy" decoding="async"${idx === 0 ? ' fetchpriority="high"' : ''} onerror="this.src='${fallbackSvg}'">
       </div>
       <div class="anime-info">
         <h3 class="anime-title" title="${titleText}">${titleText}</h3>
