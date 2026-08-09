@@ -641,9 +641,9 @@
               <span class="selector-label">Server:</span>
               <div id="serverSelect" class="server-pills">
                 <button type="button" class="server-pill active" data-value="embed_megaplay_embed">Lelouch</button>
+                <button type="button" class="server-pill" data-value="scraper_Naruto">Naruto</button>
                 <button type="button" class="server-pill" data-value="embed_animecfd">Geto</button>
                 <button type="button" class="server-pill" data-value="embed_babastream">Eren</button>
-                <button type="button" class="server-pill" data-value="scraper_Naruto">Naruto</button>
               </div>
             </div>
 
@@ -1328,10 +1328,10 @@
       if (serverSelect.tagName === 'SELECT') {
         const current = serverSelect.value || 'embed_megaplay_embed';
         const servers = [
+          { label: 'Lelouch', val: 'embed_megaplay_embed' },
           { label: 'Naruto', val: 'scraper_Naruto' },
           { label: 'Geto', val: 'embed_animecfd' },
-          { label: 'Eren', val: 'embed_babastream' },
-          { label: 'Lelouch', val: 'embed_megaplay_embed' }
+          { label: 'Eren', val: 'embed_babastream' }
         ];
         serverSelect.innerHTML = servers.map(s => `<option value="${s.val}"${current === s.val ? ' selected' : ''}>${s.label}</option>`).join('');
         if (Array.from(serverSelect.options).some(o => o.value === current)) {
@@ -1345,10 +1345,10 @@
         const current = active ? active.dataset.value : 'embed_megaplay_embed';
 
         const servers = [
+          { label: 'Lelouch', val: 'embed_megaplay_embed' },
           { label: 'Naruto', val: 'scraper_Naruto' },
           { label: 'Geto', val: 'embed_animecfd' },
-          { label: 'Eren', val: 'embed_babastream' },
-          { label: 'Lelouch', val: 'embed_megaplay_embed' }
+          { label: 'Eren', val: 'embed_babastream' }
         ];
 
         serverSelect.innerHTML = servers.map(s => {
