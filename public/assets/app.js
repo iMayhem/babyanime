@@ -1,8 +1,8 @@
 // Theme Switcher
 (function () {
   const root = document.documentElement;
-  const savedTheme = localStorage.getItem('ba_theme');
-  root.setAttribute('data-theme', savedTheme || 'light');
+  const savedTheme = localStorage.getItem('ba_theme2');
+  root.setAttribute('data-theme', savedTheme || 'dark');
   const savedClr = localStorage.getItem('clr');
   if (savedClr) root.setAttribute('data-clr', savedClr);
 })();
@@ -21,7 +21,7 @@ function setupTheme() {
   themeBtn.addEventListener('click', () => {
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
-    localStorage.setItem('ba_theme', next);
+    localStorage.setItem('ba_theme2', next);
   });
 }
 
